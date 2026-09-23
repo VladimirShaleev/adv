@@ -25,7 +25,6 @@
 #include <array>
 #include <cassert>
 #include <charconv>
-#include <compare>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -42,5 +41,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
+
+#include <utils/string-pool.hpp>
 
 #endif // ADV_COMPILER_HPP

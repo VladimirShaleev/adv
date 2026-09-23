@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.20)
 
 include(cmake/version.cmake)
 
+option(ADV_BUILD_TESTS "Build tests" ON)
 option(ADV_BUILD_TOOL "Build the advc compiler tool" ON)
+if(ADV_BUILD_TESTS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
 if(ADV_BUILD_TOOL)
     list(APPEND VCPKG_MANIFEST_FEATURES "tool")
 endif()
@@ -30,12 +34,22 @@ if(ADV_BUILD_TOOL)
     find_package(argparse CONFIG REQUIRED)
 endif()
 
+file(GLOB UTILS_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp")
+add_library(utils STATIC ${UTILS_SOURCES})
+set_default_properties(TARGET utils)
+target_include_directories(utils PRIVATE ${PROJECT_SOURCE_DIR}/src/utils)
+target_include_directories(utils PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(utils PUBLIC ${PROJECT_SOURCE_DIR}/src)
+
 file(GLOB VM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.cpp")
 add_library(vm ${VM_SOURCES})
 add_library(${PROJECT_NAME}::vm ALIAS vm)
 set_default_properties(TARGET vm STATIC VM_STATIC_BUILD)
+target_link_libraries(vm PRIVATE utils)
 target_precompile_headers(vm PRIVATE "src/vm/vm.hpp")
 target_include_directories(vm PRIVATE ${PROJECT_SOURCE_DIR}/src/vm)
 target_include_directories(vm PUBLIC
@@ -57,6 +71,7 @@ add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
 add_library(${PROJECT_NAME}::adv ALIAS adv)
 set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
 target_link_libraries(adv PRIVATE vm)
+target_link_libraries(adv PRIVATE utils)
 target_link_libraries(adv PRIVATE fmt::fmt)
 target_precompile_headers(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/compiler.hpp")
 target_compile_definitions(adv PRIVATE $<$<CONFIG:Debug>:YYDEBUG>)
@@ -73,4 +88,9 @@ if(ADV_BUILD_TOOL)
     set_default_properties(TARGET advc)
     target_link_libraries(advc PRIVATE adv)
     target_link_libraries(advc PRIVATE argparse::argparse)
+endif()
+
+if(ADV_BUILD_TESTS)
+    include(CTest)
+    add_subdirectory(tests)
 endif()

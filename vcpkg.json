@@ -5,6 +5,12 @@
     "fmt"
   ],
   "features": {
+    "tests": {
+      "description": "Build tests",
+      "dependencies": [
+        "gtest"
+      ]
+    },
     "tool": {
       "description": "Build the advc compiler tool",
       "dependencies": [
