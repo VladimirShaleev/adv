@@ -1,0 +1,109 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "vcpkg",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win64-base",
+            "displayName": "Windows 64-bit configuration",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "win64-release",
+            "displayName": "Windows x64 (release)",
+            "inherits": [
+                "win64-base",
+                "release",
+                "vcpkg"
+            ]
+        },
+        {
+            "name": "win64-debug",
+            "displayName": "Windows x64 (debug)",
+            "inherits": [
+                "win64-base",
+                "debug",
+                "vcpkg"
+            ]
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "win64-release",
+            "displayName": "Windows x64 (release)",
+            "configurePreset": "win64-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "win64-debug",
+            "displayName": "Windows x64 (debug)",
+            "configurePreset": "win64-debug",
+            "configuration": "Debug"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "win64-release",
+            "displayName": "Windows x64 (release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "win64-release"
+                },
+                {
+                    "type": "build",
+                    "name": "win64-release"
+                }
+            ]
+        },
+        {
+            "name": "win64-debug",
+            "displayName": "Windows x64 (debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "win64-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "win64-debug"
+                }
+            ]
+        }
+    ]
+}

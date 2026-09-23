@@ -1,0 +1,15 @@
+{
+  "name": "adv",
+  "version": "1.0.0",
+  "dependencies": [
+    "fmt"
+  ],
+  "features": {
+    "tool": {
+      "description": "Build the advc compiler tool",
+      "dependencies": [
+        "argparse"
+      ]
+    }
+  }
+}
