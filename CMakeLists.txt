@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-include(cmake/version.cmake)
+include(cmake/info.cmake)
 
 option(ADV_BUILD_TESTS "Build tests" ON)
 option(ADV_BUILD_TOOL "Build the advc compiler tool" ON)
@@ -12,8 +12,8 @@ if(ADV_BUILD_TOOL)
 endif()
 
 project(adv
-    HOMEPAGE_URL "https://github.com/VladimirShaleev/adv"
-    DESCRIPTION "An embeddable bytecode VM and compiler for the Adventure scripting language (vm, adv, and advc CLI)"
+    HOMEPAGE_URL ${ADV_HOMEPAGE}
+    DESCRIPTION ${ADV_DESCRIPTION}
     VERSION ${ADV_VERSION}
     LANGUAGES CXX)
 
