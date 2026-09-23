@@ -186,7 +186,7 @@ adv_compilation_result_get_root_node(adv_compilation_result_t compilation_result
 
 /**
  * @brief     Get C string by string id.
- * @details   Returns the C string by ::vm_string_t.
+ * @details   Returns the C string by ::vm_string_h.
  * @param[in] compilation_result Target compilation result instance.
  * @param[in] string String id.
  * @return    C string.

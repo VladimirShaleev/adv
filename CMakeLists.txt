@@ -59,15 +59,15 @@ target_include_directories(vm PUBLIC
 bison_target(parser
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/parser.yy"
     "${CMAKE_CURRENT_BINARY_DIR}/parser.cpp")
-flex_target(lexer
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/lexer.ll"
-    "${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp")
-add_flex_bison_dependency(lexer parser)
+flex_target(scanner
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/scanner.ll"
+    "${CMAKE_CURRENT_BINARY_DIR}/scanner.cpp")
+add_flex_bison_dependency(scanner parser)
 file(GLOB ADV_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.cpp")
 list(FILTER ADV_SOURCES EXCLUDE REGEX "main.cpp")
-add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
+add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS})
 add_library(${PROJECT_NAME}::adv ALIAS adv)
 set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
 target_link_libraries(adv PRIVATE vm)

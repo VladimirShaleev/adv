@@ -11,14 +11,6 @@
 #endif
 #endif
 
-#if defined(_MSC_VER)
-#define ADV_FORCE_INLINE __forceinline
-#elif defined(__GNUC__) || defined(__clang__)
-#define ADV_FORCE_INLINE __attribute__((always_inline)) inline
-#else
-#define ADV_FORCE_INLINE inline
-#endif
-
 #include <adv/adv.h>
 
 #include <algorithm>
@@ -41,7 +33,15 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
+#include <utils/utils.hpp>
 
-#include <utils/string-pool.hpp>
+namespace utils {
+template <>
+struct Result<adv_result_t> {
+    static constexpr adv_result_t Success     = ADV_RESULT_SUCCESS;
+    static constexpr adv_result_t Error       = ADV_RESULT_ERROR_UNKNOWN;
+    static constexpr adv_result_t OutOfMemory = ADV_RESULT_ERROR_OUT_OF_MEMORY;
+};
+} // namespace utils
 
 #endif // ADV_COMPILER_HPP

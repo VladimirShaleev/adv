@@ -1,0 +1,130 @@
+#ifndef ADV_CONTEXT_HPP
+#define ADV_CONTEXT_HPP
+
+#include "compiler.hpp"
+#include "errors.hpp"
+#include "options.hpp"
+#include "symbol.hpp"
+
+constexpr vm_value_type_t VM_VALUE_TYPE_VOID = vm_value_type_t(int(VM_VALUE_TYPE_COUNT_ENUMS) + 1);
+
+struct _adv_compilation_result : public utils::Object {};
+
+namespace adv {
+
+enum class CastResult {
+    OK,
+    WarningTruncate,
+    ErrorForbidden
+};
+
+class ContextBase : public _adv_compilation_result {
+public:
+    ContextBase();
+
+    [[nodiscard]] bool hasNotes() const noexcept { return _hasNotes; }
+    [[nodiscard]] bool hasWarnings() const noexcept { return _hasWarnings; }
+    [[nodiscard]] bool hasErrors() const noexcept { return _hasErrors; }
+
+    [[nodiscard]] vm_string_h intern(std::string_view str) { return _strPool.insert(str); }
+    [[nodiscard]] std::string_view getString(vm_string_h str) const noexcept { return _strPool[str]; }
+    [[nodiscard]] std::optional<vm_string_h> findString(std::string_view str) const noexcept {
+        return _strPool.find(str);
+    }
+
+    [[nodiscard]] adv_node_t* allocNode(const adv_location_t& loc, adv_node_type_t type);
+
+    [[nodiscard]] adv_node_t* root(const std::string& module = {}) noexcept;
+
+    [[nodiscard]] std::filesystem::path getBasePath(const std::string& module) const noexcept;
+
+    [[nodiscard]] bool hasImport(const std::filesystem::path& path) const noexcept;
+
+    void addImport(const std::filesystem::path& path);
+
+    void setNodeTree(const std::filesystem::path& path, adv_node_t* root);
+
+    void build(const Options& options);
+
+    template <adv_status_t Status, typename... Args>
+    void log(const Options& options, const adv_location_t& loc, Args&&... args) {
+        const auto warnAsError = options.getWarningsAsErrors();
+        addMessage(Status, warnAsError, loc.filename, loc.line, loc.column, [&]() {
+            return err<Status>(std::forward<Args>(args)...);
+        });
+    }
+
+    virtual void addMessage(
+        adv_status_t status,
+        bool warnAsError,
+        vm_string_h filename,
+        adv_uint32_t line,
+        adv_uint32_t column,
+        std::function<std::string(void)> message) = 0;
+
+    virtual void getMessages(adv_uint32_t& messageCount, adv_message_t* messages) const noexcept { messageCount = 0; }
+
+protected:
+    bool applyStatusAndCheckIsError(adv_status_t status, bool warnAsError) noexcept;
+
+private:
+    static constexpr size_t MaxNodesInBucket = 1024;
+
+    struct Import {
+        adv_node_t* root{};
+        std::filesystem::path filename{};
+        std::filesystem::path basePath{};
+    };
+
+    void resolveSymbols(const Options& options);
+    void resolveTypes(const Options& options);
+
+    [[nodiscard]] static bool isComparisonOp(adv_uint32_t op) noexcept;
+    [[nodiscard]] static CastResult getCastResult(vm_value_type_t from, vm_value_type_t to, bool isExplicitAs) noexcept;
+    [[nodiscard]] static std::string_view getTypeString(vm_value_type_t type) noexcept;
+    [[nodiscard]] vm_value_type_t findBaseType(vm_string_h type) const noexcept;
+    [[nodiscard]] adv_node_t* promoteNode(adv_node_t* node, vm_value_type_t targetType);
+    void visitChildrens(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes = false);
+
+    bool _hasNotes{};
+    bool _hasWarnings{};
+    bool _hasErrors{};
+    utils::StringPool _strPool{};
+    std::vector<std::vector<adv_node_t>> _nodes{};
+    size_t _nodeCount{};
+    std::unordered_map<std::string, Import> _imports{};
+    adv_node_t* _main{};
+    SymbolTable _symbolTable{};
+    std::array<std::pair<vm_string_h, vm_value_type_t>, VM_VALUE_TYPE_COUNT_ENUMS> _baseTypes{};
+};
+
+class Context final : public ContextBase {
+public:
+    void addMessage(
+        adv_status_t status,
+        bool warnAsError,
+        vm_string_h filename,
+        adv_uint32_t line,
+        adv_uint32_t column,
+        std::function<std::string(void)> message) override;
+
+    void getMessages(adv_uint32_t& messageCount, adv_message_t* messages) const noexcept override;
+
+private:
+    std::vector<adv_message_t> _messages{};
+};
+
+class ContextStub final : public ContextBase {
+public:
+    void addMessage(
+        adv_status_t status,
+        bool warnAsError,
+        vm_string_h filename,
+        adv_uint32_t line,
+        adv_uint32_t column,
+        std::function<std::string(void)> message) override;
+};
+
+} // namespace adv
+
+#endif // ADV_CONTEXT_HPP
