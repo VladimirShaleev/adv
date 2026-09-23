@@ -41,3 +41,36 @@ target_include_directories(vm PRIVATE ${PROJECT_SOURCE_DIR}/src/vm)
 target_include_directories(vm PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+bison_target(parser
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/parser.yy"
+    "${CMAKE_CURRENT_BINARY_DIR}/parser.cpp")
+flex_target(lexer
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/lexer.ll"
+    "${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp")
+add_flex_bison_dependency(lexer parser)
+file(GLOB ADV_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.cpp")
+list(FILTER ADV_SOURCES EXCLUDE REGEX "main.cpp")
+add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_lexer_OUTPUTS})
+add_library(${PROJECT_NAME}::adv ALIAS adv)
+set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
+target_link_libraries(adv PRIVATE vm)
+target_link_libraries(adv PRIVATE fmt::fmt)
+target_precompile_headers(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/compiler.hpp")
+target_compile_definitions(adv PRIVATE $<$<CONFIG:Debug>:YYDEBUG>)
+target_include_directories(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/")
+target_include_directories(adv PRIVATE "$<$<BOOL:${FLEX_INCLUDE_DIR}>:${FLEX_INCLUDE_DIR}>")
+target_include_directories(adv PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(adv PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+
+if(ADV_BUILD_TOOL)
+    add_executable(advc "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/main.cpp")
+    add_executable(${PROJECT_NAME}::advc ALIAS advc)
+    set_default_properties(TARGET advc)
+    target_link_libraries(advc PRIVATE adv)
+    target_link_libraries(advc PRIVATE argparse::argparse)
+endif()
