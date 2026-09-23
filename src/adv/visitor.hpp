@@ -87,6 +87,9 @@ Visitor accept(adv_node_t* node, Args&&... args) {
         case ADV_NODE_EXPLICIT_CAST_EXPR:
             visitor.visit(node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>{});
             break;
+        default:
+            assert(!"unreachable code");
+            break;
         }
     }
     return visitor;

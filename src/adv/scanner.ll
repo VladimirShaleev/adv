@@ -47,12 +47,12 @@ ID    [a-zA-Z_][a-zA-Z0-9_]*
 "wait"          { return token::WAIT; }
 "return"        { return token::RETURN; }
 
-{BOOL}          { yylval->emplace(yy_text_view[0] == 't'); return token::BOOL_LITERAL; }
-{FLOAT}         { yylval->emplace(parse_float(yy_text_view)); return token::FLOAT_LITERAL; }
-{INT}           { yylval->emplace(parse_int(yy_text_view)); return token::INT_LITERAL; }
-{ID}            { yylval->emplace(yy_text); return token::IDENTIFIER; }
-{STR}           { auto str = yy_text_view.substr(1, yy_text_view.length() - 2); yylval->emplace(unescape(ast_location, str)); return token::STRING_LITERAL; }
-{STR_U}         { log(E3003, yy_text_view); yylval->emplace(""s); return token::STRING_LITERAL; }
+{BOOL}          { yylval->emplace<bool>(yy_text_view[0] == 't'); return token::BOOL_LITERAL; }
+{FLOAT}         { yylval->emplace<float>(parse_float(yy_text_view)); return token::FLOAT_LITERAL; }
+{INT}           { yylval->emplace<int32_t>(parse_int(yy_text_view)); return token::INT_LITERAL; }
+{ID}            { yylval->emplace<std::string>(yy_text); return token::IDENTIFIER; }
+{STR}           { auto str = yy_text_view.substr(1, yy_text_view.length() - 2); yylval->emplace<std::string>(unescape(ast_location, str)); return token::STRING_LITERAL; }
+{STR_U}         { log(E3003, yy_text_view); yylval->emplace<std::string>(""s); return token::STRING_LITERAL; }
 
 "=="            { return token::EQ; }
 "!="            { return token::NE; }

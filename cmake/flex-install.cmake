@@ -53,6 +53,8 @@ if(NOT FLEX_FOUND)
             DEPENDS ${M4_DEPENDS}
             CONFIGURE_COMMAND <SOURCE_DIR>/configure
                 --prefix=${FLEX_INSTALL_DIR}
+                --disable-bootstrap
+                --disable-libfl
                 "CFLAGS=-O3"
                 "M4=${M4_EXECUTABLE}"
             BUILD_COMMAND make -j${NPROC}

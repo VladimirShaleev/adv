@@ -9,6 +9,7 @@
         {
             "name": "vcpkg",
             "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             }
@@ -33,7 +34,6 @@
             "name": "win64-base",
             "displayName": "Windows 64-bit configuration",
             "hidden": true,
-            "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static"
             },
@@ -41,6 +41,19 @@
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
+            }
+        },
+        {
+            "name": "osx-base",
+            "displayName": "Mac OS base configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-osx"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
             }
         },
         {
@@ -60,6 +73,24 @@
                 "debug",
                 "vcpkg"
             ]
+        },
+        {
+            "name": "osx-release",
+            "displayName": "Mac OS config (release)",
+            "inherits": [
+                "osx-base",
+                "release",
+                "vcpkg"
+            ]
+        },
+        {
+            "name": "osx-debug",
+            "displayName": "Mac OS config (debug)",
+            "inherits": [
+                "osx-base",
+                "debug",
+                "vcpkg"
+            ]
         }
     ],
     "buildPresets": [
@@ -74,6 +105,16 @@
             "displayName": "Windows x64 (debug)",
             "configurePreset": "win64-debug",
             "configuration": "Debug"
+        },
+        {
+            "name": "osx-release",
+            "displayName": "Mac OS (release)",
+            "configurePreset": "osx-release"
+        },
+        {
+            "name": "osx-debug",
+            "displayName": "Mac OS (debug)",
+            "configurePreset": "osx-debug"
         }
     ],
     "testPresets": [
@@ -86,6 +127,16 @@
             "name": "win64-debug",
             "displayName": "Windows x64 (debug)",
             "configurePreset": "win64-debug"
+        },
+        {
+            "name": "osx-release",
+            "displayName": "Mac OS (release)",
+            "configurePreset": "osx-release"
+        },
+        {
+            "name": "osx-debug",
+            "displayName": "Mac OS (debug)",
+            "configurePreset": "osx-debug"
         }
     ],
     "workflowPresets": [
@@ -122,6 +173,42 @@
                 {
                     "type": "test",
                     "name": "win64-debug"
+                }
+            ]
+        },
+        {
+            "name": "osx-release",
+            "displayName": "Mac OS (release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "osx-release"
+                },
+                {
+                    "type": "build",
+                    "name": "osx-release"
+                },
+                {
+                    "type": "test",
+                    "name": "osx-release"
+                }
+            ]
+        },
+        {
+            "name": "osx-debug",
+            "displayName": "Mac OS (debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "osx-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "osx-debug"
+                },
+                {
+                    "type": "test",
+                    "name": "osx-debug"
                 }
             ]
         }
