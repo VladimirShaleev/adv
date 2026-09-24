@@ -103,18 +103,52 @@ void Analyzer::resolveSymbols() {
             node->parent = parent;
             acceptNode(node->cast_expr.operand, node);
         }
+        void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
+            node->parent = parent;
+            acceptNode(node->if_stmt.cond, node);
+            acceptNode(node->if_stmt.then_branch, node);
+            acceptNode(node->if_stmt.else_branch, node);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {
+            node->parent = parent;
+            acceptNode(node->while_stmt.cond, node);
+            acceptNode(node->while_stmt.body, node);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {
+            node->parent = parent;
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {
+            node->parent = parent;
+            acceptNode(node->expr_stmt.expr, node);
+        }
+        void visit(adv_node_t* /* node */, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) {
+            assert(!"unreachable code");
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {
+            node->parent = parent;
+            acceptNode(node->member_access.target, node);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) {
+            node->parent = parent;
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_INT_LITERAL>) {
+            node->parent = parent;
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_FLOAT_LITERAL>) {
+            node->parent = parent;
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) {
+            node->parent = parent;
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) {
             node->parent = parent;
             symbolTable.beginScope();
             visitChildrens(node);
             symbolTable.endScope();
         }
-        void visit(...) noexcept {}
-
         void visitChildrens(adv_node_t* node) {
-            analyzer.visitChildrens(node, [this](auto node, auto parent) { acceptNode(node, parent); }, true);
+            analyzer.visitStmtsWithRules(node, [this](auto node, auto parent) { acceptNode(node, parent); }, true);
         }
-
         void acceptNode(adv_node_t* node, adv_node_t* parent) {
             accept<SymbolVisitor>(
                 node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable), parent);
@@ -432,7 +466,7 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) { visitChildrens(node); }
         void visit(...) noexcept { int i = 5; }
         void visitChildrens(adv_node_t* node) {
-            analyzer.visitChildrens(node, [this](auto node, auto /* parent */) { acceptNode(node); });
+            analyzer.visitStmtsWithRules(node, [this](auto node, auto /* parent */) { acceptNode(node); });
         }
         vm_value_type_t acceptNode(adv_node_t* node) {
             accept<TypeVisitor>(node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable));
@@ -447,7 +481,7 @@ void Analyzer::resolveTypes() {
         _ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(*this), std::ref(_ctx.symbolTable()));
 }
 
-void Analyzer::visitChildrens(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes) {
+void Analyzer::visitStmtsWithRules(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes) {
     auto hasFunctions = false;
 
     auto curr = node->stmts.first_stmt;
@@ -503,6 +537,32 @@ bool Analyzer::isComparisonOp(adv_uint32_t op) noexcept {
     case Parser::token::GE:
     case Parser::token::EQ:
     case Parser::token::NE:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool Analyzer::isBitwiseOp(adv_uint32_t op) noexcept {
+    switch (op) {
+    case '|':
+    case '&':
+    case '^':
+    case '~':
+    case Parser::token::ASHL:
+    case Parser::token::ASHR:
+    case Parser::token::LSHL:
+    case Parser::token::LSHR:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool Analyzer::isLogicOp(adv_uint32_t op) noexcept {
+    switch (op) {
+    case Parser::token::AND:
+    case Parser::token::OR:
         return true;
     default:
         return false;

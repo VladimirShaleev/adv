@@ -24,44 +24,44 @@ extern "C" {
  */
 typedef enum
 {
-    ADV_NODE_UNKNOWN = 0, /**< Unknown or uninitialized AST node type. */
+    ADV_NODE_UNKNOWN            = 0, /**< Unknown or uninitialized AST node type. */
 
     /* Top-level and statements */
-    ADV_NODE_PROGRAM,            /**< Root node: stmts.first_stmt -> list of top-level statements. */
-    ADV_NODE_BLOCK,              /**< Block `{ ... }`: stmts.first_stmt -> list of block statements. */
+    ADV_NODE_PROGRAM            = 1, /**< Root node: stmts.first_stmt -> list of top-level statements. */
+    ADV_NODE_BLOCK              = 2, /**< Block `{ ... }`: stmts.first_stmt -> list of block statements. */
 
     /* Declarations */
-    ADV_NODE_VAR_DECL,           /**< `var x: type = expr`: var_decl. */
-    ADV_NODE_FUNCTION_DECL,      /**< `function name(...)`: func_decl. */
-    ADV_NODE_PARAM_DECL,         /**< `a: int`: param_decl (used in func_decl). */
+    ADV_NODE_VAR_DECL           = 3, /**< `var x: type = expr`: var_decl. */
+    ADV_NODE_FUNCTION_DECL      = 4, /**< `function name(...)`: func_decl. */
+    ADV_NODE_PARAM_DECL         = 5, /**< `a: int`: param_decl (used in func_decl). */
 
     /* Control flow statements */
-    ADV_NODE_IMPORT_STMT,        /**< `import "file"`: import_stmt (path). */
-    ADV_NODE_IF_STMT,            /**< `if (cond) then else`: if_stmt. */
-    ADV_NODE_WHILE_STMT,         /**< `while (cond) body`: while_stmt. */
-    ADV_NODE_RETURN_STMT,        /**< `return expr`: expr_stmt. */
-    ADV_NODE_YIELD_STMT,         /**< `yield`: yield statement (no additional union payload). */
-    ADV_NODE_WAIT_STMT,          /**< `wait expr`: expr_stmt. */
-    ADV_NODE_EXPR_STMT,          /**< Expression statement: expr_stmt. */
+    ADV_NODE_IMPORT_STMT        = 6, /**< `import "file"`: import_stmt (path). */
+    ADV_NODE_IF_STMT            = 7, /**< `if (cond) then else`: if_stmt. */
+    ADV_NODE_WHILE_STMT         = 8, /**< `while (cond) body`: while_stmt. */
+    ADV_NODE_RETURN_STMT        = 9, /**< `return expr`: expr_stmt. */
+    ADV_NODE_YIELD_STMT         = 10, /**< `yield`: yield statement (no additional union payload). */
+    ADV_NODE_WAIT_STMT          = 11, /**< `wait expr`: expr_stmt. */
+    ADV_NODE_EXPR_STMT          = 12, /**< Expression statement: expr_stmt. */
 
     /* Expressions and operations */
-    ADV_NODE_IMPLICIT_CAST_EXPR, /**< Implicit type conversion node inserted during semantic analysis. */
-    ADV_NODE_EXPLICIT_CAST_EXPR, /**< `expr AS type`: explicit cast_expr. */
-    ADV_NODE_IDENTIFIER_EXPR,    /**< Identifier reference expression: id_expr. */
-    ADV_NODE_ASSIGN_EXPR,        /**< `target = val`: assign_expr. */
-    ADV_NODE_BINARY_EXPR,        /**< `a + b`, `a == b`: binary_expr. */
-    ADV_NODE_UNARY_EXPR,         /**< `-a`, `!a`: unary_expr. */
-    ADV_NODE_CALL_EXPR,          /**< `func(a, b)` or `coroutine[a, b]`: call_expr. */
-    ADV_NODE_MEMBER_ACCESS,      /**< `obj.field`: member_access. */
+    ADV_NODE_IMPLICIT_CAST_EXPR = 13, /**< Implicit type conversion node inserted during semantic analysis. */
+    ADV_NODE_EXPLICIT_CAST_EXPR = 14, /**< `expr AS type`: explicit cast_expr. */
+    ADV_NODE_IDENTIFIER_EXPR    = 15, /**< Identifier reference expression: id_expr. */
+    ADV_NODE_ASSIGN_EXPR        = 16, /**< `target = val`: assign_expr. */
+    ADV_NODE_BINARY_EXPR        = 17, /**< `a + b`, `a == b`: binary_expr. */
+    ADV_NODE_UNARY_EXPR         = 18, /**< `-a`, `!a`: unary_expr. */
+    ADV_NODE_CALL_EXPR          = 19, /**< `func(a, b)` or `coroutine[a, b]`: call_expr. */
+    ADV_NODE_MEMBER_ACCESS      = 20, /**< `obj.field`: member_access. */
 
     /* Literals */
-    ADV_NODE_BOOL_LITERAL,       /**< Boolean literal: bool_val. */
-    ADV_NODE_INT_LITERAL,        /**< 32-bit signed integer literal: int_val. */
-    ADV_NODE_FLOAT_LITERAL,      /**< 32-bit floating-point literal: float_val. */
-    ADV_NODE_STRING_LITERAL,     /**< String literal handle: str_val. */
+    ADV_NODE_BOOL_LITERAL       = 21, /**< Boolean literal: bool_val. */
+    ADV_NODE_INT_LITERAL        = 22, /**< 32-bit signed integer literal: int_val. */
+    ADV_NODE_FLOAT_LITERAL      = 23, /**< 32-bit floating-point literal: float_val. */
+    ADV_NODE_STRING_LITERAL     = 24, /**< String literal handle: str_val. */
 
-    ADV_NODE_COUNT_ENUMS,        /**< Count of constants in the enumeration. */
-    ADV_NODE_MAX_ENUM = 0x7FFFFFFF /**< Max value of enum (not used). */
+    ADV_NODE_COUNT_ENUMS        = 25, /**< Count of constants in the enumeration. */
+    ADV_NODE_MAX_ENUM           = 0x7FFFFFFF /**< Max value of enum (not used). */
 } adv_node_type_t;
 
 /**

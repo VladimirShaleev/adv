@@ -66,7 +66,7 @@ using namespace std::literals;
 %token IMPORT FUNCTION VAR AS IF ELSE WHILE YIELD WAIT RETURN
 
 /* Operators */
-%token EQ NE LE GE
+%token EQ NE LE GE AND OR ASHL ASHR LSHL LSHR UNARY
 
 /* Literals and identifiers */
 %token <int32_t>     INT_LITERAL
@@ -96,12 +96,18 @@ using namespace std::literals;
 
 /* Operator priorities */
 %right '='
-%left EQ NE
-%left '<' '>' LE GE
+%left OR
+%left AND
+%nonassoc EQ NE
+%nonassoc '<' '>' LE GE
+%left ASHL ASHR LSHL LSHR
+%left '|'
+%left '^'
+%left '&'
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left AS
-%nonassoc UMINUS
+%right UNARY
 %left '.' '[' ']' '(' ')'
 
 %start program
@@ -347,10 +353,71 @@ expr
     | call_expr { 
         $$ = $1; 
     }
-    | '-' expr %prec UMINUS {
+    | '-' expr %prec UNARY {
         auto node = alloc_node(@$, UNARY_EXPR);
         node->unary_expr.op = '-';
         node->unary_expr.operand = $2;
+        $$ = node;
+    }
+    | '~' expr %prec UNARY {
+        auto node = alloc_node(@$, UNARY_EXPR);
+        node->unary_expr.op = '~';
+        node->unary_expr.operand = $2;
+        $$ = node;
+    }
+    | '!' expr %prec UNARY {
+        auto node = alloc_node(@$, UNARY_EXPR);
+        node->unary_expr.op = '!';
+        node->unary_expr.operand = $2;
+        $$ = node;
+    }
+    | expr LSHL expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::LSHL;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr LSHR expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::LSHR;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr ASHL expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::ASHL;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr ASHR expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::ASHR;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr '&' expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = '&';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr '|' expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = '|';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr '^' expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = '^';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr '+' expr {
@@ -381,6 +448,13 @@ expr
         node->binary_expr.right = $3;
         $$ = node;
     }
+    | expr '%' expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = '%';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
     | expr EQ expr {
         auto node = alloc_node(@$, BINARY_EXPR);
         node->binary_expr.op = token::EQ;
@@ -388,9 +462,51 @@ expr
         node->binary_expr.right = $3;
         $$ = node;
     }
+    | expr NE expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::NE;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr LE expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::LE;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr GE expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::GE;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
     | expr '<' expr {
         auto node = alloc_node(@$, BINARY_EXPR);
         node->binary_expr.op = '<';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr '>' expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = '>';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr AND expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::AND;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
+        $$ = node;
+    }
+    | expr OR expr {
+        auto node = alloc_node(@$, BINARY_EXPR);
+        node->binary_expr.op = token::OR;
         node->binary_expr.left = $1;
         node->binary_expr.right = $3;
         $$ = node;

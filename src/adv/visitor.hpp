@@ -21,17 +21,17 @@ Visitor accept(adv_node_t* node, Args&&... args) {
         case ADV_NODE_BLOCK:
             visitor.visit(node, Tag<ADV_NODE_BLOCK>{});
             break;
-        case ADV_NODE_IMPORT_STMT:
-            visitor.visit(node, Tag<ADV_NODE_IMPORT_STMT>{});
-            break;
         case ADV_NODE_VAR_DECL:
             visitor.visit(node, Tag<ADV_NODE_VAR_DECL>{});
+            break;
+        case ADV_NODE_FUNCTION_DECL:
+            visitor.visit(node, Tag<ADV_NODE_FUNCTION_DECL>{});
             break;
         case ADV_NODE_PARAM_DECL:
             visitor.visit(node, Tag<ADV_NODE_PARAM_DECL>{});
             break;
-        case ADV_NODE_FUNCTION_DECL:
-            visitor.visit(node, Tag<ADV_NODE_FUNCTION_DECL>{});
+        case ADV_NODE_IMPORT_STMT:
+            visitor.visit(node, Tag<ADV_NODE_IMPORT_STMT>{});
             break;
         case ADV_NODE_IF_STMT:
             visitor.visit(node, Tag<ADV_NODE_IF_STMT>{});
@@ -51,6 +51,15 @@ Visitor accept(adv_node_t* node, Args&&... args) {
         case ADV_NODE_EXPR_STMT:
             visitor.visit(node, Tag<ADV_NODE_EXPR_STMT>{});
             break;
+        case ADV_NODE_IMPLICIT_CAST_EXPR:
+            visitor.visit(node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>{});
+            break;
+        case ADV_NODE_EXPLICIT_CAST_EXPR:
+            visitor.visit(node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>{});
+            break;
+        case ADV_NODE_IDENTIFIER_EXPR:
+            visitor.visit(node, Tag<ADV_NODE_IDENTIFIER_EXPR>{});
+            break;
         case ADV_NODE_ASSIGN_EXPR:
             visitor.visit(node, Tag<ADV_NODE_ASSIGN_EXPR>{});
             break;
@@ -66,8 +75,8 @@ Visitor accept(adv_node_t* node, Args&&... args) {
         case ADV_NODE_MEMBER_ACCESS:
             visitor.visit(node, Tag<ADV_NODE_MEMBER_ACCESS>{});
             break;
-        case ADV_NODE_IDENTIFIER_EXPR:
-            visitor.visit(node, Tag<ADV_NODE_IDENTIFIER_EXPR>{});
+        case ADV_NODE_BOOL_LITERAL:
+            visitor.visit(node, Tag<ADV_NODE_BOOL_LITERAL>{});
             break;
         case ADV_NODE_INT_LITERAL:
             visitor.visit(node, Tag<ADV_NODE_INT_LITERAL>{});
@@ -77,15 +86,6 @@ Visitor accept(adv_node_t* node, Args&&... args) {
             break;
         case ADV_NODE_STRING_LITERAL:
             visitor.visit(node, Tag<ADV_NODE_STRING_LITERAL>{});
-            break;
-        case ADV_NODE_BOOL_LITERAL:
-            visitor.visit(node, Tag<ADV_NODE_BOOL_LITERAL>{});
-            break;
-        case ADV_NODE_IMPLICIT_CAST_EXPR:
-            visitor.visit(node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>{});
-            break;
-        case ADV_NODE_EXPLICIT_CAST_EXPR:
-            visitor.visit(node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>{});
             break;
         default:
             assert(!"unreachable code");
