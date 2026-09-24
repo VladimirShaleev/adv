@@ -1,3 +1,4 @@
+#include "analyzer.hpp"
 #include "parser.hpp"
 #include "scanner.hpp"
 
@@ -11,6 +12,7 @@ class Compiler final : public _adv_compiler {
 public:
     adv_result_t compile(
         adv_utf8_t file, std::span<const adv_source_t> sources, const Options& options, ContextBase& context) noexcept {
+        Analyzer analyzer(options, context);
         adv_result_t result = ADV_RESULT_SUCCESS;
         std::stack<std::tuple<std::string, adv_node_t*, std::filesystem::path, adv_uint32_t>> stack;
         stack.emplace(""s, nullptr, file ? file : "", 0);
@@ -47,9 +49,7 @@ public:
             return result;
         }
 
-        context.build(options);
-
-        return result;
+        return analyzer.build();
     }
 
 private:

@@ -6,22 +6,12 @@
 #include "options.hpp"
 #include "symbol.hpp"
 
-constexpr vm_value_type_t VM_VALUE_TYPE_VOID = vm_value_type_t(int(VM_VALUE_TYPE_COUNT_ENUMS) + 1);
-
 struct _adv_compilation_result : public utils::Object {};
 
 namespace adv {
 
-enum class CastResult {
-    OK,
-    WarningTruncate,
-    ErrorForbidden
-};
-
 class ContextBase : public _adv_compilation_result {
 public:
-    ContextBase();
-
     [[nodiscard]] bool hasNotes() const noexcept { return _hasNotes; }
     [[nodiscard]] bool hasWarnings() const noexcept { return _hasWarnings; }
     [[nodiscard]] bool hasErrors() const noexcept { return _hasErrors; }
@@ -31,6 +21,8 @@ public:
     [[nodiscard]] std::optional<vm_string_h> findString(std::string_view str) const noexcept {
         return _strPool.find(str);
     }
+
+    [[nodiscard]] SymbolTable& symbolTable() noexcept { return _symbolTable; }
 
     [[nodiscard]] adv_node_t* allocNode(const adv_location_t& loc, adv_node_type_t type);
 
@@ -43,8 +35,6 @@ public:
     void addImport(const std::filesystem::path& path);
 
     void setNodeTree(const std::filesystem::path& path, adv_node_t* root);
-
-    void build(const Options& options);
 
     template <adv_status_t Status, typename... Args>
     void log(const Options& options, const adv_location_t& loc, Args&&... args) {
@@ -76,16 +66,6 @@ private:
         std::filesystem::path basePath{};
     };
 
-    void resolveSymbols(const Options& options);
-    void resolveTypes(const Options& options);
-
-    [[nodiscard]] static bool isComparisonOp(adv_uint32_t op) noexcept;
-    [[nodiscard]] static CastResult getCastResult(vm_value_type_t from, vm_value_type_t to, bool isExplicitAs) noexcept;
-    [[nodiscard]] static std::string_view getTypeString(vm_value_type_t type) noexcept;
-    [[nodiscard]] vm_value_type_t findBaseType(vm_string_h type) const noexcept;
-    [[nodiscard]] adv_node_t* promoteNode(adv_node_t* node, vm_value_type_t targetType);
-    void visitChildrens(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes = false);
-
     bool _hasNotes{};
     bool _hasWarnings{};
     bool _hasErrors{};
@@ -95,7 +75,6 @@ private:
     std::unordered_map<std::string, Import> _imports{};
     adv_node_t* _main{};
     SymbolTable _symbolTable{};
-    std::array<std::pair<vm_string_h, vm_value_type_t>, VM_VALUE_TYPE_COUNT_ENUMS> _baseTypes{};
 };
 
 class Context final : public ContextBase {
