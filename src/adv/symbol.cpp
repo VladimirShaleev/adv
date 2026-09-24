@@ -48,7 +48,7 @@ bool SymbolTable::addSymbol(const Options& options, ContextBase& ctx, adv_node_t
         currScope = currScope->parent;
     }
     if (sym->kind == SymbolKind::Param) {
-        auto fnSym = lookup(options, ctx, node->parent->location, node->parent->fn_decl.name);
+        auto fnSym = lookup(options, ctx, node->parent->location, node->parent->func_decl.name);
         fnSym->params.push_back(sym);
     }
     _scope->symbols[sym->name] = sym;
@@ -79,7 +79,7 @@ Symbol* SymbolTable::allocSym(adv_node_t* node) {
         using K = SymbolKind;
         explicit KindVisitor(Scope* scope) noexcept : scope((void*)scope) {}
         void visit(adv_node_t* n, Tag<ADV_NODE_VAR_DECL>) noexcept { set(K::Var, n->var_decl.scope); }
-        void visit(adv_node_t* n, Tag<ADV_NODE_FUNCTION_DECL>) noexcept { set(K::Function, n->fn_decl.scope); }
+        void visit(adv_node_t* n, Tag<ADV_NODE_FUNCTION_DECL>) noexcept { set(K::Function, n->func_decl.scope); }
         void visit(adv_node_t* n, Tag<ADV_NODE_PARAM_DECL>) noexcept { set(K::Param, n->param_decl.scope); }
         void visit(...) noexcept { assert(!"unreachable code"); }
         void set(K nodeKind, void*& nodeScope) noexcept { kind = nodeKind, nodeScope = scope; }

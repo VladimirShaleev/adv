@@ -27,40 +27,38 @@ typedef enum
     ADV_NODE_UNKNOWN = 0, /**< Unknown or uninitialized AST node type. */
 
     /* Top-level and statements */
-    ADV_NODE_PROGRAM,            /**< Root node: children.first_child -> list of top-level statements. */
-    ADV_NODE_BLOCK,              /**< Block `{ ... }`: children.first_child -> list of statements. */
-    ADV_NODE_IMPORT_STMT,        /**< `import "file"`: import_stmt (path). */
+    ADV_NODE_PROGRAM,            /**< Root node: stmts.first_stmt -> list of top-level statements. */
+    ADV_NODE_BLOCK,              /**< Block `{ ... }`: stmts.first_stmt -> list of block statements. */
 
     /* Declarations */
     ADV_NODE_VAR_DECL,           /**< `var x: type = expr`: var_decl. */
-    ADV_NODE_PARAM_DECL,         /**< `a: int`: param_decl (used in fn_decl). */
-    ADV_NODE_FUNCTION_DECL,      /**< `function name(...)`: fn_decl. */
+    ADV_NODE_FUNCTION_DECL,      /**< `function name(...)`: func_decl. */
+    ADV_NODE_PARAM_DECL,         /**< `a: int`: param_decl (used in func_decl). */
 
     /* Control flow statements */
+    ADV_NODE_IMPORT_STMT,        /**< `import "file"`: import_stmt (path). */
     ADV_NODE_IF_STMT,            /**< `if (cond) then else`: if_stmt. */
     ADV_NODE_WHILE_STMT,         /**< `while (cond) body`: while_stmt. */
-    ADV_NODE_RETURN_STMT,        /**< `return expr`: unary (or children.first_child). */
+    ADV_NODE_RETURN_STMT,        /**< `return expr`: expr_stmt. */
     ADV_NODE_YIELD_STMT,         /**< `yield`: yield statement (no additional union payload). */
-    ADV_NODE_WAIT_STMT,          /**< `wait expr`: wait statement. */
-    ADV_NODE_EXPR_STMT,          /**< Expression statement: children.first_child -> expr. */
+    ADV_NODE_WAIT_STMT,          /**< `wait expr`: expr_stmt. */
+    ADV_NODE_EXPR_STMT,          /**< Expression statement: expr_stmt. */
 
     /* Expressions and operations */
-    ADV_NODE_ASSIGN_EXPR,        /**< `target = val`: assign. */
-    ADV_NODE_BINARY_EXPR,        /**< `a + b`, `a == b`: binop. */
-    ADV_NODE_UNARY_EXPR,         /**< `-a`, `!a`: unary. */
-    ADV_NODE_CALL_EXPR,          /**< `func(a, b)` or `coroutine[a, b]`: call. */
+    ADV_NODE_IMPLICIT_CAST_EXPR, /**< Implicit type conversion node inserted during semantic analysis. */
+    ADV_NODE_EXPLICIT_CAST_EXPR, /**< `expr AS type`: explicit cast_expr. */
+    ADV_NODE_IDENTIFIER_EXPR,    /**< Identifier reference expression: id_expr. */
+    ADV_NODE_ASSIGN_EXPR,        /**< `target = val`: assign_expr. */
+    ADV_NODE_BINARY_EXPR,        /**< `a + b`, `a == b`: binary_expr. */
+    ADV_NODE_UNARY_EXPR,         /**< `-a`, `!a`: unary_expr. */
+    ADV_NODE_CALL_EXPR,          /**< `func(a, b)` or `coroutine[a, b]`: call_expr. */
     ADV_NODE_MEMBER_ACCESS,      /**< `obj.field`: member_access. */
 
-    /* Literals and identifiers */
-    ADV_NODE_IDENTIFIER_EXPR,    /**< Identifier reference: id_expr. */
+    /* Literals */
+    ADV_NODE_BOOL_LITERAL,       /**< Boolean literal: bool_val. */
     ADV_NODE_INT_LITERAL,        /**< 32-bit signed integer literal: int_val. */
     ADV_NODE_FLOAT_LITERAL,      /**< 32-bit floating-point literal: float_val. */
     ADV_NODE_STRING_LITERAL,     /**< String literal handle: str_val. */
-    ADV_NODE_BOOL_LITERAL,       /**< Boolean literal: bool_val. */
-
-    /* Type casting */
-    ADV_NODE_IMPLICIT_CAST_EXPR, /**< Implicit type conversion node inserted during semantic analysis. */
-    ADV_NODE_EXPLICIT_CAST_EXPR, /**< `expr AS type`: explicit cast_expr. */
 
     ADV_NODE_COUNT_ENUMS,        /**< Count of constants in the enumeration. */
     ADV_NODE_MAX_ENUM = 0x7FFFFFFF /**< Max value of enum (not used). */
@@ -96,28 +94,14 @@ struct adv_node_t
 
     union
     {
-        adv_sint32_t  int_val;     /**< Integer literal value. */
-        adv_float32_t float_val;   /**< Floating-point literal value. */
-        adv_bool_t    bool_val;    /**< Boolean literal value. */
-        vm_string_h   str_val;     /**< String literal handle. */
-
         /**
-         * @brief Generic list of child nodes.
+         * @brief Generic list of statement child nodes.
          */
         struct
         {
-            adv_node_t*  first_child; /**< Head of child nodes list. */
-            adv_uint32_t child_count; /**< Number of children. */
-        } children;
-
-        /**
-         * @brief Import statement payload.
-         */
-        struct
-        {
-            adv_node_t* root; /**< Root node of imported AST. */
-            vm_string_h path; /**< Imported module or file path string handle. */
-        } import_stmt;
+            adv_node_t*  first_stmt; /**< Head of statement nodes list. */
+            adv_uint32_t stmt_count; /**< Number of statements in list. */
+        } stmts;
 
         /**
          * @brief Variable declaration payload.
@@ -132,14 +116,17 @@ struct adv_node_t
         } var_decl;
 
         /**
-         * @brief Identifier expression payload.
+         * @brief Function declaration payload.
          */
         struct
         {
-            vm_string_h name;      /**< Identifier name string handle. */
-            vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
-            void*       scope;     /**< Pointer to resolved scope context. */
-        } id_expr;
+            vm_string_h  name;             /**< Function name string handle. */
+            vm_string_h  return_type_hint; /**< Return type annotation handle. */
+            adv_node_t*  first_param;      /**< Head of parameter declarations list (linked by next_sibling). */
+            adv_uint32_t param_count;      /**< Number of parameters. */
+            adv_node_t*  body;             /**< Pointer to BLOCK node. */
+            void*        scope;            /**< Pointer to function scope. */
+        } func_decl;
 
         /**
          * @brief Function parameter declaration payload.
@@ -152,17 +139,13 @@ struct adv_node_t
         } param_decl;
 
         /**
-         * @brief Function declaration payload.
+         * @brief Import statement payload.
          */
         struct
         {
-            vm_string_h  name;             /**< Function name string handle. */
-            vm_string_h  return_type_hint; /**< Return type annotation handle. */
-            adv_node_t*  first_param;      /**< Head of parameter declarations list (linked by next_sibling). */
-            adv_uint32_t param_count;      /**< Number of parameters. */
-            adv_node_t*  body;             /**< Pointer to BLOCK node. */
-            void*        scope;            /**< Pointer to function scope. */
-        } fn_decl;
+            adv_node_t* root; /**< Root node of imported AST. */
+            vm_string_h path; /**< Imported module or file path string handle. */
+        } import_stmt;
 
         /**
          * @brief Conditional statement payload.
@@ -171,7 +154,7 @@ struct adv_node_t
         {
             adv_node_t* cond;        /**< Condition expression. */
             adv_node_t* then_branch; /**< Execution block if condition evaluates to true. */
-            adv_node_t* else_branch; /**< Optional else block or nested IF_STMT. */
+            adv_node_t* else_branch; /**< Optional else block or nested ADV_NODE_IF_STMT. */
         } if_stmt;
 
         /**
@@ -184,60 +167,12 @@ struct adv_node_t
         } while_stmt;
 
         /**
-         * @brief Wait statement payload.
+         * @brief Single expression statement payload (used for EXPR_STMT, RETURN_STMT, WAIT_STMT).
          */
         struct
         {
-            adv_node_t* expr; /**< Expression to wait on (nullptr for frame pause). */
-        } wait_stmt;
-
-        /**
-         * @brief Binary operator expression payload.
-         */
-        struct
-        {
-            adv_uint32_t op;    /**< Operator token code (e.g. '+', EQ). */
-            adv_node_t*  left;  /**< Left-hand operand. */
-            adv_node_t*  right; /**< Right-hand operand. */
-        } binop;
-
-        /**
-         * @brief Unary operator expression payload.
-         */
-        struct
-        {
-            adv_uint32_t op;      /**< Operator token code. */
-            adv_node_t*  operand; /**< Target operand. */
-        } unary;
-
-        /**
-         * @brief Assignment expression payload.
-         */
-        struct
-        {
-            adv_node_t* target; /**< Target node (IDENTIFIER_EXPR or MEMBER_ACCESS). */
-            adv_node_t* val;    /**< Value expression to assign. */
-        } assign;
-
-        /**
-         * @brief Member access expression payload.
-         */
-        struct
-        {
-            adv_node_t* target; /**< Target object instance expression. */
-            vm_string_h member; /**< Member field name string handle. */
-        } member_access;
-        
-        /**
-         * @brief Call expression payload.
-         */
-        struct
-        {
-            vm_string_h  name;      /**< Function or coroutine name string handle. */
-            adv_node_t*  first_arg; /**< Head of argument expressions list (linked by next_sibling). */
-            adv_uint32_t arg_count; /**< Number of arguments passed. */
-            adv_bool_t   is_async;  /**< True for asynchronous invocation `coroutine[a, b]`, false for standard `func(a, b)`. */
-        } call;
+            adv_node_t* expr; /**< Expression payload (nullptr if omitted/void). */
+        } expr_stmt;
 
         /**
          * @brief Type cast expression payload.
@@ -249,6 +184,69 @@ struct adv_node_t
             vm_value_type_t from_type;        /**< Original value type. */
             vm_value_type_t to_type;          /**< Target converted type. */
         } cast_expr;
+
+        /**
+         * @brief Identifier reference expression payload.
+         */
+        struct
+        {
+            vm_string_h name;      /**< Identifier name string handle. */
+            vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
+            void*       scope;     /**< Pointer to resolved scope context. */
+        } id_expr;
+
+        /**
+         * @brief Assignment expression payload.
+         */
+        struct
+        {
+            adv_node_t* target; /**< Target node (IDENTIFIER_EXPR or MEMBER_ACCESS). */
+            adv_node_t* val;    /**< Value expression to assign. */
+        } assign_expr;
+
+        /**
+         * @brief Binary operator expression payload.
+         */
+        struct
+        {
+            adv_uint32_t op;    /**< Operator token code (e.g. '+', EQ). */
+            adv_node_t*  left;  /**< Left-hand operand. */
+            adv_node_t*  right; /**< Right-hand operand. */
+        } binary_expr;
+
+        /**
+         * @brief Unary operator expression payload.
+         */
+        struct
+        {
+            adv_uint32_t op;      /**< Operator token code. */
+            adv_node_t*  operand; /**< Target operand. */
+        } unary_expr;
+
+        /**
+         * @brief Call expression payload.
+         */
+        struct
+        {
+            vm_string_h  name;      /**< Function or coroutine name string handle. */
+            adv_node_t*  first_arg; /**< Head of argument expressions list (linked by next_sibling). */
+            adv_uint32_t arg_count; /**< Number of arguments passed. */
+            adv_bool_t   is_async;  /**< True for asynchronous invocation `coroutine[a, b]`, false for standard `func(a, b)`. */
+        } call_expr;
+
+        /**
+         * @brief Member access expression payload.
+         */
+        struct
+        {
+            adv_node_t* target; /**< Target object instance expression. */
+            vm_string_h member; /**< Member field name string handle. */
+        } member_access;
+
+        adv_bool_t    bool_val;    /**< Boolean literal value. */
+        adv_sint32_t  int_val;     /**< Integer literal value. */
+        adv_float32_t float_val;   /**< Floating-point literal value. */
+        vm_string_h   str_val;     /**< String literal handle. */
     };
 };
 

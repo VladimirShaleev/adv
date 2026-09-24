@@ -87,9 +87,12 @@ using namespace std::literals;
 %type <adv_node_t*>  import_stmt
 %type <adv_node_t*>  return_stmt
 %type <adv_node_t*>  function_decl
+%type <adv_node_t*>  param
 %type <NodeList>     param_list
 %type <NodeList>     arg_list
 %type <adv_node_t*>  block
+%type <adv_node_t*>  init_expr
+%type <vm_string_h>  type_hint
 
 /* Operator priorities */
 %right '='
@@ -108,8 +111,8 @@ using namespace std::literals;
 program
     : statement_list {
         auto prog = alloc_node(@$, PROGRAM);
-        prog->children.first_child = $1.first;
-        prog->children.child_count = $1.count;
+        prog->stmts.first_stmt = $1.first;
+        prog->stmts.stmt_count = $1.count;
         scanner.context().setNodeTree(*scanner.filename(), prog);
     }
     ;
@@ -125,64 +128,47 @@ arg_list:
     | arg_list ',' expr { $$ = list_add($1, $3); }
     ;
 
-param_list:
-    /* empty */ { $$ = list_init(nullptr); }
-    | IDENTIFIER { 
+param
+    : IDENTIFIER {
         log(E3006, @1, $1);
-        auto param = alloc_node(@1, PARAM_DECL);
-        param->param_decl.name = intern($1);
-        param->param_decl.type_hint = intern("<error>"s);
-        $$ = list_init(param);
+        auto p = alloc_node(@1, PARAM_DECL);
+        p->param_decl.name = intern($1);
+        p->param_decl.type_hint = intern("<error>"s);
+        $$ = p;
     }
-    | IDENTIFIER ':' IDENTIFIER { 
-        auto param = alloc_node(@1, PARAM_DECL);
-        param->param_decl.name = intern($1);
-        param->param_decl.type_hint = intern($3);
-        $$ = list_init(param); 
-    }
-    | param_list ',' IDENTIFIER {
-        log(E3006, @3, $3);
-        auto param = alloc_node(@3, PARAM_DECL);
-        param->param_decl.name = intern($3);
-        param->param_decl.type_hint = intern("<error>"s);
-        $$ = list_add($1, param);
-    }
-    | param_list ',' IDENTIFIER ':' IDENTIFIER {
-        auto param = alloc_node(@3, PARAM_DECL);
-        param->param_decl.name = intern($3);
-        param->param_decl.type_hint = intern($5);
-        $$ = list_add($1, param);
+    | IDENTIFIER ':' IDENTIFIER {
+        auto p = alloc_node(@1, PARAM_DECL);
+        p->param_decl.name = intern($1);
+        p->param_decl.type_hint = intern($3);
+        $$ = p;
     }
     ;
 
+param_list:
+    /* empty */            { $$ = list_init(nullptr); }
+    | param                { $$ = list_init($1); }
+    | param_list ',' param { $$ = list_add($1, $3); }
+    ;
+
+type_hint:
+    /* empty */ { $$ = vm_string_h{0}; }
+    | ':' IDENTIFIER { $$ = intern($2); }
+    ;
+
+init_expr:
+    /* empty */ { $$ = nullptr; }
+    | '=' expr { $$ = $2; }
+    ;
+
 var_decl
-    : VAR IDENTIFIER {
-        log(E3007, @2, $2);
+    : VAR IDENTIFIER type_hint init_expr {
+        if ($3.handle == 0 && $4 == nullptr) {
+            log(E3007, @2, $2);
+        }
         auto node = alloc_node(@$, VAR_DECL);
         node->var_decl.name = intern($2);
-        node->var_decl.type_hint = {0};
-        node->var_decl.init_expr = nullptr;
-        $$ = node;
-    }
-    | VAR IDENTIFIER ':' IDENTIFIER {
-        auto node = alloc_node(@$, VAR_DECL);
-        node->var_decl.name = intern($2);
-        node->var_decl.type_hint = intern($4);
-        node->var_decl.init_expr = nullptr;
-        $$ = node;
-    }
-    | VAR IDENTIFIER '=' expr {
-        auto node = alloc_node(@$, VAR_DECL);
-        node->var_decl.name = intern($2);
-        node->var_decl.type_hint = {0};
+        node->var_decl.type_hint = $3;
         node->var_decl.init_expr = $4;
-        $$ = node;
-    }
-    | VAR IDENTIFIER ':' IDENTIFIER '=' expr {
-        auto node = alloc_node(@$, VAR_DECL);
-        node->var_decl.name = intern($2);
-        node->var_decl.type_hint = intern($4);
-        node->var_decl.init_expr = $6;
         $$ = node;
     }
     ;
@@ -190,20 +176,20 @@ var_decl
 function_decl
     : FUNCTION IDENTIFIER '(' param_list ')' ':' IDENTIFIER block {
         auto fn = alloc_node(@$, FUNCTION_DECL);
-        fn->fn_decl.name = intern($2);
-        fn->fn_decl.first_param = $4.first;
-        fn->fn_decl.param_count = $4.count;
-        fn->fn_decl.return_type_hint = intern($7);
-        fn->fn_decl.body = $8;
+        fn->func_decl.name = intern($2);
+        fn->func_decl.first_param = $4.first;
+        fn->func_decl.param_count = $4.count;
+        fn->func_decl.return_type_hint = intern($7);
+        fn->func_decl.body = $8;
         $$ = fn;
     }
     | FUNCTION IDENTIFIER '(' param_list ')' block {
         auto fn = alloc_node(@$, FUNCTION_DECL);
-        fn->fn_decl.name = intern($2);
-        fn->fn_decl.first_param = $4.first;
-        fn->fn_decl.param_count = $4.count;
-        fn->fn_decl.return_type_hint = {0};
-        fn->fn_decl.body = $6;
+        fn->func_decl.name = intern($2);
+        fn->func_decl.first_param = $4.first;
+        fn->func_decl.param_count = $4.count;
+        fn->func_decl.return_type_hint = {0};
+        fn->func_decl.body = $6;
         $$ = fn;
     }
     ;
@@ -211,14 +197,14 @@ function_decl
 block
     : '{' statement_list '}' {
         auto blk = alloc_node(@$, BLOCK);
-        blk->children.first_child = $2.first;
-        blk->children.child_count = $2.count;
+        blk->stmts.first_stmt = $2.first;
+        blk->stmts.stmt_count = $2.count;
         $$ = blk;
     }
     | '{' '}' {
         auto blk = alloc_node(@$, BLOCK);
-        blk->children.first_child = nullptr;
-        blk->children.child_count = 0;
+        blk->stmts.first_stmt = nullptr;
+        blk->stmts.stmt_count = 0;
         $$ = blk;
     }
     ;
@@ -227,7 +213,6 @@ statement
     : var_decl ';'                 { $$ = $1; }
     | block                        { $$ = $1; }
     | function_decl                { $$ = $1; }
-    | assign_expr ';'              { $$ = $1; }
     | if_stmt                      { $$ = $1; }
     | while_stmt                   { $$ = $1; }
     | return_stmt ';'              { $$ = $1; }
@@ -235,13 +220,12 @@ statement
     | import_stmt ';'              { $$ = $1; }
     | WAIT '(' expr ')' ';' {
         auto w = alloc_node(@$, WAIT_STMT);
-        w->wait_stmt.expr = $3;
+        w->expr_stmt.expr = $3;
         $$ = w;
     }
-    | call_expr ';' {
+    | expr ';' {
         auto st = alloc_node(@$, EXPR_STMT);
-        st->children.first_child = $1;
-        st->children.child_count = 1;
+        st->expr_stmt.expr = $1;
         $$ = st;
     }
     ;
@@ -257,14 +241,12 @@ import_stmt
 return_stmt
     : RETURN expr {
         auto ret = alloc_node(@$, RETURN_STMT);
-        ret->unary.op = token::RETURN;
-        ret->unary.operand = $2;
+        ret->expr_stmt.expr = $2;
         $$ = ret;
     }
     | RETURN {
         auto ret = alloc_node(@$, RETURN_STMT);
-        ret->unary.op = token::RETURN;
-        ret->unary.operand = nullptr;
+        ret->expr_stmt.expr = nullptr;
         $$ = ret;
     }
     ;
@@ -272,18 +254,18 @@ return_stmt
 call_expr
     : IDENTIFIER '(' arg_list ')' {
         auto call = alloc_node(@$, CALL_EXPR);
-        call->call.name = intern($1);
-        call->call.first_arg = $3.first;
-        call->call.arg_count = $3.count;
-        call->call.is_async = false;
+        call->call_expr.name = intern($1);
+        call->call_expr.first_arg = $3.first;
+        call->call_expr.arg_count = $3.count;
+        call->call_expr.is_async = false;
         $$ = call;
     }
     | IDENTIFIER '[' arg_list ']' {
         auto call = alloc_node(@$, CALL_EXPR);
-        call->call.name = intern($1);
-        call->call.first_arg = $3.first;
-        call->call.arg_count = $3.count;
-        call->call.is_async = true;
+        call->call_expr.name = intern($1);
+        call->call_expr.first_arg = $3.first;
+        call->call_expr.arg_count = $3.count;
+        call->call_expr.is_async = true;
         $$ = call;
     }
     ;
@@ -294,8 +276,8 @@ assign_expr
         target->id_expr.name = intern($1);
 
         auto assign = alloc_node(@$, ASSIGN_EXPR);
-        assign->assign.target = target;
-        assign->assign.val = $3;
+        assign->assign_expr.target = target;
+        assign->assign_expr.val = $3;
         $$ = assign;
     }
     ;
@@ -359,55 +341,58 @@ expr
         node->id_expr.name = intern($1);
         $$ = node;
     }
+    | assign_expr { 
+        $$ = $1; 
+    }
     | call_expr { 
         $$ = $1; 
     }
     | '-' expr %prec UMINUS {
         auto node = alloc_node(@$, UNARY_EXPR);
-        node->unary.op = '-';
-        node->unary.operand = $2;
+        node->unary_expr.op = '-';
+        node->unary_expr.operand = $2;
         $$ = node;
     }
     | expr '+' expr {
         auto node = alloc_node(@$, BINARY_EXPR);
-        node->binop.op = '+';
-        node->binop.left = $1;
-        node->binop.right = $3;
+        node->binary_expr.op = '+';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr '-' expr {
         auto node = alloc_node(@$, BINARY_EXPR);
-        node->binop.op = '-';
-        node->binop.left = $1;
-        node->binop.right = $3;
+        node->binary_expr.op = '-';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr '*' expr {
         auto node = alloc_node(@$, BINARY_EXPR);
-        node->binop.op = '*';
-        node->binop.left = $1;
-        node->binop.right = $3;
+        node->binary_expr.op = '*';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr '/' expr {
         auto node = alloc_node(@$, BINARY_EXPR);
-        node->binop.op = '/';
-        node->binop.left = $1;
-        node->binop.right = $3;
+        node->binary_expr.op = '/';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr EQ expr {
         auto node = alloc_node(@$, BINARY_EXPR);
-        node->binop.op = token::EQ;
-        node->binop.left = $1;
-        node->binop.right = $3;
+        node->binary_expr.op = token::EQ;
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr '<' expr {
         auto node = alloc_node(@$, BINARY_EXPR);
-        node->binop.op = '<';
-        node->binop.left = $1;
-        node->binop.right = $3;
+        node->binary_expr.op = '<';
+        node->binary_expr.left = $1;
+        node->binary_expr.right = $3;
         $$ = node;
     }
     | expr AS IDENTIFIER {

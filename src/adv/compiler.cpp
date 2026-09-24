@@ -30,7 +30,7 @@ public:
                 if (parentImport) {
                     parentImport->import_stmt.root = moduleRoot;
                 }
-                auto curr = moduleRoot->children.first_child;
+                auto curr = moduleRoot->stmts.first_stmt;
                 while (curr) {
                     if (curr->type == ADV_NODE_IMPORT_STMT) {
                         auto import = context.getString(curr->import_stmt.path);

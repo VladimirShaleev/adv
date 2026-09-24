@@ -71,29 +71,29 @@ void Analyzer::resolveSymbols() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {
             node->parent = parent;
-            acceptNode(node->unary.operand, node);
+            acceptNode(node->expr_stmt.expr, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
             node->parent = parent;
-            visitChildrens(node);
+            acceptNode(node->expr_stmt.expr, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
             node->parent = parent;
-            acceptNode(node->assign.val, node);
-            acceptNode(node->assign.target, node);
+            acceptNode(node->assign_expr.val, node);
+            acceptNode(node->assign_expr.target, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_BINARY_EXPR>) {
             node->parent = parent;
-            acceptNode(node->binop.left, node);
-            acceptNode(node->binop.right, node);
+            acceptNode(node->binary_expr.left, node);
+            acceptNode(node->binary_expr.right, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_UNARY_EXPR>) {
             node->parent = parent;
-            acceptNode(node->unary.operand, node);
+            acceptNode(node->unary_expr.operand, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
             node->parent = parent;
-            auto curr    = node->call.first_arg;
+            auto curr    = node->call_expr.first_arg;
             while (curr) {
                 acceptNode(curr, node);
                 curr = curr->next_sibling;
@@ -142,46 +142,46 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_BOOL; }
         void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
             auto returnType = VM_VALUE_TYPE_VOID;
-            if (node->fn_decl.return_type_hint.handle != 0) {
-                returnType = analyzer.findBaseType(node->fn_decl.return_type_hint);
+            if (node->func_decl.return_type_hint.handle != 0) {
+                returnType = analyzer.findBaseType(node->func_decl.return_type_hint);
                 if (returnType == VM_VALUE_TYPE_UNKNOWN) {
                     ctx.log<ADV_STATUS_E3011>(
                         options,
                         node->location,
-                        ctx.getString(node->fn_decl.return_type_hint),
-                        ctx.getString(node->fn_decl.name));
+                        ctx.getString(node->func_decl.return_type_hint),
+                        ctx.getString(node->func_decl.name));
                     return;
                 }
             }
-            symbolTable.setScope(node->fn_decl.scope);
-            auto sym  = symbolTable.lookup(options, ctx, node->location, node->fn_decl.name);
+            symbolTable.setScope(node->func_decl.scope);
+            auto sym  = symbolTable.lookup(options, ctx, node->location, node->func_decl.name);
             sym->type = returnType;
 
             node->resolved_type = returnType;
 
-            auto param = node->fn_decl.first_param;
+            auto param = node->func_decl.first_param;
             while (param) {
                 acceptNode(param);
                 param = param->next_sibling;
             }
-            // acceptNode(node->fn_decl.body);
+            // acceptNode(node->func_decl.body);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {
-            const bool hasExpr = node->unary.operand != nullptr;
+            const bool hasExpr = node->expr_stmt.expr != nullptr;
             auto retType       = VM_VALUE_TYPE_UNKNOWN;
             if (hasExpr) {
-                retType = acceptNode(node->unary.operand);
+                retType = acceptNode(node->expr_stmt.expr);
                 if (retType == VM_VALUE_TYPE_UNKNOWN) {
                     return;
                 }
             }
             auto& fn = node->parent->parent;
             if (fn->resolved_type == VM_VALUE_TYPE_VOID && hasExpr) {
-                ctx.log<ADV_STATUS_E3013>(options, node->location, ctx.getString(fn->fn_decl.name));
+                ctx.log<ADV_STATUS_E3013>(options, node->location, ctx.getString(fn->func_decl.name));
                 return;
             }
             if (fn->resolved_type != VM_VALUE_TYPE_VOID && !hasExpr) {
-                ctx.log<ADV_STATUS_E3014>(options, node->location, ctx.getString(fn->fn_decl.name));
+                ctx.log<ADV_STATUS_E3014>(options, node->location, ctx.getString(fn->func_decl.name));
                 return;
             }
             if (fn->resolved_type != retType) {
@@ -191,19 +191,22 @@ void Analyzer::resolveTypes() {
                         options,
                         node->location,
                         analyzer.getTypeString(retType),
-                        ctx.getString(fn->fn_decl.return_type_hint));
+                        ctx.getString(fn->func_decl.return_type_hint));
                 } else if (result == CastResult::ErrorForbidden) {
                     ctx.log<ADV_STATUS_E3015>(
                         options,
                         node->location,
                         analyzer.getTypeString(retType),
-                        ctx.getString(fn->fn_decl.return_type_hint),
-                        ctx.getString(fn->fn_decl.name));
+                        ctx.getString(fn->func_decl.return_type_hint),
+                        ctx.getString(fn->func_decl.name));
                     return;
                 }
-                node->unary.operand = analyzer.promoteNode(node->unary.operand, fn->resolved_type);
+                node->expr_stmt.expr = analyzer.promoteNode(node->expr_stmt.expr, fn->resolved_type);
                 node->resolved_type = fn->resolved_type;
             }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
+            acceptNode(node->expr_stmt.expr);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             const bool hasTypeHint = node->param_decl.type_hint.handle != 0;
@@ -239,8 +242,8 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_BINARY_EXPR>) {
-            const auto leftType  = acceptNode(node->binop.left);
-            const auto rightType = acceptNode(node->binop.right);
+            const auto leftType  = acceptNode(node->binary_expr.left);
+            const auto rightType = acceptNode(node->binary_expr.right);
             if (leftType == VM_VALUE_TYPE_UNKNOWN || rightType == VM_VALUE_TYPE_UNKNOWN) {
                 return;
             }
@@ -259,35 +262,35 @@ void Analyzer::resolveTypes() {
                     return;
                 }
                 if (leftType == from) {
-                    node->binop.left = analyzer.promoteNode(node->binop.left, to);
+                    node->binary_expr.left = analyzer.promoteNode(node->binary_expr.left, to);
                 } else {
-                    node->binop.right = analyzer.promoteNode(node->binop.right, to);
+                    node->binary_expr.right = analyzer.promoteNode(node->binary_expr.right, to);
                 }
                 toType = to;
             }
-            if (isComparisonOp(node->binop.op)) {
+            if (isComparisonOp(node->binary_expr.op)) {
                 node->resolved_type = VM_VALUE_TYPE_BOOL;
                 return;
             }
             node->resolved_type = toType;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
-            auto* fnSym = symbolTable.lookup(options, ctx, node->location, node->call.name);
+            auto* fnSym = symbolTable.lookup(options, ctx, node->location, node->call_expr.name);
             if (!fnSym) {
-                ctx.log<ADV_STATUS_E3020>(options, node->location, ctx.getString(node->call.name));
+                ctx.log<ADV_STATUS_E3020>(options, node->location, ctx.getString(node->call_expr.name));
                 return;
             }
             if (fnSym->kind != SymbolKind::Function) {
-                ctx.log<ADV_STATUS_E3021>(options, node->location, ctx.getString(node->call.name));
+                ctx.log<ADV_STATUS_E3021>(options, node->location, ctx.getString(node->call_expr.name));
                 return;
             }
             node->resolved_type = fnSym->type;
 
-            adv_node_t** argPtr = &node->call.first_arg;
+            adv_node_t** argPtr = &node->call_expr.first_arg;
             const auto& params  = fnSym->params;
-            if (params.size() != node->call.arg_count) {
+            if (params.size() != node->call_expr.arg_count) {
                 ctx.log<ADV_STATUS_E3022>(
-                    options, node->location, ctx.getString(node->call.name), params.size(), node->call.arg_count);
+                    options, node->location, ctx.getString(node->call_expr.name), params.size(), node->call_expr.arg_count);
                 return;
             }
             for (const auto param : params) {
@@ -303,7 +306,7 @@ void Analyzer::resolveTypes() {
                             analyzer.getTypeString(argType),
                             analyzer.getTypeString(paramType),
                             ctx.getString(param->name),
-                            ctx.getString(node->call.name));
+                            ctx.getString(node->call_expr.name));
                     } else if (result == CastResult::ErrorForbidden) {
                         ctx.log<ADV_STATUS_E3023>(
                             options,
@@ -311,7 +314,7 @@ void Analyzer::resolveTypes() {
                             ctx.getString(param->name),
                             analyzer.getTypeString(argType),
                             analyzer.getTypeString(paramType),
-                            ctx.getString(node->call.name));
+                            ctx.getString(node->call_expr.name));
                         continue;
                     }
                     *argPtr                 = analyzer.promoteNode(arg, paramType);
@@ -322,14 +325,14 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_UNARY_EXPR>) {
-            node->resolved_type = acceptNode(node->unary.operand);
+            node->resolved_type = acceptNode(node->unary_expr.operand);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
-            const auto targetType = acceptNode(node->assign.target);
+            const auto targetType = acceptNode(node->assign_expr.target);
             if (targetType == VM_VALUE_TYPE_UNKNOWN) {
                 return;
             }
-            const auto valueType = acceptNode(node->assign.val);
+            const auto valueType = acceptNode(node->assign_expr.val);
             if (valueType == VM_VALUE_TYPE_UNKNOWN) {
                 return;
             }
@@ -343,7 +346,7 @@ void Analyzer::resolveTypes() {
                         options, node->location, analyzer.getTypeString(valueType), analyzer.getTypeString(targetType));
                     return;
                 }
-                node->assign.val = analyzer.promoteNode(node->assign.val, targetType);
+                node->assign_expr.val = analyzer.promoteNode(node->assign_expr.val, targetType);
             }
             node->resolved_type = targetType;
         }
@@ -447,7 +450,7 @@ void Analyzer::resolveTypes() {
 void Analyzer::visitChildrens(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes) {
     auto hasFunctions = false;
 
-    auto curr = node->children.first_child;
+    auto curr = node->stmts.first_stmt;
     while (curr) {
         accept(curr, node);
         if (curr->type == ADV_NODE_FUNCTION_DECL) {
@@ -458,18 +461,18 @@ void Analyzer::visitChildrens(adv_node_t* node, std::function<void(adv_node_t*, 
     if (hasFunctions) {
         auto& symbolTable = _ctx.symbolTable();
 
-        curr = node->children.first_child;
+        curr = node->stmts.first_stmt;
         while (curr) {
             if (curr->type == ADV_NODE_FUNCTION_DECL) {
                 if (useScopes) {
                     symbolTable.beginScope();
-                    auto param = curr->fn_decl.first_param;
+                    auto param = curr->func_decl.first_param;
                     while (param) {
                         accept(param, curr);
                         param = param->next_sibling;
                     }
                 }
-                accept(curr->fn_decl.body, curr);
+                accept(curr->func_decl.body, curr);
                 if (useScopes) {
                     symbolTable.endScope();
                 }
