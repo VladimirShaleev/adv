@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 include(cmake/info.cmake)
 
@@ -37,11 +37,11 @@ endif()
 file(GLOB UTILS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp")
-add_library(utils STATIC ${UTILS_SOURCES})
+add_library(utils OBJECT ${UTILS_SOURCES})
 set_default_properties(TARGET utils)
-target_include_directories(utils PRIVATE ${PROJECT_SOURCE_DIR}/src/utils)
-target_include_directories(utils PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(utils PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils")
+target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 file(GLOB VM_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.hpp"
@@ -51,7 +51,7 @@ add_library(${PROJECT_NAME}::vm ALIAS vm)
 set_default_properties(TARGET vm STATIC VM_STATIC_BUILD)
 target_link_libraries(vm PRIVATE utils)
 target_precompile_headers(vm PRIVATE "src/vm/vm.hpp")
-target_include_directories(vm PRIVATE ${PROJECT_SOURCE_DIR}/src/vm)
+target_include_directories(vm PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/vm")
 target_include_directories(vm PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
@@ -70,14 +70,14 @@ list(FILTER ADV_SOURCES EXCLUDE REGEX "main.cpp")
 add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS})
 add_library(${PROJECT_NAME}::adv ALIAS adv)
 set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
-target_link_libraries(adv PRIVATE vm)
 target_link_libraries(adv PRIVATE utils)
+target_link_libraries(adv PRIVATE vm)
 target_link_libraries(adv PRIVATE fmt::fmt)
 target_precompile_headers(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/compiler.hpp")
 target_compile_definitions(adv PRIVATE $<$<CONFIG:Debug>:YYDEBUG>)
 target_include_directories(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/")
 target_include_directories(adv PRIVATE "$<$<BOOL:${FLEX_INCLUDE_DIR}>:${FLEX_INCLUDE_DIR}>")
-target_include_directories(adv PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(adv PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 target_include_directories(adv PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
