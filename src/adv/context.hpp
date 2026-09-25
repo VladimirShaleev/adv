@@ -10,7 +10,7 @@ struct _adv_compilation_result : public utils::Object {};
 
 namespace adv {
 
-class ContextBase : public _adv_compilation_result {
+class Context : public _adv_compilation_result {
 public:
     [[nodiscard]] bool hasNotes() const noexcept { return _hasNotes; }
     [[nodiscard]] bool hasWarnings() const noexcept { return _hasWarnings; }
@@ -86,7 +86,7 @@ private:
     SymbolTable _symbolTable{};
 };
 
-class Context final : public ContextBase {
+class ContextImpl final : public Context {
 public:
     void addMessage(
         adv_status_t status,
@@ -102,7 +102,7 @@ private:
     std::vector<adv_message_t> _messages{};
 };
 
-class ContextStub final : public ContextBase {
+class ContextStub final : public Context {
 public:
     void addMessage(
         adv_status_t status,

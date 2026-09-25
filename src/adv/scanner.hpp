@@ -14,7 +14,7 @@ namespace adv {
 class Scanner : public yyFlexLexer {
 public:
     Scanner(
-        ContextBase& ctx,
+        Context& ctx,
         const Options& options,
         std::span<const adv_source_t> sources,
         const adv_location_t& loc,
@@ -40,7 +40,7 @@ public:
 
     int yylex(Parser::semantic_type* yylval, Parser::location_type* yylloc);
 
-    [[nodiscard]] ContextBase& context() noexcept { return _ctx; }
+    [[nodiscard]] Context& context() noexcept { return _ctx; }
 
     [[nodiscard]] const std::string* filename() const noexcept { return _filename.empty() ? nullptr : &_filename; }
 
@@ -220,7 +220,7 @@ private:
         return ss.str();
     }
 
-    ContextBase& _ctx;
+    Context& _ctx;
     const Options& _options;
     std::string _filename{};
     const adv_source_t* _source{};

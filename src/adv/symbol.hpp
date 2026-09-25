@@ -18,19 +18,18 @@ struct Symbol {
     vm_value_type_t type;
     std::vector<Symbol*> params;
     adv_location_t location;
-    adv_uint32_t frameSlotCount;
     adv_uint32_t slotIndex;
+    adv_uint32_t frameSlotCount;
     bool isGlobal;
 };
 
 struct Scope {
     Scope* parent{};
     std::unordered_map<vm_string_h, Symbol*> symbols{};
-    adv_uint32_t currentOffset{};
 };
 
 class Options;
-class ContextBase;
+class Context;
 
 class SymbolTable {
 public:
@@ -39,9 +38,9 @@ public:
     void beginScope();
     void endScope();
     void setScope(void* scope);
-    bool addSymbol(const Options& options, ContextBase& ctx, adv_node_t* node);
+    Symbol* addSymbol(const Options& options, Context& ctx, adv_node_t* node);
     [[nodiscard]] Symbol*
-    lookup(const Options& options, ContextBase& ctx, const adv_location_t& loc, vm_string_h name) const noexcept;
+    lookup(const Options& options, Context& ctx, const adv_location_t& loc, vm_string_h name) const noexcept;
     [[nodiscard]] void* getScope() noexcept;
 
 private:

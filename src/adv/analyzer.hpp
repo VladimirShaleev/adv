@@ -8,7 +8,7 @@ constexpr vm_value_type_t VM_VALUE_TYPE_VOID = vm_value_type_t(int(VM_VALUE_TYPE
 namespace adv {
 
 class Options;
-class ContextBase;
+class Context;
 
 enum class CastResult {
     OK,
@@ -18,7 +18,7 @@ enum class CastResult {
 
 class Analyzer {
 public:
-    Analyzer(const Options& options, ContextBase& ctx) noexcept;
+    Analyzer(const Options& options, Context& ctx) noexcept;
 
     [[nodiscard]] adv_result_t build();
 
@@ -26,7 +26,19 @@ private:
     void resolveSymbols();
     void resolveTypes();
 
-    void visitStmtsWithRules(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes = false);
+    void
+    visitStmtsWithRules(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes = false);
+
+    struct FunctionFrameState {
+        adv_uint32_t currentSlot;
+        adv_uint32_t maxSlots;
+    };
+
+    void pushFrame();
+    void popFrame() noexcept;
+    void saveFrameSlot(class Symbol* sym) noexcept;
+    [[nodiscard]] bool hasFrame() const noexcept;
+    [[nodiscard]] FunctionFrameState& currFrame() noexcept;
 
     [[nodiscard]] adv_node_t* promoteNode(adv_node_t* node, vm_value_type_t targetType);
     [[nodiscard]] static bool isEqualityOp(adv_uint32_t op) noexcept;
@@ -40,7 +52,8 @@ private:
     [[nodiscard]] vm_value_type_t findBaseType(vm_string_h type) const noexcept;
 
     const Options& _options;
-    ContextBase& _ctx;
+    Context& _ctx;
+    std::stack<FunctionFrameState> _frameStack{};
 };
 
 } // namespace adv

@@ -10,11 +10,11 @@ void SymbolTable::beginScope() { _scope = allocScope(_scope); }
 void SymbolTable::endScope() { _scope = _scope->parent; }
 void SymbolTable::setScope(void* scope) { _scope = (Scope*)scope; }
 
-bool SymbolTable::addSymbol(const Options& options, ContextBase& ctx, adv_node_t* node) {
+Symbol* SymbolTable::addSymbol(const Options& options, Context& ctx, adv_node_t* node) {
     auto sym = allocSym(node);
     if (auto existsSym = _scope->symbols.find(sym->name); existsSym != _scope->symbols.end()) {
         ctx.log<ADV_STATUS_E3008>(options, sym->location, sym->name, existsSym->second->location);
-        return false;
+        return sym;
     }
     auto currScope = _scope;
     while (currScope) {
@@ -29,11 +29,11 @@ bool SymbolTable::addSymbol(const Options& options, ContextBase& ctx, adv_node_t
         fnSym->params.push_back(sym);
     }
     _scope->symbols[sym->name] = sym;
-    return true;
+    return sym;
 }
 
-Symbol* SymbolTable::lookup(
-    const Options& options, ContextBase& ctx, const adv_location_t& loc, vm_string_h name) const noexcept {
+Symbol*
+SymbolTable::lookup(const Options& options, Context& ctx, const adv_location_t& loc, vm_string_h name) const noexcept {
     auto scope = _scope;
     while (scope) {
         if (auto sym = scope->symbols.find(name); sym != scope->symbols.end()) {

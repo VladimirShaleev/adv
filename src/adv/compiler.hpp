@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cassert>
 #include <charconv>
 #include <filesystem>
@@ -33,13 +34,24 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
+#include <magic_enum/magic_enum.hpp>
 #include <utils/utils.hpp>
+
+UTILS_FORCE_INLINE adv_sint32_t swap_bytes(adv_sint32_t val) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_bswap32(val);
+#else
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0x00FF00FF);
+    val = (val << 16) | (val >> 16);
+    return val;
+#endif
+}
 
 namespace utils {
 template <>
 struct Result<adv_result_t> {
-    static constexpr adv_result_t Success     = ADV_RESULT_SUCCESS;
-    static constexpr adv_result_t Error       = ADV_RESULT_ERROR_UNKNOWN;
+    static constexpr adv_result_t Success = ADV_RESULT_SUCCESS;
+    static constexpr adv_result_t Error = ADV_RESULT_ERROR_UNKNOWN;
     static constexpr adv_result_t OutOfMemory = ADV_RESULT_ERROR_OUT_OF_MEMORY;
 };
 } // namespace utils
