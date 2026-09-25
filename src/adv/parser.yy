@@ -224,9 +224,9 @@ statement
     | return_stmt ';'              { $$ = $1; }
     | YIELD ';'                    { $$ = alloc_node(@$, YIELD_STMT); }
     | import_stmt ';'              { $$ = $1; }
-    | WAIT '(' expr ')' ';' {
+    | WAIT expr ';' {
         auto w = alloc_node(@$, WAIT_STMT);
-        w->expr_stmt.expr = $3;
+        w->expr_stmt.expr = $2;
         $$ = w;
     }
     | expr ';' {

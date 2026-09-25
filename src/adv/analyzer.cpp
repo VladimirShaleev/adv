@@ -513,7 +513,20 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
-        void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {
+            if (!node->expr_stmt.expr) {
+                ctx.log<ADV_STATUS_E3041>(options, node->location);
+                return;
+            }
+            const auto exprType = acceptNode(node->expr_stmt.expr);
+            if (exprType == VM_VALUE_TYPE_UNKNOWN) {
+                return;
+            }
+            if (exprType != VM_VALUE_TYPE_INT && exprType != VM_VALUE_TYPE_FLOAT) {
+                ctx.log<ADV_STATUS_E3040>(options, node->expr_stmt.expr->location, analyzer.getTypeString(exprType));
+                return;
+            }
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) { assert(!"unreachable code"); }
         void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) { assert(!"not implemented"); }
         void visitChildrens(adv_node_t* node) {
