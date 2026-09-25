@@ -83,7 +83,8 @@ typedef enum
     ADV_STATUS_E3033       = 3033, /**< Ordering not supported for 'bool'. */
     ADV_STATUS_E3034       = 3034, /**< Condition must be a boolean expression. */
     ADV_STATUS_E3035       = 3035, /**< Return statement is not allowed outside of a function body. */
-    ADV_STATUS_COUNT_ENUMS = 34, /**< Count of constants in the enumeration. */
+    ADV_STATUS_E3036       = 3036, /**< Condition in 'while' statement must evaluate to 'bool'. */
+    ADV_STATUS_COUNT_ENUMS = 43, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
 

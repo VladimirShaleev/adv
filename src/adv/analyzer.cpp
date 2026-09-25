@@ -504,7 +504,15 @@ void Analyzer::resolveTypes() {
                 acceptNode(node->if_stmt.else_branch);
             }
         }
-        void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {
+            const auto condType = acceptNode(node->while_stmt.cond);
+            if (condType != VM_VALUE_TYPE_UNKNOWN && condType != VM_VALUE_TYPE_BOOL) {
+                ctx.log<ADV_STATUS_E3036>(options, node->while_stmt.cond->location, analyzer.getTypeString(condType));
+            }
+            if (node->while_stmt.body) {
+                acceptNode(node->while_stmt.body);
+            }
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
         void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
         void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) { assert(!"unreachable code"); }

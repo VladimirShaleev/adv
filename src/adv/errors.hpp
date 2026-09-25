@@ -102,6 +102,9 @@ inline std::string err(Args&&... args) {
         str = fmt::format("Condition must be a boolean expression, but the actual type is '{}'", args...);
     } else if constexpr (Status == ADV_STATUS_E3035) {
         str = fmt::format("Return statement is not allowed outside of a function body");
+    } else if constexpr (Status == ADV_STATUS_E3036) {
+        str =
+            fmt::format("Condition in 'while' statement must evaluate to 'bool', but the actual type is '{}'", args...);
     } else {
         assert(!"Unknown status code");
     }
