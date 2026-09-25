@@ -98,6 +98,10 @@ inline std::string err(Args&&... args) {
         str = fmt::format("Bitwise ops require 'int', but the types '{}' and '{}' are actually used", args...);
     } else if constexpr (Status == ADV_STATUS_E3033) {
         str = fmt::format("Ordering not supported for 'bool'");
+    } else if constexpr (Status == ADV_STATUS_E3034) {
+        str = fmt::format("Condition must be a boolean expression, but the actual type is '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3035) {
+        str = fmt::format("Return statement is not allowed outside of a function body");
     } else {
         assert(!"Unknown status code");
     }

@@ -199,7 +199,14 @@ void Analyzer::resolveTypes() {
                     return;
                 }
             }
-            auto& fn = node->parent->parent;
+            adv_node_t* fn = node->parent;
+            while (fn && fn->type != ADV_NODE_FUNCTION_DECL) {
+                fn = fn->parent;
+            }
+            if (!fn) {
+                ctx.log<ADV_STATUS_E3035>(options, node->location);
+                return;
+            }
             if (fn->resolved_type == VM_VALUE_TYPE_VOID && hasExpr) {
                 ctx.log<ADV_STATUS_E3013>(options, node->location, ctx.getString(fn->func_decl.name));
                 return;
@@ -506,7 +513,23 @@ void Analyzer::resolveTypes() {
             node->resolved_type = targetType;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) { visitChildrens(node); }
-        void visit(...) noexcept { int i = 5; }
+        void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
+            const auto condType = acceptNode(node->if_stmt.cond);
+            if (condType != VM_VALUE_TYPE_UNKNOWN && condType != VM_VALUE_TYPE_BOOL) {
+                ctx.log<ADV_STATUS_E3034>(options, node->if_stmt.cond->location, analyzer.getTypeString(condType));
+            }
+            if (node->if_stmt.then_branch) {
+                acceptNode(node->if_stmt.then_branch);
+            }
+            if (node->if_stmt.else_branch) {
+                acceptNode(node->if_stmt.else_branch);
+            }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) { assert(!"unreachable code"); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) { assert(!"not implemented"); }
         void visitChildrens(adv_node_t* node) {
             analyzer.visitStmtsWithRules(node, [this](auto node, auto /* parent */) { acceptNode(node); });
         }
