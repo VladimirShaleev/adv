@@ -21,7 +21,9 @@ public:
             const auto [parentModule, parentImport, currFile, depth] = stack.top();
             stack.pop();
 
-            const auto [status, module] = generateNodeTree(parentModule, currFile, sources, depth, options, context);
+            const auto parentLoc = parentImport ? parentImport->location : adv_location_t{};
+            const auto [status, module] =
+                generateNodeTree(parentModule, parentLoc, currFile, sources, depth, options, context);
             if (status != ADV_RESULT_SUCCESS && result == ADV_RESULT_SUCCESS) {
                 result = status;
             }
@@ -35,7 +37,7 @@ public:
                     if (curr->type == ADV_NODE_IMPORT_STMT) {
                         auto import = context.getString(curr->import_stmt.path);
                         if (import.empty()) {
-                            // Log error
+                            context.log<ADV_STATUS_E3039>(options, curr->location);
                         } else {
                             stack.emplace(module, curr, import, depth + 1);
                         }
@@ -55,22 +57,17 @@ public:
 private:
     std::pair<adv_result_t, std::string> generateNodeTree(
         const std::string& parentModule,
+        const adv_location_t& parentLoc,
         std::filesystem::path file,
         std::span<const adv_source_t> sources,
         adv_uint32_t depth,
         const Options& options,
         ContextBase& context) {
 
-        Scanner scanner{context, options, sources, file, context.getBasePath(parentModule), depth};
+        Scanner scanner{context, options, sources, parentLoc, file, context.getBasePath(parentModule), depth};
         Parser parser{scanner};
 
-        // parser.set_debug_level(1);
-
         if (scanner.filename() == nullptr) {
-            // const auto warnAsErrors = options ? options->getWarningsAsErrors() : false;
-            // const auto sourceHandle = result->intern("<input>");
-            // result->addMessage(
-            //     IDL_STATUS_E3046, warnAsErrors, sourceHandle, 0, 0, []() { return err<IDL_STATUS_E3046>(); });
             return {ADV_RESULT_ERROR_SOURCE_NOT_FOUND, ""};
         }
 
@@ -80,10 +77,7 @@ private:
 
         if (context.hasErrors() || code != 0) {
             if (!context.hasErrors()) {
-                // const auto warnAsErrors = options ? options->getWarningsAsErrors() : false;
-                // const auto sourceHandle = result->intern("<input>");
-                // result->addMessage(
-                //     IDL_STATUS_E3046, warnAsErrors, sourceHandle, 0, 0, []() { return err<IDL_STATUS_E3046>(); });
+                context.log<ADV_STATUS_E3002>(options, {});
             }
             return {ADV_RESULT_COMPILATION_FAILED, module};
         }

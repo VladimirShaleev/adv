@@ -105,6 +105,12 @@ inline std::string err(Args&&... args) {
     } else if constexpr (Status == ADV_STATUS_E3036) {
         str =
             fmt::format("Condition in 'while' statement must evaluate to 'bool', but the actual type is '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3037) {
+        str = fmt::format("Cannot resolve import file '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3038) {
+        str = fmt::format("Could not read imported file '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3039) {
+        str = fmt::format("Import path cannot be empty");
     } else {
         assert(!"Unknown status code");
     }

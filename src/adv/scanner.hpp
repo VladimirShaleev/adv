@@ -17,11 +17,12 @@ public:
         ContextBase& ctx,
         const Options& options,
         std::span<const adv_source_t> sources,
+        const adv_location_t& loc,
         const std::filesystem::path& file,
         const std::filesystem::path& basePath,
         adv_uint32_t depth)
         : yyFlexLexer(), _ctx(ctx), _options(options) {
-        import(file, sources, basePath, depth);
+        import(loc, file, sources, basePath, depth);
     }
 
     ~Scanner() {
@@ -62,26 +63,27 @@ private:
     };
 
     void import(
+        const adv_location_t& loc,
         const std::filesystem::path& file,
         std::span<const adv_source_t> sources,
         const std::filesystem::path& basePath,
         adv_uint32_t depth) {
         const auto [path, source, needRelease] = findFile(file, sources, basePath, depth, _options);
         if (path.empty()) {
-            // _ctx.log<IDL_STATUS_E3021>(astLoc, file.filename().string());
+            _ctx.log<ADV_STATUS_E3037>(_options, loc, file.filename().string());
             return;
         }
-        _source      = source;
+        _source = source;
         _needRelease = needRelease;
 
         if (source) {
             _memBuffer = std::make_unique<MemoryBuffer>(source->data, (size_t)source->size);
-            _stream    = std::make_unique<std::istream>(_memBuffer.get());
+            _stream = std::make_unique<std::istream>(_memBuffer.get());
         } else {
             _stream = std::make_unique<std::ifstream>(path);
             if (_stream->fail()) {
                 _stream.reset();
-                // _ctx.log<IDL_STATUS_E3022>(astLoc, file.string());
+                _ctx.log<ADV_STATUS_E3038>(_options, loc, file.string());
                 return;
             }
         }
@@ -111,7 +113,7 @@ private:
         }
 
         auto filename = normalize(file, basePath);
-        auto name     = filename.string();
+        auto name = filename.string();
 
         adv_data_t data{};
         if (auto importer = options.getImporter(&data)) {
@@ -157,7 +159,7 @@ private:
     }
 
     [[nodiscard]] adv_float32_t parseFloat(const adv_location_t& location, std::string_view str) noexcept {
-        adv_float32_t val  = 0.0f;
+        adv_float32_t val = 0.0f;
         const auto [_, ec] = std::from_chars(str.data(), str.data() + str.length(), val);
         if (ec == std::errc()) {
             return val;
@@ -172,7 +174,7 @@ private:
     }
 
     [[nodiscard]] adv_sint32_t parseInt(const adv_location_t& location, std::string_view str) noexcept {
-        adv_sint32_t val   = 0;
+        adv_sint32_t val = 0;
         const auto [_, ec] = std::from_chars(str.data(), str.data() + str.length(), val);
         if (ec == std::errc()) {
             return val;
@@ -190,7 +192,7 @@ private:
         auto cStr = str.data();
         std::ostringstream ss;
         for (size_t i = 0; i < str.length(); ++i) {
-            char c  = *cStr++;
+            char c = *cStr++;
             char nc = *cStr;
             if (c == '\\') {
                 if (i + 1 < str.length()) {
@@ -226,9 +228,6 @@ private:
     yy_buffer_state* _buffer{};
     std::unique_ptr<MemoryBuffer> _memBuffer{};
     std::unique_ptr<std::istream> _stream{};
-
-    // std::span<const adv_source_t> _sources;
-    // std::filesystem::path _basePath{};
 };
 
 } // namespace adv

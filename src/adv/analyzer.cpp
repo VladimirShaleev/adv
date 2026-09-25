@@ -256,7 +256,6 @@ void Analyzer::resolveTypes() {
                     ctx.log<ADV_STATUS_E3018>(options, node->location, node->id_expr.name);
                     return;
                 }
-                // node->id_expr.type_hint = sym->
                 node->resolved_type = sym->type;
             }
         }
@@ -522,7 +521,7 @@ void Analyzer::resolveTypes() {
         }
         vm_value_type_t acceptNode(adv_node_t* node) {
             accept<TypeVisitor>(node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable));
-            return node->resolved_type;
+            return node ? node->resolved_type : VM_VALUE_TYPE_UNKNOWN;
         }
         const Options& options;
         ContextBase& ctx;

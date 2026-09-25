@@ -68,7 +68,6 @@ Symbol* SymbolTable::allocSym(adv_node_t* node) {
 
     symbol->name = node->var_decl.name;
     symbol->kind = kind;
-    // symbol-> valType;
     symbol->location = node->location;
     symbol->frameSlotCount = 0;
     symbol->slotIndex = 0;
