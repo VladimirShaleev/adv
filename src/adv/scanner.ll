@@ -42,6 +42,7 @@ ID    [a-zA-Z_][a-zA-Z0-9_]*
 "as"             { return token::AS; }
 "or"             { return token::OR; }
 "and"            { return token::AND; }
+"not"            { return token::NOT; }
 "if"             { return token::IF; }
 "else"           { return token::ELSE; }
 "while"          { return token::WHILE; }
@@ -77,7 +78,6 @@ ID    [a-zA-Z_][a-zA-Z0-9_]*
 "|"              { return '|'; }
 "&"              { return '&'; }
 "^"              { return '^'; }
-"!"              { return '!'; }
 "("              { return '('; }
 ")"              { return ')'; }
 "["              { return '['; }

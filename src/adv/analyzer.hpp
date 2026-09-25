@@ -29,7 +29,10 @@ private:
     void visitStmtsWithRules(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes = false);
 
     [[nodiscard]] adv_node_t* promoteNode(adv_node_t* node, vm_value_type_t targetType);
+    [[nodiscard]] static bool isEqualityOp(adv_uint32_t op) noexcept;
+    [[nodiscard]] static bool isOrderingOp(adv_uint32_t op) noexcept;
     [[nodiscard]] static bool isComparisonOp(adv_uint32_t op) noexcept;
+    [[nodiscard]] static bool isArithmeticOp(adv_uint32_t op) noexcept;
     [[nodiscard]] static bool isBitwiseOp(adv_uint32_t op) noexcept;
     [[nodiscard]] static bool isLogicOp(adv_uint32_t op) noexcept;
     [[nodiscard]] static CastResult getCastResult(vm_value_type_t from, vm_value_type_t to, bool isExplicitAs) noexcept;

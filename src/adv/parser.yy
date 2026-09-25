@@ -66,7 +66,7 @@ using namespace std::literals;
 %token IMPORT FUNCTION VAR AS IF ELSE WHILE YIELD WAIT RETURN
 
 /* Operators */
-%token EQ NE LE GE AND OR ASHL ASHR LSHL LSHR UNARY
+%token EQ NE LE GE AND OR NOT ASHL ASHR LSHL LSHR UNARY
 
 /* Literals and identifiers */
 %token <int32_t>     INT_LITERAL
@@ -107,7 +107,7 @@ using namespace std::literals;
 %left '+' '-'
 %left '*' '/' '%'
 %left AS
-%right UNARY
+%right UNARY NOT
 %left '.' '[' ']' '(' ')'
 
 %start program
@@ -365,9 +365,9 @@ expr
         node->unary_expr.operand = $2;
         $$ = node;
     }
-    | '!' expr %prec UNARY {
+    | NOT expr {
         auto node = alloc_node(@$, UNARY_EXPR);
-        node->unary_expr.op = '!';
+        node->unary_expr.op = token::NOT;
         node->unary_expr.operand = $2;
         $$ = node;
     }

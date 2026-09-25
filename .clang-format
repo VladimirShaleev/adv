@@ -10,7 +10,4 @@ BinPackParameters: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 AllowShortEnumsOnASingleLine: false
-AlignConsecutiveAssignments:
-  Enabled: true
-  EnumAssignments: true
 ...

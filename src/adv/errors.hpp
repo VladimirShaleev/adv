@@ -85,6 +85,19 @@ inline std::string err(Args&&... args) {
         str = fmt::format("Unknown type '{}' in declaration of variable '{}'", args...);
     } else if constexpr (Status == ADV_STATUS_E3027) {
         str = fmt::format("Cannot initialize variable '{}' of type '{}' with expression of type '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3028) {
+        str = fmt::format("Logical NOT requires 'bool' operand, but the actual type is '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3029) {
+        str = fmt::format("Bitwise NOT ('~') requires 'int' operand, but the actual type is '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3030) {
+        str = fmt::format(
+            "Unary minus requires numeric operand ('int' or 'float'), but the actual type is '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3031) {
+        str = fmt::format("Logical operations require 'bool', but the types '{}' and '{}' are actually used", args...);
+    } else if constexpr (Status == ADV_STATUS_E3032) {
+        str = fmt::format("Bitwise ops require 'int', but the types '{}' and '{}' are actually used", args...);
+    } else if constexpr (Status == ADV_STATUS_E3033) {
+        str = fmt::format("Ordering not supported for 'bool'");
     } else {
         assert(!"Unknown status code");
     }

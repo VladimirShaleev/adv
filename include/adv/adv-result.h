@@ -75,6 +75,12 @@ typedef enum
     ADV_STATUS_E3025       = 3025, /**< Variable declaration must have either an explicit type annotation or an initializer. */
     ADV_STATUS_E3026       = 3026, /**< Unknown type in declaration of variable. */
     ADV_STATUS_E3027       = 3027, /**< Cannot initialize variable with expression. */
+    ADV_STATUS_E3028       = 3028, /**< Logical NOT requires 'bool' operand. */
+    ADV_STATUS_E3029       = 3029, /**< Bitwise NOT ('~') requires 'int' operand. */
+    ADV_STATUS_E3030       = 3030, /**< Unary minus requires numeric operand ('int' or 'float'). */
+    ADV_STATUS_E3031       = 3031, /**< Logical operations require 'bool'. */
+    ADV_STATUS_E3032       = 3032, /**< Bitwise ops require 'int'. */
+    ADV_STATUS_E3033       = 3033, /**< Ordering not supported for 'bool'. */
     ADV_STATUS_COUNT_ENUMS = 34, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
