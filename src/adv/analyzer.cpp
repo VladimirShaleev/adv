@@ -172,10 +172,7 @@ void Analyzer::resolveTypes() {
                 returnType = analyzer.findBaseType(node->func_decl.return_type_hint);
                 if (returnType == VM_VALUE_TYPE_UNKNOWN) {
                     ctx.log<ADV_STATUS_E3011>(
-                        options,
-                        node->location,
-                        ctx.getString(node->func_decl.return_type_hint),
-                        ctx.getString(node->func_decl.name));
+                        options, node->location, node->func_decl.return_type_hint, node->func_decl.name);
                     return;
                 }
             }
@@ -208,28 +205,25 @@ void Analyzer::resolveTypes() {
                 return;
             }
             if (fn->resolved_type == VM_VALUE_TYPE_VOID && hasExpr) {
-                ctx.log<ADV_STATUS_E3013>(options, node->location, ctx.getString(fn->func_decl.name));
+                ctx.log<ADV_STATUS_E3013>(options, node->location, fn->func_decl.name);
                 return;
             }
             if (fn->resolved_type != VM_VALUE_TYPE_VOID && !hasExpr) {
-                ctx.log<ADV_STATUS_E3014>(options, node->location, ctx.getString(fn->func_decl.name));
+                ctx.log<ADV_STATUS_E3014>(options, node->location, fn->func_decl.name);
                 return;
             }
             if (fn->resolved_type != retType) {
                 auto result = analyzer.getCastResult(retType, fn->resolved_type, false);
                 if (result == CastResult::WarningTruncate) {
                     ctx.log<ADV_STATUS_W2002>(
-                        options,
-                        node->location,
-                        analyzer.getTypeString(retType),
-                        ctx.getString(fn->func_decl.return_type_hint));
+                        options, node->location, analyzer.getTypeString(retType), fn->func_decl.return_type_hint);
                 } else if (result == CastResult::ErrorForbidden) {
                     ctx.log<ADV_STATUS_E3015>(
                         options,
                         node->location,
                         analyzer.getTypeString(retType),
-                        ctx.getString(fn->func_decl.return_type_hint),
-                        ctx.getString(fn->func_decl.name));
+                        fn->func_decl.return_type_hint,
+                        fn->func_decl.name);
                     return;
                 }
                 node->expr_stmt.expr = analyzer.promoteNode(node->expr_stmt.expr, fn->resolved_type);
@@ -240,16 +234,12 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             const bool hasTypeHint = node->param_decl.type_hint.handle != 0;
             if (!hasTypeHint) {
-                ctx.log<ADV_STATUS_E3016>(options, node->location, ctx.getString(node->param_decl.name));
+                ctx.log<ADV_STATUS_E3016>(options, node->location, node->param_decl.name);
                 return;
             }
             const auto paramType = analyzer.findBaseType(node->param_decl.type_hint);
             if (paramType == VM_VALUE_TYPE_UNKNOWN) {
-                ctx.log<ADV_STATUS_E3017>(
-                    options,
-                    node->location,
-                    ctx.getString(node->param_decl.type_hint),
-                    ctx.getString(node->param_decl.name));
+                ctx.log<ADV_STATUS_E3017>(options, node->location, node->param_decl.type_hint, node->param_decl.name);
                 return;
             }
             symbolTable.setScope(node->param_decl.scope);
@@ -263,7 +253,7 @@ void Analyzer::resolveTypes() {
             auto* sym = symbolTable.lookup(options, ctx, node->location, node->id_expr.name);
             if (sym) {
                 if (sym->type == VM_VALUE_TYPE_UNKNOWN) {
-                    ctx.log<ADV_STATUS_E3018>(options, node->location, ctx.getString(node->id_expr.name));
+                    ctx.log<ADV_STATUS_E3018>(options, node->location, node->id_expr.name);
                     return;
                 }
                 // node->id_expr.type_hint = sym->
@@ -336,11 +326,11 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
             auto* fnSym = symbolTable.lookup(options, ctx, node->location, node->call_expr.name);
             if (!fnSym) {
-                ctx.log<ADV_STATUS_E3020>(options, node->location, ctx.getString(node->call_expr.name));
+                ctx.log<ADV_STATUS_E3020>(options, node->location, node->call_expr.name);
                 return;
             }
             if (fnSym->kind != SymbolKind::Function) {
-                ctx.log<ADV_STATUS_E3021>(options, node->location, ctx.getString(node->call_expr.name));
+                ctx.log<ADV_STATUS_E3021>(options, node->location, node->call_expr.name);
                 return;
             }
             node->resolved_type = fnSym->type;
@@ -349,11 +339,7 @@ void Analyzer::resolveTypes() {
             const auto& params = fnSym->params;
             if (params.size() != node->call_expr.arg_count) {
                 ctx.log<ADV_STATUS_E3022>(
-                    options,
-                    node->location,
-                    ctx.getString(node->call_expr.name),
-                    params.size(),
-                    node->call_expr.arg_count);
+                    options, node->location, node->call_expr.name, params.size(), node->call_expr.arg_count);
                 return;
             }
             for (const auto param : params) {
@@ -368,16 +354,16 @@ void Analyzer::resolveTypes() {
                             arg->location,
                             analyzer.getTypeString(argType),
                             analyzer.getTypeString(paramType),
-                            ctx.getString(param->name),
-                            ctx.getString(node->call_expr.name));
+                            param->name,
+                            node->call_expr.name);
                     } else if (result == CastResult::ErrorForbidden) {
                         ctx.log<ADV_STATUS_E3023>(
                             options,
                             arg->location,
-                            ctx.getString(param->name),
+                            param->name,
                             analyzer.getTypeString(argType),
                             analyzer.getTypeString(paramType),
-                            ctx.getString(node->call_expr.name));
+                            node->call_expr.name);
                         continue;
                     }
                     *argPtr = analyzer.promoteNode(arg, paramType);
@@ -442,7 +428,7 @@ void Analyzer::resolveTypes() {
             const bool hasTypeHint = node->var_decl.type_hint.handle != 0;
             const bool hasInitExpr = node->var_decl.init_expr != nullptr;
             if (!hasTypeHint && !hasInitExpr) {
-                ctx.log<ADV_STATUS_E3025>(options, node->location, ctx.getString(node->var_decl.name));
+                ctx.log<ADV_STATUS_E3025>(options, node->location, node->var_decl.name);
                 return;
             }
             auto hintType = VM_VALUE_TYPE_UNKNOWN;
@@ -450,11 +436,7 @@ void Analyzer::resolveTypes() {
             if (hasTypeHint) {
                 hintType = analyzer.findBaseType(node->var_decl.type_hint);
                 if (hintType == VM_VALUE_TYPE_UNKNOWN) {
-                    ctx.log<ADV_STATUS_E3026>(
-                        options,
-                        node->location,
-                        ctx.getString(node->var_decl.type_hint),
-                        ctx.getString(node->var_decl.name));
+                    ctx.log<ADV_STATUS_E3026>(options, node->location, node->var_decl.type_hint, node->var_decl.name);
                     return;
                 }
             }
@@ -472,12 +454,12 @@ void Analyzer::resolveTypes() {
                         node->location,
                         analyzer.getTypeString(initType),
                         analyzer.getTypeString(hintType),
-                        ctx.getString(node->var_decl.name));
+                        node->var_decl.name);
                 } else if (result == CastResult::ErrorForbidden) {
                     ctx.log<ADV_STATUS_E3027>(
                         options,
                         node->location,
-                        ctx.getString(node->var_decl.name),
+                        node->var_decl.name,
                         analyzer.getTypeString(initType),
                         analyzer.getTypeString(hintType));
                     return;
@@ -496,16 +478,13 @@ void Analyzer::resolveTypes() {
             }
             const auto targetType = analyzer.findBaseType(node->cast_expr.target_type_hint);
             if (targetType == VM_VALUE_TYPE_UNKNOWN) {
-                ctx.log<ADV_STATUS_E3010>(options, node->location, ctx.getString(node->cast_expr.target_type_hint));
+                ctx.log<ADV_STATUS_E3010>(options, node->location, node->cast_expr.target_type_hint);
                 return;
             }
             const auto result = analyzer.getCastResult(srcType, targetType, true);
             if (result == CastResult::ErrorForbidden) {
                 ctx.log<ADV_STATUS_E3012>(
-                    options,
-                    node->location,
-                    analyzer.getTypeString(srcType),
-                    ctx.getString(node->cast_expr.target_type_hint));
+                    options, node->location, analyzer.getTypeString(srcType), node->cast_expr.target_type_hint);
                 return;
             }
             node->cast_expr.from_type = srcType;

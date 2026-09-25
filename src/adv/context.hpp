@@ -40,7 +40,7 @@ public:
     void log(const Options& options, const adv_location_t& loc, Args&&... args) {
         const auto warnAsError = options.getWarningsAsErrors();
         addMessage(Status, warnAsError, loc.filename, loc.line, loc.column, [&]() {
-            return err<Status>(std::forward<Args>(args)...);
+            return err<Status>(unpackArg(std::forward<Args>(args))...);
         });
     }
 
@@ -59,6 +59,15 @@ protected:
 
 private:
     static constexpr size_t MaxNodesInBucket = 1024;
+
+    template <typename T>
+    T&& unpackArg(T&& arg) const noexcept {
+        return static_cast<T&&>(arg);
+    }
+    std::string_view unpackArg(vm_string_h str) const noexcept { return getString(str); }
+    std::string unpackArg(adv_location_t loc) const {
+        return std::format("{}:{}:{}", getString(loc.filename), loc.line, loc.column);
+    }
 
     struct Import {
         adv_node_t* root{};
