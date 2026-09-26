@@ -600,8 +600,7 @@ void Analyzer::pushFrame() { _frameStack.emplace(); }
 void Analyzer::popFrame() noexcept { _frameStack.pop(); }
 
 void Analyzer::saveFrameSlot(Symbol* sym) noexcept {
-    if (!sym->isGlobal) {
-        assert(hasFrame());
+    if (hasFrame()) {
         auto& frame = currFrame();
         sym->slotIndex = frame.currentSlot++;
         frame.maxSlots = std::max(frame.maxSlots, frame.currentSlot);
