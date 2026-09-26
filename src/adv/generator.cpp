@@ -60,13 +60,13 @@ public:
         case VM_VALUE_TYPE_BOOL:
             switch (to) {
             case VM_VALUE_TYPE_INT:
-                emitByte(VM_OPCODE_BTOI);
+                emitByte(VM_OPCODE_BOOL_TO_INT);
                 break;
             case VM_VALUE_TYPE_FLOAT:
-                emitByte(VM_OPCODE_BTOF);
+                emitByte(VM_OPCODE_BOOL_TO_FLOAT);
                 break;
             case VM_VALUE_TYPE_STRING:
-                emitByte(VM_OPCODE_BTOS);
+                emitByte(VM_OPCODE_BOOL_TO_STRING);
                 break;
             default:
                 assert(!"unreachable code");
@@ -76,13 +76,13 @@ public:
         case VM_VALUE_TYPE_INT:
             switch (to) {
             case VM_VALUE_TYPE_BOOL:
-                emitByte(VM_OPCODE_ITOB);
+                emitByte(VM_OPCODE_INT_TO_BOOL);
                 break;
             case VM_VALUE_TYPE_FLOAT:
-                emitByte(VM_OPCODE_ITOF);
+                emitByte(VM_OPCODE_INT_TO_FLOAT);
                 break;
             case VM_VALUE_TYPE_STRING:
-                emitByte(VM_OPCODE_ITOS);
+                emitByte(VM_OPCODE_INT_TO_STRING);
                 break;
             default:
                 assert(!"unreachable code");
@@ -92,13 +92,13 @@ public:
         case VM_VALUE_TYPE_FLOAT:
             switch (to) {
             case VM_VALUE_TYPE_BOOL:
-                emitByte(VM_OPCODE_FTOB);
+                emitByte(VM_OPCODE_FLOAT_TO_BOOL);
                 break;
             case VM_VALUE_TYPE_INT:
-                emitByte(VM_OPCODE_FTOI);
+                emitByte(VM_OPCODE_FLOAT_TO_INT);
                 break;
             case VM_VALUE_TYPE_STRING:
-                emitByte(VM_OPCODE_FTOS);
+                emitByte(VM_OPCODE_FLOAT_TO_STRING);
                 break;
             default:
                 assert(!"unreachable code");
@@ -108,13 +108,13 @@ public:
         case VM_VALUE_TYPE_STRING:
             switch (to) {
             case VM_VALUE_TYPE_BOOL:
-                emitByte(VM_OPCODE_STOB);
+                emitByte(VM_OPCODE_STRING_TO_BOOL);
                 break;
             case VM_VALUE_TYPE_INT:
-                emitByte(VM_OPCODE_STOI);
+                emitByte(VM_OPCODE_STRING_TO_INT);
                 break;
             case VM_VALUE_TYPE_FLOAT:
-                emitByte(VM_OPCODE_STOF);
+                emitByte(VM_OPCODE_STRING_TO_FLOAT);
                 break;
             default:
                 assert(!"unreachable code");
@@ -234,7 +234,7 @@ struct CodeGenVisitor {
 
         acceptNode(node->func_decl.body);
         emitter.emitByte(VM_OPCODE_PUSH_ZERO);
-        emitter.emitByte(VM_OPCODE_RET);
+        emitter.emitByte(VM_OPCODE_RETURN);
         emitter.patchJump(jumpOverBody);
 
         auto& symbolTable = ctx.symbolTable();
@@ -328,46 +328,46 @@ struct CodeGenVisitor {
             emitter.emitByte(VM_OPCODE_ADD);
             break;
         case '-':
-            emitter.emitByte(VM_OPCODE_SUB);
+            emitter.emitByte(VM_OPCODE_SUBTRACT);
             break;
         case '*':
-            emitter.emitByte(VM_OPCODE_MUL);
+            emitter.emitByte(VM_OPCODE_MULTIPLY);
             break;
         case '/':
-            emitter.emitByte(VM_OPCODE_DIV);
+            emitter.emitByte(VM_OPCODE_DIVISION);
             break;
         case '%':
             emitter.emitByte(VM_OPCODE_MOD);
             break;
         case '<':
-            emitter.emitByte(VM_OPCODE_LS);
+            emitter.emitByte(VM_OPCODE_LESS);
             break;
         case '>':
-            emitter.emitByte(VM_OPCODE_GR);
+            emitter.emitByte(VM_OPCODE_GREAT);
             break;
         case Parser::token::LE:
-            emitter.emitByte(VM_OPCODE_LE);
+            emitter.emitByte(VM_OPCODE_LESS_EQUAL);
             break;
         case Parser::token::GE:
-            emitter.emitByte(VM_OPCODE_GE);
+            emitter.emitByte(VM_OPCODE_GREAT_EQUAL);
             break;
         case Parser::token::EQ:
-            emitter.emitByte(VM_OPCODE_EQ);
+            emitter.emitByte(VM_OPCODE_EQUAL);
             break;
         case Parser::token::NE:
-            emitter.emitByte(VM_OPCODE_NE);
+            emitter.emitByte(VM_OPCODE_NOT_EQUAL);
             break;
         case Parser::token::ASHL:
-            emitter.emitByte(VM_OPCODE_ASHL);
+            emitter.emitByte(VM_OPCODE_ARITHMETIC_SHIFT_LEFT);
             break;
         case Parser::token::ASHR:
-            emitter.emitByte(VM_OPCODE_ASHR);
+            emitter.emitByte(VM_OPCODE_ARITHMETIC_SHIFT_RIGHT);
             break;
         case Parser::token::LSHL:
-            emitter.emitByte(VM_OPCODE_LSHL);
+            emitter.emitByte(VM_OPCODE_LOGIC_SHIFT_LEFT);
             break;
         case Parser::token::LSHR:
-            emitter.emitByte(VM_OPCODE_LSHR);
+            emitter.emitByte(VM_OPCODE_LOGIC_SHIFT_RIGHT);
             break;
         default:
             assert(!"unreachable code");
@@ -379,13 +379,13 @@ struct CodeGenVisitor {
 
         switch (node->unary_expr.op) {
         case '~':
-            emitter.emitByte(VM_OPCODE_NOT);
+            emitter.emitByte(VM_OPCODE_BITWISE_NOT);
             break;
         case '-':
-            emitter.emitByte(VM_OPCODE_INV);
+            emitter.emitByte(VM_OPCODE_NUMERIC_NEGATION);
             break;
         case Parser::token::NOT:
-            emitter.emitByte(VM_OPCODE_NEG);
+            emitter.emitByte(VM_OPCODE_LOGICAL_NOT);
             break;
         default:
             break;
@@ -440,7 +440,7 @@ adv_result_t Generator::text() {
         auto opcodeName = magic_enum::enum_name(opcode).substr(10);
         ss << "OP_"sv << opcodeName;
         switch (opcode) {
-        case VM_OPCODE_NOP:
+        case VM_OPCODE_NO_OPERATION:
             assert(!"todo");
             break;
         case VM_OPCODE_PUSH_ZERO:
@@ -487,86 +487,86 @@ adv_result_t Generator::text() {
         case VM_OPCODE_POP_GLOBAL:
             assert(!"todo");
             break;
-        case VM_OPCODE_BTOI:
+        case VM_OPCODE_BOOL_TO_INT:
             assert(!"todo");
             break;
-        case VM_OPCODE_BTOF:
+        case VM_OPCODE_BOOL_TO_FLOAT:
             assert(!"todo");
             break;
-        case VM_OPCODE_BTOS:
+        case VM_OPCODE_BOOL_TO_STRING:
             assert(!"todo");
             break;
-        case VM_OPCODE_ITOB:
+        case VM_OPCODE_INT_TO_BOOL:
             assert(!"todo");
             break;
-        case VM_OPCODE_ITOF:
+        case VM_OPCODE_INT_TO_FLOAT:
             break;
-        case VM_OPCODE_ITOS:
+        case VM_OPCODE_INT_TO_STRING:
             assert(!"todo");
             break;
-        case VM_OPCODE_FTOB:
+        case VM_OPCODE_FLOAT_TO_BOOL:
             assert(!"todo");
             break;
-        case VM_OPCODE_FTOI:
+        case VM_OPCODE_FLOAT_TO_INT:
             break;
-        case VM_OPCODE_FTOS:
+        case VM_OPCODE_FLOAT_TO_STRING:
             assert(!"todo");
             break;
-        case VM_OPCODE_STOB:
+        case VM_OPCODE_STRING_TO_BOOL:
             assert(!"todo");
             break;
-        case VM_OPCODE_STOI:
+        case VM_OPCODE_STRING_TO_INT:
             assert(!"todo");
             break;
-        case VM_OPCODE_STOF:
+        case VM_OPCODE_STRING_TO_FLOAT:
             assert(!"todo");
             break;
-        case VM_OPCODE_NOT:
+        case VM_OPCODE_LOGICAL_NOT:
             break;
-        case VM_OPCODE_NEG:
+        case VM_OPCODE_NUMERIC_NEGATION:
             assert(!"todo");
             break;
-        case VM_OPCODE_INV:
+        case VM_OPCODE_BITWISE_NOT:
             assert(!"todo");
             break;
-        case VM_OPCODE_ASHL:
+        case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
             assert(!"todo");
             break;
-        case VM_OPCODE_ASHR:
+        case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
             assert(!"todo");
             break;
-        case VM_OPCODE_LSHL:
+        case VM_OPCODE_LOGIC_SHIFT_LEFT:
             assert(!"todo");
             break;
-        case VM_OPCODE_LSHR:
+        case VM_OPCODE_LOGIC_SHIFT_RIGHT:
             assert(!"todo");
             break;
         case VM_OPCODE_ADD:
             break;
-        case VM_OPCODE_SUB:
+        case VM_OPCODE_SUBTRACT:
             assert(!"todo");
             break;
-        case VM_OPCODE_MUL:
+        case VM_OPCODE_MULTIPLY:
             break;
-        case VM_OPCODE_DIV:
+        case VM_OPCODE_DIVISION:
             assert(!"todo");
             break;
         case VM_OPCODE_MOD:
             assert(!"todo");
             break;
-        case VM_OPCODE_EQ:
+        case VM_OPCODE_EQUAL:
             break;
-        case VM_OPCODE_NE:
+        case VM_OPCODE_NOT_EQUAL:
             assert(!"todo");
             break;
-        case VM_OPCODE_LS:
+        case VM_OPCODE_LESS:
             break;
-        case VM_OPCODE_LE:
+        case VM_OPCODE_LESS_EQUAL:
             assert(!"todo");
             break;
-        case VM_OPCODE_GR:
+        case VM_OPCODE_GREAT:
             break;
-        case VM_OPCODE_GE:
+        case VM_OPCODE_GREAT_EQUAL:
             assert(!"todo");
             break;
         case VM_OPCODE_CALL_NATIVE:
@@ -575,7 +575,7 @@ adv_result_t Generator::text() {
         case VM_OPCODE_CALL:
             assert(!"todo");
             break;
-        case VM_OPCODE_RET:
+        case VM_OPCODE_RETURN:
             break;
         case VM_OPCODE_JUMP:
             ss << ' ' << Reader::readUint32(code, ip);

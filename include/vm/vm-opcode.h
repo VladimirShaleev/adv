@@ -7,8 +7,9 @@ extern "C" {
 
 typedef enum
 {
-    VM_OPCODE_NOP,
+    VM_OPCODE_NO_OPERATION,
 
+    // --- Literals / Values Push ---
     VM_OPCODE_PUSH_ZERO,
     VM_OPCODE_PUSH_TRUE,
     VM_OPCODE_PUSH_FALSE,
@@ -16,6 +17,7 @@ typedef enum
     VM_OPCODE_PUSH_FLOAT,
     VM_OPCODE_PUSH_STRING,
 
+    // --- Variables & Memory Access ---
     VM_OPCODE_PUSH_GLOBAL_BY_NAME,
     VM_OPCODE_PUSH_GLOBAL,
     VM_OPCODE_PUSH_LOCAL,
@@ -24,48 +26,62 @@ typedef enum
     VM_OPCODE_POP_LOCAL,
     VM_OPCODE_POP,
 
-    VM_OPCODE_BTOI,
-    VM_OPCODE_BTOF,
-    VM_OPCODE_BTOS,
-    VM_OPCODE_ITOB,
-    VM_OPCODE_ITOF,
-    VM_OPCODE_ITOS,
-    VM_OPCODE_FTOB,
-    VM_OPCODE_FTOI,
-    VM_OPCODE_FTOS,
-    VM_OPCODE_STOB,
-    VM_OPCODE_STOI,
-    VM_OPCODE_STOF,
+    // --- Explicit / Implicit Type Casts ---
+    VM_OPCODE_BOOL_TO_INT,
+    VM_OPCODE_BOOL_TO_FLOAT,
+    VM_OPCODE_BOOL_TO_STRING,
+    VM_OPCODE_INT_TO_BOOL,
+    VM_OPCODE_INT_TO_FLOAT,
+    VM_OPCODE_INT_TO_STRING,
+    VM_OPCODE_FLOAT_TO_BOOL,
+    VM_OPCODE_FLOAT_TO_INT,
+    VM_OPCODE_FLOAT_TO_STRING,
+    VM_OPCODE_STRING_TO_BOOL,
+    VM_OPCODE_STRING_TO_INT,
+    VM_OPCODE_STRING_TO_FLOAT,
 
-    VM_OPCODE_NOT,
-    VM_OPCODE_NEG,
-    VM_OPCODE_INV,
+    // --- Unary Operators ---
+    VM_OPCODE_LOGICAL_NOT,
+    VM_OPCODE_NUMERIC_NEGATION,
+    VM_OPCODE_BITWISE_NOT,
 
-    VM_OPCODE_ASHL,
-    VM_OPCODE_ASHR,
-    VM_OPCODE_LSHL,
-    VM_OPCODE_LSHR,
+    // --- Bitwise Shifts ---
+    VM_OPCODE_ARITHMETIC_SHIFT_LEFT,
+    VM_OPCODE_ARITHMETIC_SHIFT_RIGHT,
+    VM_OPCODE_LOGIC_SHIFT_LEFT,
+    VM_OPCODE_LOGIC_SHIFT_RIGHT,
 
+    // --- Bitwise Logical Operators ---
+    VM_OPCODE_BITWISE_AND,
+    VM_OPCODE_BITWISE_OR,
+    VM_OPCODE_BITWISE_XOR,
+
+    // --- Arithmetic Binary Operators ---
     VM_OPCODE_ADD,
-    VM_OPCODE_SUB,
-    VM_OPCODE_MUL,
-    VM_OPCODE_DIV,
+    VM_OPCODE_SUBTRACT,
+    VM_OPCODE_MULTIPLY,
+    VM_OPCODE_DIVISION,
     VM_OPCODE_MOD,
-    
-    VM_OPCODE_EQ,
-    VM_OPCODE_NE,
-    VM_OPCODE_LS,
-    VM_OPCODE_LE,
-    VM_OPCODE_GR,
-    VM_OPCODE_GE,
 
+    // --- Comparison Operators ---
+    VM_OPCODE_EQUAL,
+    VM_OPCODE_NOT_EQUAL,
+    VM_OPCODE_LESS,
+    VM_OPCODE_LESS_EQUAL,
+    VM_OPCODE_GREAT,
+    VM_OPCODE_GREAT_EQUAL,
+
+    // --- Subroutines & Execution Control ---
     VM_OPCODE_CALL_NATIVE,
+    VM_OPCODE_CALL_BY_NAME,
     VM_OPCODE_CALL,
-    VM_OPCODE_RET,
+    VM_OPCODE_RETURN,
 
+    // --- Jumps & Control Flow ---
     VM_OPCODE_JUMP,
     VM_OPCODE_JUMP_IF_FALSE,
 
+    // --- Concurrency & VM Lifecycle ---
     VM_OPCODE_YIELD,
     VM_OPCODE_WAIT,
     VM_OPCODE_HALT
