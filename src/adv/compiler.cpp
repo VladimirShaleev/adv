@@ -11,8 +11,8 @@ namespace adv {
 
 class Compiler final : public _adv_compiler {
 public:
-    adv_result_t compile(
-        adv_utf8_t file, std::span<const adv_source_t> sources, const Options& options, Context& context) noexcept {
+    adv_result_t
+    compile(adv_utf8_t file, std::span<const adv_source_t> sources, const Options& options, Context& context) noexcept {
         Analyzer analyzer(options, context);
         Generator generator(options, context);
         if (auto result = parse(file, sources, options, context); result != ADV_RESULT_SUCCESS) {
@@ -21,7 +21,10 @@ public:
         if (auto result = analyzer.build(); result != ADV_RESULT_SUCCESS) {
             return result;
         }
-        return generator.gen();
+        if (auto result = generator.gen(); result != ADV_RESULT_SUCCESS) {
+            return result;
+        }
+        return generator.text();
     }
 
 private:

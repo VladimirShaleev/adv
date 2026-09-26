@@ -40,7 +40,7 @@ private:
     [[nodiscard]] bool hasFrame() const noexcept;
     [[nodiscard]] FunctionFrameState& currFrame() noexcept;
 
-    [[nodiscard]] adv_node_t* promoteNode(adv_node_t* node, vm_value_type_t targetType);
+    [[nodiscard]] adv_node_t* promoteCastNode(adv_node_t* node, vm_value_type_t targetType);
     [[nodiscard]] static bool isEqualityOp(adv_uint32_t op) noexcept;
     [[nodiscard]] static bool isOrderingOp(adv_uint32_t op) noexcept;
     [[nodiscard]] static bool isComparisonOp(adv_uint32_t op) noexcept;

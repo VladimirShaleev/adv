@@ -37,7 +37,15 @@
 #include <magic_enum/magic_enum.hpp>
 #include <utils/utils.hpp>
 
-UTILS_FORCE_INLINE adv_sint32_t swap_bytes(adv_sint32_t val) {
+UTILS_FORCE_INLINE adv_uint16_t swap_bytes(adv_uint16_t val) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_bswap16(val);
+#else
+    return (val << 8) | (val >> 8);
+#endif
+}
+
+UTILS_FORCE_INLINE adv_uint32_t swap_bytes(adv_uint32_t val) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap32(val);
 #else

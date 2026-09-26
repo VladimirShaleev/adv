@@ -236,7 +236,7 @@ void Analyzer::resolveTypes() {
                         fn->func_decl.name);
                     return;
                 }
-                node->expr_stmt.expr = analyzer.promoteNode(node->expr_stmt.expr, fn->resolved_type);
+                node->expr_stmt.expr = analyzer.promoteCastNode(node->expr_stmt.expr, fn->resolved_type);
                 node->resolved_type = fn->resolved_type;
             }
         }
@@ -319,9 +319,9 @@ void Analyzer::resolveTypes() {
                     return;
                 }
                 if (leftType == from) {
-                    node->binary_expr.left = analyzer.promoteNode(node->binary_expr.left, to);
+                    node->binary_expr.left = analyzer.promoteCastNode(node->binary_expr.left, to);
                 } else {
-                    node->binary_expr.right = analyzer.promoteNode(node->binary_expr.right, to);
+                    node->binary_expr.right = analyzer.promoteCastNode(node->binary_expr.right, to);
                 }
                 targetType = to;
             }
@@ -375,7 +375,7 @@ void Analyzer::resolveTypes() {
                             node->call_expr.name);
                         continue;
                     }
-                    *argPtr = analyzer.promoteNode(arg, paramType);
+                    *argPtr = analyzer.promoteCastNode(arg, paramType);
                     (*argPtr)->next_sibling = arg->next_sibling;
                     arg->next_sibling = nullptr;
                 }
@@ -424,7 +424,7 @@ void Analyzer::resolveTypes() {
                         options, node->location, analyzer.getTypeString(valueType), analyzer.getTypeString(targetType));
                     return;
                 }
-                node->assign_expr.val = analyzer.promoteNode(node->assign_expr.val, targetType);
+                node->assign_expr.val = analyzer.promoteCastNode(node->assign_expr.val, targetType);
             }
             node->resolved_type = targetType;
         }
@@ -473,7 +473,7 @@ void Analyzer::resolveTypes() {
                         analyzer.getTypeString(hintType));
                     return;
                 }
-                node->var_decl.init_expr = analyzer.promoteNode(node->var_decl.init_expr, hintType);
+                node->var_decl.init_expr = analyzer.promoteCastNode(node->var_decl.init_expr, hintType);
             }
             const auto finalType = hasTypeHint ? hintType : initType;
 
@@ -611,7 +611,7 @@ bool Analyzer::hasFrame() const noexcept { return !_frameStack.empty(); }
 
 Analyzer::FunctionFrameState& Analyzer::currFrame() noexcept { return _frameStack.top(); }
 
-adv_node_t* Analyzer::promoteNode(adv_node_t* node, vm_value_type_t targetType) {
+adv_node_t* Analyzer::promoteCastNode(adv_node_t* node, vm_value_type_t targetType) {
     if (!node || node->resolved_type == targetType) {
         return node;
     }
