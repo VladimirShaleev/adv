@@ -25,12 +25,17 @@ public:
     }
 
     void emitString(vm_string_h str) {
-        adv_uint32_t offset = static_cast<adv_uint32_t>(data.size());
-        auto view = ctx.getString(str);
-        emitUint16(static_cast<adv_uint16_t>(view.length()), data);
-        data.insert(data.end(), view.begin(), view.end());
-        data.push_back(uint8_t('\0'));
-        emitUint32(offset, code);
+        if (auto it = strings.find(str); it != strings.end()) {
+            emitUint32(it->second, code);
+        } else {
+            adv_uint32_t offset = static_cast<adv_uint32_t>(data.size());
+            auto view = ctx.getString(str);
+            emitUint16(static_cast<adv_uint16_t>(view.length()), data);
+            data.insert(data.end(), view.begin(), view.end());
+            data.push_back(uint8_t('\0'));
+            emitUint32(offset, code);
+            strings[str] = offset;
+        }
     }
 
     [[nodiscard]] adv_uint32_t emitJump(vm_opcode_t op) {
@@ -43,10 +48,10 @@ public:
     void patchJump(adv_uint32_t patchOffset) {
         auto targetAddress = offset();
         targetAddress = std::endian::native == std::endian::little ? targetAddress : swap_bytes(targetAddress);
-        // code[patchOffset + 0] = static_cast<uint8_t>((targetAddress >> 0) & 0xFF);
-        // code[patchOffset + 1] = static_cast<uint8_t>((targetAddress >> 8) & 0xFF);
-        // code[patchOffset + 2] = static_cast<uint8_t>((targetAddress >> 16) & 0xFF);
-        // code[patchOffset + 3] = static_cast<uint8_t>((targetAddress >> 24) & 0xFF);
+        code[patchOffset + 0] = static_cast<uint8_t>((targetAddress >> 0) & 0xFF);
+        code[patchOffset + 1] = static_cast<uint8_t>((targetAddress >> 8) & 0xFF);
+        code[patchOffset + 2] = static_cast<uint8_t>((targetAddress >> 16) & 0xFF);
+        code[patchOffset + 3] = static_cast<uint8_t>((targetAddress >> 24) & 0xFF);
     }
 
     void emitCast(vm_value_type_t from, vm_value_type_t to) {
@@ -122,11 +127,12 @@ public:
         }
     }
 
-    [[nodiscard]] adv_uint32_t offset() const noexcept { return static_cast<adv_uint32_t>(data.size()); }
+    [[nodiscard]] adv_uint32_t offset() const noexcept { return static_cast<adv_uint32_t>(code.size()); }
 
     Context& ctx;
     std::vector<uint8_t>& data;
     std::vector<uint8_t>& code;
+    std::unordered_map<vm_string_h, adv_uint32_t> strings;
 
 private:
     static void emitUint16(adv_uint16_t val, std::vector<uint8_t>& buffer) {
@@ -175,7 +181,7 @@ struct Reader {
         static_assert(sizeof(adv_float32_t) == sizeof(adv_sint32_t));
         auto bits = readInt32(code, ip);
         adv_float32_t val;
-        std::memcpy(&bits, &val, sizeof(adv_float32_t));
+        std::memcpy(&val, &bits, sizeof(adv_float32_t));
         return val;
     }
 
@@ -215,7 +221,7 @@ struct CodeGenVisitor {
         symbolTable.setScope(node->var_decl.scope);
         auto sym = symbolTable.lookup(options, ctx, node->location, node->var_decl.name);
         if (sym->isGlobal) {
-            emitter.emitByte(VM_OPCODE_SET_GLOBAL_BY_NAME);
+            emitter.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
             emitter.emitString(sym->name);
         } else {
             emitter.emitByte(VM_OPCODE_PUSH_LOCAL);
@@ -243,7 +249,7 @@ struct CodeGenVisitor {
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {}
-    void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) { // 1. Вычисляем условие (на стеке окажется bool / int)
+    void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
         acceptNode(node->if_stmt.cond);
 
         const auto elseJumpPos = emitter.emitJump(VM_OPCODE_JUMP_IF_FALSE);
@@ -274,7 +280,10 @@ struct CodeGenVisitor {
     void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
-    void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
+        acceptNode(node->expr_stmt.expr);
+        emitter.emitByte(VM_OPCODE_POP);
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) {
         acceptNode(node->cast_expr.operand);
         emitter.emitCast(node->cast_expr.from_type, node->cast_expr.to_type);
@@ -297,19 +306,19 @@ struct CodeGenVisitor {
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
         acceptNode(node->assign_expr.val);
-
-        // auto& symbolTable = ctx.symbolTable();
-        // symbolTable.setScope(node->assign_expr.scope);
-        // auto sym = symbolTable.lookup(options, ctx, node->location, node->assign_expr.target);
-
-        // // 3. Сохраняем значение из стека в переменную
-        // if (sym->isGlobal) {
-        //     emitter.emitByte(VM_OPCODE_SET_GLOBAL_BY_NAME);
-        //     emitter.emitString(sym->name);
-        // } else {
-        //     emitter.emitByte(VM_OPCODE_SET_LOCAL);
-        //     emitter.emitByte(static_cast<uint8_t>(sym->slotIndex));
-        // }
+        auto target = node->assign_expr.target;
+        if (target->type == ADV_NODE_IDENTIFIER_EXPR) {
+            auto& symbolTable = ctx.symbolTable();
+            symbolTable.setScope(target->id_expr.scope);
+            auto sym = symbolTable.lookup(options, ctx, node->location, target->id_expr.name);
+            if (sym->isGlobal) {
+                emitter.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
+                emitter.emitString(sym->name);
+            } else {
+                emitter.emitByte(VM_OPCODE_POP_LOCAL);
+                emitter.emitInt16(static_cast<adv_sint16_t>(sym->slotIndex));
+            }
+        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_BINARY_EXPR>) {
         acceptNode(node->binary_expr.left);
@@ -426,6 +435,7 @@ adv_result_t Generator::text() {
         if (ip > 0) {
             ss << std::endl;
         }
+        ss << ip << ": "sv;
         const auto opcode = (vm_opcode_t)code[ip++];
         auto opcodeName = magic_enum::enum_name(opcode).substr(10);
         ss << "OP_"sv << opcodeName;
@@ -444,9 +454,14 @@ adv_result_t Generator::text() {
         case VM_OPCODE_PUSH_INT:
             ss << ' ' << Reader::readInt32(code, ip);
             break;
-        case VM_OPCODE_PUSH_FLOAT:
-            ss << ' ' << Reader::readFloat(code, ip);
+        case VM_OPCODE_PUSH_FLOAT: {
+            auto str = fmt::format("{:g}", Reader::readFloat(code, ip));
+            if (str.find_last_of('.') == std::string::npos) {
+                str += ".0"s;
+            }
+            ss << ' ' << str;
             break;
+        }
         case VM_OPCODE_PUSH_STRING:
             assert(!"todo");
             break;
@@ -456,23 +471,17 @@ adv_result_t Generator::text() {
         case VM_OPCODE_POP_LOCAL:
             assert(!"todo");
             break;
-        case VM_OPCODE_SET_GLOBAL_BY_NAME: {
+        case VM_OPCODE_POP_GLOBAL_BY_NAME: {
             const auto [offset, str] = Reader::readString(code, ip, _data.data());
             ss << ' ' << offset << " ("sv << str << ')';
             break;
         }
-        case VM_OPCODE_SET_LOCAL:
-            assert(!"todo");
-            break;
         case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
             const auto [offset, str] = Reader::readString(code, ip, _data.data());
             ss << ' ' << offset << " ("sv << str << ')';
             break;
         }
         case VM_OPCODE_PUSH_GLOBAL:
-            assert(!"todo");
-            break;
-        case VM_OPCODE_POP_GLOBAL_BY_NAME:
             assert(!"todo");
             break;
         case VM_OPCODE_POP_GLOBAL:
@@ -551,7 +560,6 @@ adv_result_t Generator::text() {
             assert(!"todo");
             break;
         case VM_OPCODE_LS:
-            assert(!"todo");
             break;
         case VM_OPCODE_LE:
             assert(!"todo");
