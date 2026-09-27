@@ -224,7 +224,7 @@ struct CodeGenVisitor {
             emitter.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
             emitter.emitString(sym->name);
         } else {
-            emitter.emitByte(VM_OPCODE_PUSH_LOCAL);
+            emitter.emitByte(VM_OPCODE_POP_LOCAL);
             emitter.emitInt16(static_cast<int16_t>(sym->slotIndex));
         }
     }
@@ -282,7 +282,9 @@ struct CodeGenVisitor {
     void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
         acceptNode(node->expr_stmt.expr);
-        emitter.emitByte(VM_OPCODE_POP);
+        if (node->expr_stmt.expr->type != ADV_NODE_ASSIGN_EXPR) {
+            emitter.emitByte(VM_OPCODE_POP);
+        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) {
         acceptNode(node->cast_expr.operand);
@@ -469,7 +471,7 @@ adv_result_t Generator::text() {
             ss << ' ' << Reader::readInt16(code, ip);
             break;
         case VM_OPCODE_POP_LOCAL:
-            assert(!"todo");
+            ss << ' ' << Reader::readInt16(code, ip);
             break;
         case VM_OPCODE_POP_GLOBAL_BY_NAME: {
             const auto [offset, str] = Reader::readString(code, ip, _data.data());
@@ -524,7 +526,6 @@ adv_result_t Generator::text() {
         case VM_OPCODE_LOGICAL_NOT:
             break;
         case VM_OPCODE_NUMERIC_NEGATION:
-            assert(!"todo");
             break;
         case VM_OPCODE_BITWISE_NOT:
             assert(!"todo");
