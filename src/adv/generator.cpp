@@ -443,15 +443,9 @@ adv_result_t Generator::text() {
         ss << "OP_"sv << opcodeName;
         switch (opcode) {
         case VM_OPCODE_NO_OPERATION:
-            assert(!"todo");
-            break;
         case VM_OPCODE_PUSH_ZERO:
-            break;
         case VM_OPCODE_PUSH_TRUE:
-            assert(!"todo");
-            break;
         case VM_OPCODE_PUSH_FALSE:
-            assert(!"todo");
             break;
         case VM_OPCODE_PUSH_INT:
             ss << ' ' << Reader::readInt32(code, ip);
@@ -490,85 +484,35 @@ adv_result_t Generator::text() {
             assert(!"todo");
             break;
         case VM_OPCODE_BOOL_TO_INT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_BOOL_TO_FLOAT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_BOOL_TO_STRING:
-            assert(!"todo");
-            break;
         case VM_OPCODE_INT_TO_BOOL:
-            assert(!"todo");
-            break;
         case VM_OPCODE_INT_TO_FLOAT:
-            break;
         case VM_OPCODE_INT_TO_STRING:
-            assert(!"todo");
-            break;
         case VM_OPCODE_FLOAT_TO_BOOL:
-            assert(!"todo");
-            break;
         case VM_OPCODE_FLOAT_TO_INT:
-            break;
         case VM_OPCODE_FLOAT_TO_STRING:
-            assert(!"todo");
-            break;
         case VM_OPCODE_STRING_TO_BOOL:
-            assert(!"todo");
-            break;
         case VM_OPCODE_STRING_TO_INT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_STRING_TO_FLOAT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_LOGICAL_NOT:
-            break;
         case VM_OPCODE_NUMERIC_NEGATION:
-            break;
         case VM_OPCODE_BITWISE_NOT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_LOGIC_SHIFT_LEFT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_LOGIC_SHIFT_RIGHT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_ADD:
-            break;
         case VM_OPCODE_SUBTRACT:
-            assert(!"todo");
-            break;
         case VM_OPCODE_MULTIPLY:
-            break;
         case VM_OPCODE_DIVISION:
-            assert(!"todo");
-            break;
         case VM_OPCODE_MOD:
-            assert(!"todo");
-            break;
         case VM_OPCODE_EQUAL:
-            break;
         case VM_OPCODE_NOT_EQUAL:
-            assert(!"todo");
-            break;
         case VM_OPCODE_LESS:
-            break;
         case VM_OPCODE_LESS_EQUAL:
-            assert(!"todo");
-            break;
         case VM_OPCODE_GREAT:
-            break;
         case VM_OPCODE_GREAT_EQUAL:
-            assert(!"todo");
             break;
         case VM_OPCODE_CALL_NATIVE:
             assert(!"todo");

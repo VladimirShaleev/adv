@@ -219,6 +219,7 @@ statement
     : var_decl ';'                 { $$ = $1; }
     | block                        { $$ = $1; }
     | function_decl                { $$ = $1; }
+    | assign_expr ';'              { $$ = $1; }
     | if_stmt                      { $$ = $1; }
     | while_stmt                   { $$ = $1; }
     | return_stmt ';'              { $$ = $1; }
@@ -346,9 +347,6 @@ expr
         auto node = alloc_node(@1, IDENTIFIER_EXPR);
         node->id_expr.name = intern($1);
         $$ = node;
-    }
-    | assign_expr { 
-        $$ = $1; 
     }
     | call_expr { 
         $$ = $1; 
