@@ -15,7 +15,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cassert>
 #include <charconv>
 #include <filesystem>
@@ -36,24 +35,6 @@
 #include <fmt/ranges.h>
 #include <magic_enum/magic_enum.hpp>
 #include <utils/utils.hpp>
-
-UTILS_FORCE_INLINE adv_uint16_t swap_bytes(adv_uint16_t val) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_bswap16(val);
-#else
-    return (val << 8) | (val >> 8);
-#endif
-}
-
-UTILS_FORCE_INLINE adv_uint32_t swap_bytes(adv_uint32_t val) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_bswap32(val);
-#else
-    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0x00FF00FF);
-    val = (val << 16) | (val >> 16);
-    return val;
-#endif
-}
 
 namespace utils {
 template <>

@@ -2,6 +2,8 @@
 #define UTILS_OBJECT_HPP
 
 #include <cstdint>
+#include <new>
+#include <type_traits>
 
 #include "utils.hpp"
 

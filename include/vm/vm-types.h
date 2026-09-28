@@ -15,6 +15,8 @@
 extern "C" {
 #endif
 
+VM_TYPE(vm)
+
 /**
  * @name    String Handles
  * @brief   Opaque handles for interned string references.
@@ -23,6 +25,7 @@ extern "C" {
  * @{
  */
 VM_HANDLE(vm_string) /**< String handle representation. Unique identifier for the interned string */
+VM_HANDLE(vm_script)
 /** @} */
 
 #ifdef __cplusplus

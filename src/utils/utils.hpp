@@ -12,4 +12,25 @@
 #include "object.hpp"
 #include "string-pool.hpp"
 
+#include <bit>
+#include <cstdint>
+
+UTILS_FORCE_INLINE uint16_t swap_bytes(uint16_t val) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_bswap16(val);
+#else
+    return (val << 8) | (val >> 8);
+#endif
+}
+
+UTILS_FORCE_INLINE uint32_t swap_bytes(uint32_t val) {
+#if defined(__GNUC__) || defined(__clang__)
+    return __builtin_bswap32(val);
+#else
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0x00FF00FF);
+    val = (val << 16) | (val >> 16);
+    return val;
+#endif
+}
+
 #endif // UTILS_UTILS_HPP
