@@ -35,6 +35,7 @@
 #include "vm-opcode.h"
 #include "vm-script.h"
 #include "vm-value.h"
+#include "vm-version.h"
 
 #ifdef __cplusplus
 extern "C" {

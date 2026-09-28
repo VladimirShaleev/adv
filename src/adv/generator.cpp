@@ -429,18 +429,60 @@ adv_result_t Generator::gen() {
 }
 
 adv_result_t Generator::text() {
-    std::ostringstream ss;
+    const auto tab = "       "s;
+    size_t strLen = 0;
+    std::cout << ".format: "sv << "ADVT"sv << std::endl;
+    std::cout << ".version: "sv << VM_VERSION_STRING << std::endl;
+    std::cout << ".checksum: "sv << 0 << std::endl;
+    /*std::map<size_t, size_t> dataOffsets;
+    size_t dataIndex = 0;
+
+    auto hasPrev = false;
+    if (!_data.empty()) {
+        std::cout << ".data:"sv << std::endl << tab;
+        size_t pos = 0;
+        while (pos < _data.size()) {
+            if (strLen > 50) {
+                strLen = 0;
+                std::cout << std::endl << tab;
+            } else {
+                if (hasPrev) {
+                    std::cout << ' ';
+                }
+            }
+            hasPrev = true;
+            dataOffsets[pos] = dataIndex++;
+            const auto len = Reader::readUint16(_data.data(), pos);
+            std::cout << '"' << std::string_view{(const char*)(_data.data() + pos), len} << '"';
+            pos += len + 1;
+            strLen += len + 2;
+        }
+        std::cout << std::endl;
+    }*/
+
+    size_t literalCount = 0;
+    std::map<std::string_view, std::string> names;
+    std::map<std::string_view, size_t> strPool;
+    size_t labelIndex = 0;
+    std::map<size_t, std::string> labels;
+    std::vector<std::tuple<
+        size_t,
+        std::string_view,
+        std::variant<std::monostate, adv_sint16_t, adv_sint32_t, adv_float32_t, std::string_view>>>
+        codeLines;
+    codeLines.emplace_back();
     size_t ip = 0;
     size_t codeSize = _code.size();
     const auto code = _code.data();
     while (ip < codeSize) {
         if (ip > 0) {
-            ss << std::endl;
+            codeLines.emplace_back();
         }
-        ss << ip << ": "sv;
+        auto& [index, op, val] = codeLines.back();
+        index = ip;
         const auto opcode = (vm_opcode_t)code[ip++];
         auto opcodeName = magic_enum::enum_name(opcode).substr(10);
-        ss << "OP_"sv << opcodeName;
+        op = opcodeName;
         switch (opcode) {
         case VM_OPCODE_NO_OPERATION:
         case VM_OPCODE_PUSH_ZERO:
@@ -448,33 +490,33 @@ adv_result_t Generator::text() {
         case VM_OPCODE_PUSH_FALSE:
             break;
         case VM_OPCODE_PUSH_INT:
-            ss << ' ' << Reader::readInt32(code, ip);
+            val = Reader::readInt32(code, ip);
             break;
         case VM_OPCODE_PUSH_FLOAT: {
-            auto str = fmt::format("{:g}", Reader::readFloat(code, ip));
-            if (str.find_last_of('.') == std::string::npos) {
-                str += ".0"s;
-            }
-            ss << ' ' << str;
+            val = Reader::readFloat(code, ip);
             break;
         }
-        case VM_OPCODE_PUSH_STRING:
-            assert(!"todo");
-            break;
-        case VM_OPCODE_PUSH_LOCAL:
-            ss << ' ' << Reader::readInt16(code, ip);
-            break;
-        case VM_OPCODE_POP_LOCAL:
-            ss << ' ' << Reader::readInt16(code, ip);
-            break;
-        case VM_OPCODE_POP_GLOBAL_BY_NAME: {
+        case VM_OPCODE_PUSH_STRING: {
             const auto [offset, str] = Reader::readString(code, ip, _data.data());
-            ss << ' ' << offset << " ("sv << str << ')';
+            val = str;
+            ++strPool[str];
+            if (!names.contains(str)) {
+                names[str] = "lit"s + std::to_string(literalCount++);
+            }
             break;
         }
+        case VM_OPCODE_PUSH_LOCAL:
+        case VM_OPCODE_POP_LOCAL:
+            val = Reader::readInt16(code, ip);
+            break;
+        case VM_OPCODE_POP_GLOBAL_BY_NAME:
         case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
             const auto [offset, str] = Reader::readString(code, ip, _data.data());
-            ss << ' ' << offset << " ("sv << str << ')';
+            val = str;
+            ++strPool[str];
+            if (!names.contains(str)) {
+                names[str] = str;
+            }
             break;
         }
         case VM_OPCODE_PUSH_GLOBAL:
@@ -523,11 +565,15 @@ adv_result_t Generator::text() {
         case VM_OPCODE_RETURN:
             break;
         case VM_OPCODE_JUMP:
-            ss << ' ' << Reader::readUint32(code, ip);
+        case VM_OPCODE_JUMP_IF_FALSE: {
+            const auto address = Reader::readUint32(code, ip);
+            if (!labels.contains(address)) {
+                labels[address] = "lb"s + std::to_string(labelIndex++);
+            }
+            const auto& l = labels[address];
+            val = std::string_view{l.c_str(), l.length()};
             break;
-        case VM_OPCODE_JUMP_IF_FALSE:
-            ss << ' ' << Reader::readUint32(code, ip);
-            break;
+        }
         case VM_OPCODE_YIELD:
             assert(!"todo");
             break;
@@ -538,8 +584,57 @@ adv_result_t Generator::text() {
             break;
         }
     }
-    const auto s = ss.str();
-    std::cout << s;
+    auto hasDataSection = false;
+    for (const auto& [_, counter] : strPool) {
+        if (counter > 1) {
+            hasDataSection = true;
+            break;
+        }
+    }
+    if (hasDataSection) {
+        std::cout << ".data:"sv << std::endl;
+        for (const auto& [text, counter] : strPool) {
+            if (counter > 1) {
+                std::cout << tab << names[text] << ": \""sv << text << '"' << std::endl;
+            }
+        }
+    }
+    if (!codeLines.empty()) {
+        std::cout << ".text:"sv << std::endl;
+        for (const auto& [index, op, val] : codeLines) {
+            std::string label = tab;
+            if (auto it = labels.find(index); it != labels.end()) {
+                label = fmt::format("{:>5}: ", it->second);
+            }
+            std::cout << label << op;
+            if (val.index() != 0) {
+                std::cout << ' ';
+                if (std::holds_alternative<std::string_view>(val)) {
+                    auto str = std::get<std::string_view>(val);
+                    if (strPool.contains(str)) {
+                        if (strPool[str] == 1) {
+                            std::cout << '"' << str << '"';
+                        } else {
+                            std::cout << names[str];
+                        }
+                    } else {
+                        std::cout << str;
+                    }
+                } else if (std::holds_alternative<adv_sint16_t>(val)) {
+                    std::cout << std::get<adv_sint16_t>(val);
+                } else if (std::holds_alternative<adv_sint32_t>(val)) {
+                    std::cout << std::get<adv_sint32_t>(val);
+                } else if (std::holds_alternative<adv_float32_t>(val)) {
+                    auto str = fmt::format("{:g}", std::get<adv_float32_t>(val));
+                    if (str.find_last_of('.') == std::string::npos) {
+                        str += ".0"s;
+                    }
+                    std::cout << str;
+                }
+            }
+            std::cout << std::endl;
+        }
+    }
     return ADV_RESULT_SUCCESS;
 }
 
