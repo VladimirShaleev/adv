@@ -12,6 +12,7 @@
 #include "object.hpp"
 #include "pool.hpp"
 #include "string-pool.hpp"
+#include "translator.hpp"
 
 #include <bit>
 #include <cstdint>

@@ -11,7 +11,12 @@
 #endif
 #endif
 
+#include <algorithm>
+#include <charconv>
+#include <fstream>
+#include <regex>
 #include <span>
+#include <unordered_map>
 #include <vector>
 
 #include "vm/vm.h"

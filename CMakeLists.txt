@@ -40,6 +40,7 @@ file(GLOB UTILS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp")
 add_library(utils OBJECT ${UTILS_SOURCES})
 set_default_properties(TARGET utils)
+target_link_libraries(utils PRIVATE fmt::fmt)
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -88,7 +89,7 @@ if(ADV_BUILD_TOOL)
     add_executable(advc "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/main.cpp")
     add_executable(${PROJECT_NAME}::advc ALIAS advc)
     set_default_properties(TARGET advc)
-    target_link_libraries(advc PRIVATE adv)
+    target_link_libraries(advc PRIVATE adv vm) # TODO: remove vm later
     target_link_libraries(advc PRIVATE argparse::argparse)
 endif()
 

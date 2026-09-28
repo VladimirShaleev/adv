@@ -5,12 +5,7 @@
 
 namespace vm {
 
-constexpr size_t MAX_THREADS = 64;
-constexpr size_t STACK_SIZE = 64;
-constexpr size_t LOCALS_COUNT = 16;
-constexpr size_t GLOBALS_COUNT = 256;
-constexpr size_t MAX_NATIVE_FUNCTIONS = 64;
-constexpr size_t MAX_FRAMES = 16;
+constexpr vm_script_h UndefinedScript{std::numeric_limits<decltype(vm_script_h::handle)>::max()};
 
 enum class ThreadState {
     Dead = 0,
@@ -37,10 +32,10 @@ struct ScriptThread {
     uint32_t ip;
     uint32_t waitTicks;
 
-    vm_value_t stack[STACK_SIZE];
+    // vm_value_t stack[STACK_SIZE];
     int32_t sp;
 
-    CallFrame frames[MAX_FRAMES];
+    // CallFrame frames[MAX_FRAMES];
     int32_t frameCount;
 };
 

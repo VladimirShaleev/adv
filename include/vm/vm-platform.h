@@ -122,7 +122,7 @@ typedef struct _##vm_name* vm_name##_t;
  */
 #define VM_HANDLE(vm_name) \
 typedef struct {           \
-    vm_uint32_t handle; \
+    vm_uint32_t handle;    \
 } vm_name##_h;
 
 #endif /* VM_PLATFORM_H */
