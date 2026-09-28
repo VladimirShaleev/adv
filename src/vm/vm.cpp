@@ -1,4 +1,4 @@
-#include "vm.hpp"
+#include "script.hpp"
 
 struct _vm : public utils::Object {};
 
@@ -11,6 +11,9 @@ public:
     vm_script_h loadScriptFromMemory(std::span<const uint8_t> code) noexcept { return {}; }
 
     vm_script_h loadScriptFromFile(vm_utf8_t file) noexcept { return {}; }
+
+private:
+    utils::Pool<ScriptThread> _threads[MAX_THREADS];
 };
 
 } // namespace vm

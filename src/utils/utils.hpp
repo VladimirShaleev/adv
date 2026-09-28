@@ -10,6 +10,7 @@
 #endif
 
 #include "object.hpp"
+#include "pool.hpp"
 #include "string-pool.hpp"
 
 #include <bit>

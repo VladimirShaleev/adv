@@ -5,7 +5,7 @@
 
 namespace vm {
 
-constexpr size_t MAX_THREADS = 16;
+constexpr size_t MAX_THREADS = 64;
 constexpr size_t STACK_SIZE = 64;
 constexpr size_t LOCALS_COUNT = 16;
 constexpr size_t GLOBALS_COUNT = 256;
@@ -25,7 +25,13 @@ struct CallFrame {
     vm_uint32_t baseSp;
 };
 
+struct ScriptThreadHandle {
+    vm_uint16_t handle;
+};
+
 struct ScriptThread {
+    using Handle = ScriptThreadHandle;
+
     ThreadState state;
     uint32_t scriptId;
     uint32_t ip;
