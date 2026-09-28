@@ -15,6 +15,10 @@
 
 #include <bit>
 #include <cstdint>
+#include <string>
+#include <string_view>
+
+namespace utils {
 
 UTILS_FORCE_INLINE uint16_t swap_bytes(uint16_t val) {
 #if defined(__GNUC__) || defined(__clang__)
@@ -33,5 +37,71 @@ UTILS_FORCE_INLINE uint32_t swap_bytes(uint32_t val) {
     return val;
 #endif
 }
+
+[[nodiscard]] inline std::string escape(std::string_view input) {
+    std::string result;
+    result.reserve(input.size() * 2);
+    for (char ch : input) {
+        switch (ch) {
+        case '\\':
+            result += "\\\\";
+            break;
+        case '"':
+            result += "\\\"";
+            break;
+        case '\r':
+            result += "\\r";
+            break;
+        case '\n':
+            result += "\\n";
+            break;
+        case '\t':
+            result += "\\t";
+            break;
+        default:
+            result += ch;
+            break;
+        }
+    }
+    return result;
+}
+
+[[nodiscard]] inline std::optional<std::string> unescape(std::string_view input) {
+    std::string result;
+    result.reserve(input.size());
+    for (size_t i = 0; i < input.size(); ++i) {
+        char ch = input[i];
+        if (ch == '\\') {
+            if (i + 1 >= input.size()) {
+                return std::nullopt;
+            }
+            char nextCh = input[++i];
+            switch (nextCh) {
+            case '\\':
+                result += '\\';
+                break;
+            case '"':
+                result += '"';
+                break;
+            case 'r':
+                result += '\r';
+                break;
+            case 'n':
+                result += '\n';
+                break;
+            case 't':
+                result += '\t';
+                break;
+            default:
+                return std::nullopt;
+            }
+        } else {
+            result += ch;
+        }
+    }
+    return result;
+}
+
+} // namespace utils
 
 #endif // UTILS_UTILS_HPP

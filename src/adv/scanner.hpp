@@ -189,35 +189,11 @@ private:
     }
 
     [[nodiscard]] std::string unescape(const adv_location_t& location, const std::string_view str) {
-        auto cStr = str.data();
-        std::ostringstream ss;
-        for (size_t i = 0; i < str.length(); ++i) {
-            char c = *cStr++;
-            char nc = *cStr;
-            if (c == '\\') {
-                if (i + 1 < str.length()) {
-                    log<ADV_STATUS_E3005>(location, "incomplete sequence of '\\'");
-                    break;
-                } else if (nc == '\\') {
-                    ss << '\\';
-                } else if (nc == '"') {
-                    ss << '"';
-                } else if (nc == 'r') {
-                    ss << '\r';
-                } else if (nc == 'n') {
-                    ss << '\n';
-                } else if (nc == 't') {
-                    ss << '\t';
-                } else {
-                    log<ADV_STATUS_E3005>(location, "valid sequences: '\\\\', '\\\"', '\\r', '\\n', '\\t'");
-                    break;
-                }
-                ++cStr;
-            } else {
-                ss << c;
-            }
+        if (auto result = utils::unescape(str)) {
+            return result.value();
         }
-        return ss.str();
+        log<ADV_STATUS_E3005>(location, "valid sequences: '\\\\', '\\\"', '\\r', '\\n', '\\t'");
+        return "";
     }
 
     Context& _ctx;
