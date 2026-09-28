@@ -35,6 +35,20 @@
 # endif
 #endif
 
+#if defined(_MSC_VER)
+# define VM_PACKED_BEGIN _Pragma("pack(push, 1)")
+# define VM_PACKED_END   _Pragma("pack(pop)")
+# define VM_PACKED_ATTR
+#elif defined(__GNUC__) || defined(__clang__)
+# define VM_PACKED_BEGIN
+# define VM_PACKED_END
+# define VM_PACKED_ATTR __attribute__((packed))
+#else
+# define VM_PACKED_BEGIN
+# define VM_PACKED_END
+# define VM_PACKED_ATTR
+#endif
+
 #if defined(_WIN32) && !defined(VM_PLATFORM_WINDOWS)
 # define VM_PLATFORM_WINDOWS
 #elif defined(__APPLE__)

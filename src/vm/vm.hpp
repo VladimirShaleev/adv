@@ -12,6 +12,7 @@
 #endif
 
 #include <span>
+#include <vector>
 
 #include "vm/vm.h"
 

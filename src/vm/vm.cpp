@@ -4,16 +4,31 @@ struct _vm : public utils::Object {};
 
 namespace vm {
 
+struct Module {
+    using Handle = vm_script_h;
+
+    vm_script_header_t header;
+    vm_script_table_t table;
+    std::vector<uint8_t> bytecode;
+};
+
 class VM final : public _vm {
 public:
+    VM() : _mapModules(16, 2048, 64), _modules(16), _threads(64), _mapGlobals(512, 4096, 2048) {}
+
     void loadScript(vm_script_h handle) noexcept {}
 
-    vm_script_h loadScriptFromMemory(std::span<const uint8_t> code) noexcept { return {}; }
+    vm_script_h loadScriptFromMemory(std::span<const vm_char_t> code) noexcept { return {}; }
 
     vm_script_h loadScriptFromFile(vm_utf8_t file) noexcept { return {}; }
 
 private:
-    utils::Pool<ScriptThread> _threads[MAX_THREADS];
+    utils::StringPool _mapModules;
+    utils::Pool<Module> _modules;
+    utils::Pool<ScriptThread> _threads;
+    std::vector<ScriptThreadHandle> _threadHandles;
+    utils::StringPool _mapGlobals;
+    std::vector<vm_value_t> _globals;
 };
 
 } // namespace vm
@@ -61,6 +76,6 @@ vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
     return vm ? vm->as<vm::VM>()->loadScriptFromFile(file) : vm_script_h{};
 }
 
-vm_script_h vm_load_script_from_memory(vm_t vm, const vm_uint8_t* code, vm_uint32_t code_size) {
+vm_script_h vm_load_script_from_memory(vm_t vm, const vm_char_t* code, vm_uint32_t code_size) {
     return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}) : vm_script_h{};
 }

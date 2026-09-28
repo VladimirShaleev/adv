@@ -92,7 +92,7 @@ public:
 
     void clear() noexcept {
         if constexpr (!std::is_trivially_destructible_v<T>) {
-            for (size_t i = 0; i < _capacity; ++i) {
+            for (vm_uint32_t i = 0; i < _capacity; ++i) {
                 if (_values[i].handle.handle != Undefined.handle) {
                     access({i})->~T();
                 }

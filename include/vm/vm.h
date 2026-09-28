@@ -33,6 +33,7 @@
 #define VM_H
 
 #include "vm-opcode.h"
+#include "vm-script.h"
 #include "vm-value.h"
 
 #ifdef __cplusplus
@@ -82,7 +83,7 @@ vm_load_script_from_file(vm_t vm,
 
 VM_API vm_script_h
 vm_load_script_from_memory(vm_t vm,
-                           const vm_uint8_t* code,
+                           const vm_char_t* code,
                            vm_uint32_t code_size);
 
 #ifdef __cplusplus
