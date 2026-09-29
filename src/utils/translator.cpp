@@ -171,14 +171,14 @@ public:
                 } else if (equals(sec, ".text")) {
                     parseTextSection(result);
                 } else {
-                    error(fmt::format("Unknown section '{}'", sec), TranslateErrorCode::UnknownSection);
+                    error(fmt::format("Unknown section '{}'", sec), TranslateError::UnknownSection);
                 }
             } else {
-                error("Expected section header starting with '.'", TranslateErrorCode::ExpectedSectionStartingWithDot);
+                error("Expected section header starting with '.'", TranslateError::ExpectedSectionStartingWithDot);
             }
         }
         if (result.format == Format::Unknown) {
-            error("Unknown format", TranslateErrorCode::UnknownFormat);
+            error("Unknown format", TranslateError::UnknownFormat);
         }
         return result;
     }
@@ -197,11 +197,11 @@ private:
 
     void expect(TokenType expected, const std::string& message) {
         if (_currentToken.type != expected) {
-            error(message, TranslateErrorCode::SyntaxError);
+            error(message, TranslateError::SyntaxError);
         }
     }
 
-    [[noreturn]] void error(const std::string& message, TranslateErrorCode errorCode) const {
+    [[noreturn]] void error(const std::string& message, TranslateError::ErrorCode errorCode) const {
         throw TranslateError{errorCode, message, _prevToken.line, _prevToken.column};
     }
 
@@ -220,7 +220,7 @@ private:
         }
         error(
             fmt::format("Script version '{}' is incompatible with adv version '{}'", strVer, VM_VERSION_STRING),
-            TranslateErrorCode::IncompatibleVersion);
+            TranslateError::IncompatibleVersion);
     }
 
     [[nodiscard]] Format parseFormat() {
@@ -229,7 +229,7 @@ private:
         if (equals(str, "ADVT"sv)) {
             return Format::Advt;
         }
-        error(fmt::format("Unknown format '{}'", str), TranslateErrorCode::UnknownFormat);
+        error(fmt::format("Unknown format '{}'", str), TranslateError::UnknownFormat);
     }
 
     [[nodiscard]] vm_uint32_t parseUint32() {
@@ -239,9 +239,9 @@ private:
         if (ec == std::errc()) {
             return val;
         } else if (ec == std::errc::result_out_of_range) {
-            error(fmt::format("Value out of range '{}'", str), TranslateErrorCode::ValueOutOfRange);
+            error(fmt::format("Value out of range '{}'", str), TranslateError::ValueOutOfRange);
         } else {
-            error(fmt::format("Syntax Error '{}'", str), TranslateErrorCode::SyntaxError);
+            error(fmt::format("Syntax Error '{}'", str), TranslateError::SyntaxError);
         }
     }
 
@@ -251,7 +251,7 @@ private:
         advance();
         skipNewlinesAndComments();
         if (_currentToken.type != TokenType::Identifier) {
-            error("Expected header value", TranslateErrorCode::ExpectedHeaderValue);
+            error("Expected header value", TranslateError::ExpectedHeaderValue);
         }
         auto result = _currentToken.value;
         advance();
@@ -307,14 +307,14 @@ private:
                     instruction.opcode = parseOpcode(firstToken);
                 }
             } else {
-                error("Expected instruction or label", TranslateErrorCode::ExpectedInstruction);
+                error("Expected instruction or label", TranslateError::ExpectedInstruction);
             }
             while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
                    _currentToken.type != TokenType::Eof) {
                 if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
                     instruction.operand = _currentToken.value;
                 } else {
-                    error("Unexpected token in operands", TranslateErrorCode::UnexpectedTokenInOperand);
+                    error("Unexpected token in operands", TranslateError::UnexpectedTokenInOperand);
                 }
                 advance();
             }
@@ -356,7 +356,7 @@ private:
                 return opcode.value();
             }
         }
-        error(fmt::format("Unknown opcode '{}'", str), TranslateErrorCode::UnknownOpcode);
+        error(fmt::format("Unknown opcode '{}'", str), TranslateError::UnknownOpcode);
     }
 
     [[nodiscard]] static bool equals(std::string_view lhs, std::string_view rhs) noexcept {

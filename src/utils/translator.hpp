@@ -7,22 +7,22 @@
 
 namespace utils {
 
-enum class TranslateErrorCode {
-    NoError = 0,
-    SyntaxError,
-    UnknownFormat,
-    UnknownOpcode,
-    IncompatibleVersion,
-    ValueOutOfRange,
-    UnknownSection,
-    ExpectedSectionStartingWithDot,
-    ExpectedHeaderValue,
-    ExpectedInstruction,
-    UnexpectedTokenInOperand
-};
-
 struct TranslateError {
-    TranslateErrorCode errorCode;
+    enum ErrorCode {
+        NoError = 0,
+        SyntaxError,
+        UnknownFormat,
+        UnknownOpcode,
+        IncompatibleVersion,
+        ValueOutOfRange,
+        UnknownSection,
+        ExpectedSectionStartingWithDot,
+        ExpectedHeaderValue,
+        ExpectedInstruction,
+        UnexpectedTokenInOperand
+    };
+
+    ErrorCode errorCode;
     std::string message;
     uint32_t line;
     uint32_t column;
