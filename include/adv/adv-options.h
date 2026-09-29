@@ -16,6 +16,20 @@ extern "C" {
 #endif
 
 /**
+ * @brief   Script text or binary format type.
+ * @details Defines the representation format of the script code, 
+ *          distinguishing between human-readable text assembly and compiled binary bytecode.
+ * @ingroup enums
+ */
+typedef enum
+{
+    ADV_FORMAT_BINARY      = 0, /**< Binary bytecode format. */
+    ADV_FORMAT_TEXT        = 1, /**< Textual assembly source format. */
+    ADV_FORMAT_COUNT_ENUMS = 2, /**< Count of constants in the enumeration. */
+    ADV_FORMAT_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used). */
+} adv_format_t;
+
+/**
  * @brief   Source code.
  * @details Used to provide source code in memory.
  * @ingroup structs
@@ -135,6 +149,29 @@ adv_options_get_warnings_as_errors(adv_options_t options);
 ADV_API void
 adv_options_set_warnings_as_errors(adv_options_t options,
                                    adv_bool_t enable);
+
+/**
+ * @brief     Get the target output format setting.
+ * @details   Return the current output format configured in the options.
+ * @param[in] options Target options.
+ * @return    Current output format (::adv_format_t).
+ * @sa        ::adv_options_set_output_format
+ * @ingroup   functions
+ */
+ADV_API adv_format_t
+adv_options_get_output_format(adv_options_t options);
+
+/**
+ * @brief     Set the target output format setting.
+ * @details   Set the desired output format type for compilation or translation.
+ * @param[in] options Target options.
+ * @param[in] format Output format type to set.
+ * @sa        ::adv_options_get_output_format
+ * @ingroup   functions
+ */
+ADV_API void
+adv_options_set_output_format(adv_options_t options,
+                              adv_format_t format);
 
 /**
  * @brief     Get output directory.

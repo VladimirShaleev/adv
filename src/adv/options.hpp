@@ -12,6 +12,9 @@ public:
     [[nodiscard]] bool getWarningsAsErrors() const noexcept;
     void setWarningsAsErrors(bool enable) noexcept;
 
+    [[nodiscard]] adv_format_t getOutputFormat() const noexcept;
+    void setOutputFormat(adv_format_t format) noexcept;
+
     [[nodiscard]] adv_utf8_t getOutputDir() const noexcept;
     void setOutputDir(adv_utf8_t dir);
 
@@ -30,6 +33,7 @@ public:
 private:
     bool _warningsAsErrors{};
 
+    adv_format_t _outputFormat{};
     std::string _outputDir{};
     std::vector<std::string> _importDirs{};
 

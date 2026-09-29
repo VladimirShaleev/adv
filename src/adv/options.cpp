@@ -6,6 +6,10 @@ bool Options::getWarningsAsErrors() const noexcept { return _warningsAsErrors; }
 
 void Options::setWarningsAsErrors(bool enable) noexcept { _warningsAsErrors = enable; }
 
+adv_format_t Options::getOutputFormat() const noexcept { return _outputFormat; }
+
+void Options::setOutputFormat(adv_format_t format) noexcept { _outputFormat = format; }
+
 adv_utf8_t Options::getOutputDir() const noexcept { return _outputDir.c_str(); }
 
 void Options::setOutputDir(adv_utf8_t dir) { _outputDir = dir; }
@@ -36,10 +40,10 @@ adv_import_callback_t Options::getImporter(adv_data_t* data) const noexcept {
 
 void Options::setImporter(adv_import_callback_t callback, adv_data_t data) noexcept {
     if (callback) {
-        _importer     = callback;
+        _importer = callback;
         _importerData = data;
     } else {
-        _importer     = nullptr;
+        _importer = nullptr;
         _importerData = nullptr;
     }
 }
@@ -53,10 +57,10 @@ adv_release_import_callback_t Options::getReleaseImport(adv_data_t* data) const 
 
 void Options::setReleaseImport(adv_release_import_callback_t callback, adv_data_t data) noexcept {
     if (callback) {
-        _releaseImport     = callback;
+        _releaseImport = callback;
         _releaseImportData = data;
     } else {
-        _releaseImport     = nullptr;
+        _releaseImport = nullptr;
         _releaseImportData = nullptr;
     }
 }
@@ -70,10 +74,10 @@ adv_write_callback_t Options::getWriter(adv_data_t* data) const noexcept {
 
 void Options::setWriter(adv_write_callback_t callback, adv_data_t data) noexcept {
     if (callback) {
-        _writer     = callback;
+        _writer = callback;
         _writerData = data;
     } else {
-        _writer     = nullptr;
+        _writer = nullptr;
         _writerData = nullptr;
     }
 }
@@ -104,6 +108,16 @@ adv_bool_t adv_options_get_warnings_as_errors(adv_options_t options) {
 void adv_options_set_warnings_as_errors(adv_options_t options, adv_bool_t enable) {
     if (options) {
         options->as<adv::Options>()->setWarningsAsErrors(!!enable);
+    }
+}
+
+adv_format_t adv_options_get_output_format(adv_options_t options) {
+    return options ? options->as<adv::Options>()->getOutputFormat() : ADV_FORMAT_BINARY;
+}
+
+void adv_options_set_output_format(adv_options_t options, adv_format_t format) {
+    if (options) {
+        options->as<adv::Options>()->setOutputFormat(format);
     }
 }
 
