@@ -35,7 +35,7 @@ if(ADV_BUILD_TOOL)
     find_package(argparse CONFIG REQUIRED)
 endif()
 
-file(GLOB UTILS_SOURCES
+file(GLOB UTILS_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp")
 add_library(utils OBJECT ${UTILS_SOURCES})
@@ -46,7 +46,7 @@ target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-file(GLOB VM_SOURCES
+file(GLOB VM_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.cpp")
 add_library(vm ${VM_SOURCES})
@@ -66,7 +66,7 @@ flex_target(scanner
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/scanner.ll"
     "${CMAKE_CURRENT_BINARY_DIR}/scanner.cpp")
 add_flex_bison_dependency(scanner parser)
-file(GLOB ADV_SOURCES
+file(GLOB ADV_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.cpp")
 list(FILTER ADV_SOURCES EXCLUDE REGEX "main.cpp")

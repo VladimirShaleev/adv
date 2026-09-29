@@ -551,17 +551,33 @@ private:
 } // namespace
 
 bool isBinaryCode(std::span<const char> code) noexcept {
-    if (code.size() >= sizeof(vm_script_header_t)) {
-        auto ptr = code.data();
-        vm_script_header_t* header;
-        memcpy((void*)&header, (void*)&ptr, sizeof(vm_script_header_t*));
-
-        const auto magic = header->magic;
-        if (magic[0] == 'a' && magic[1] == 'd' && magic[2] == 'v' && magic[3] == 'b') {
-            return true;
-        }
+    if (code.size() < sizeof(vm_script_header_t) + sizeof(vm_script_table_t)) {
+        return false;
     }
-    return false;
+    auto ptrHeader = code.data();
+    vm_script_header_t* header;
+    memcpy((void*)&header, (void*)&ptrHeader, sizeof(vm_script_header_t*));
+
+    const auto magic = header->magic;
+    if (magic[0] != 'a' || magic[1] != 'd' || magic[2] != 'v' || magic[3] != 'b') {
+        return false;
+    }
+
+    vm_script_table_t table;
+    std::memcpy(&table, code.data() + sizeof(vm_script_header_t), sizeof(table));
+    if (std::endian::native != std::endian::little) {
+        table.data_offset = swap_bytes(table.data_offset);
+        table.data_size = swap_bytes(table.data_size);
+        table.text_offset = swap_bytes(table.text_offset);
+        table.text_size = swap_bytes(table.text_size);
+    }
+
+    const auto dataLeft = table.data_offset;
+    const auto dataRight = dataLeft + table.data_size;
+    const auto textLeft = table.text_offset;
+    const auto textRight = textLeft + table.text_size;
+
+    return dataRight <= code.size() && textRight <= code.size() && (dataRight <= textLeft || textRight <= dataLeft);
 }
 
 std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept {
