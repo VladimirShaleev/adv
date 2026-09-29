@@ -53,7 +53,6 @@ struct PatchInstruction {
 };
 
 struct Advt {
-
     Format format;
     vm_uint32_t version;
     vm_uint32_t checksum;
@@ -345,45 +344,6 @@ private:
         }
     }
 
-    void pushUint16(vm_uint16_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
-        buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
-        buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
-    }
-
-    void pushUint32(vm_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
-        buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
-        buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
-        buffer.push_back(static_cast<uint8_t>((val >> 16) & 0xFF));
-        buffer.push_back(static_cast<uint8_t>((val >> 24) & 0xFF));
-    }
-
-    void pushInt32(vm_sint32_t val, std::vector<uint8_t>& buffer) { pushUint32(static_cast<vm_uint32_t>(val), buffer); }
-
-    void pushFloat(vm_float32_t val, std::vector<uint8_t>& buffer) {
-        static_assert(sizeof(vm_float32_t) == sizeof(vm_uint32_t));
-        vm_uint32_t bits;
-        std::memcpy(&bits, &val, sizeof(vm_float32_t));
-        pushUint32(bits, buffer);
-    }
-
-    void patchUint32(vm_uint32_t offset, vm_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
-        buffer[offset + 0] = static_cast<uint8_t>((val >> 0) & 0xFF);
-        buffer[offset + 1] = static_cast<uint8_t>((val >> 8) & 0xFF);
-        buffer[offset + 2] = static_cast<uint8_t>((val >> 16) & 0xFF);
-        buffer[offset + 3] = static_cast<uint8_t>((val >> 24) & 0xFF);
-    }
-
-    [[nodiscard]] vm_uint32_t pushStringData(std::string_view str, std::vector<uint8_t>& buffer) {
-        const auto offset = static_cast<vm_uint32_t>(buffer.size());
-        pushUint16(static_cast<vm_uint16_t>(str.length() - 2), buffer);
-        buffer.insert(buffer.end(), str.begin() + 1, str.end() - 1);
-        buffer.push_back(uint8_t('\0'));
-        return offset;
-    }
-
     void pushInstruction(Advt& result, const Instruction& instruction) {
         const auto label = instruction.label;
         const auto opcode = instruction.opcode;
@@ -392,7 +352,7 @@ private:
             if (result.labelMap.contains(label)) {
                 error(fmt::format("Duplicate label identifier '{}'", label), TranslateError::RedefinedIdentifier);
             }
-            result.labelMap[label] = static_cast<vm_uint32_t>(result.textSection.size());
+            result.labelMap[label] = pollOffset(result.textSection);
         }
         result.textSection.push_back((uint8_t)opcode);
         switch (instruction.opcode) {
@@ -402,7 +362,7 @@ private:
             break;
         case VM_OPCODE_JUMP:
         case VM_OPCODE_JUMP_IF_FALSE:
-            result.labels.emplace_back(operand, static_cast<vm_uint32_t>(result.textSection.size()), instruction.line);
+            result.labels.emplace_back(operand, pollOffset(result.textSection), instruction.line);
             pushUint32(0, result.textSection);
             break;
         case VM_OPCODE_PUSH_INT:
@@ -423,8 +383,7 @@ private:
                     pushUint32(offset, result.textSection);
                 }
             } else {
-                result.identifiers.emplace_back(
-                    operand, static_cast<vm_uint32_t>(result.textSection.size()), instruction.line);
+                result.identifiers.emplace_back(operand, pollOffset(result.textSection), instruction.line);
                 pushUint32(0, result.textSection);
             }
             break;
@@ -458,6 +417,18 @@ private:
         }
     }
 
+    [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) {
+        char buffer[64] = "VM_OPCODE_";
+        if (str.length() + 10 < sizeof(buffer)) {
+            std::memcpy(buffer + 10, str.data(), str.length());
+            auto opcode = magic_enum::enum_cast<vm_opcode_t>({buffer, str.length() + 10}, magic_enum::case_insensitive);
+            if (opcode) {
+                return opcode.value();
+            }
+        }
+        error(fmt::format("Unknown opcode '{}'", str), TranslateError::UnknownOpcode);
+    }
+
     [[nodiscard]] static std::optional<vm_uint32_t> parseComponent(std::string_view& str, bool isLast) noexcept {
         if (str.empty()) {
             return std::nullopt;
@@ -483,22 +454,55 @@ private:
         return value;
     }
 
-    [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) {
-        char buffer[64] = "VM_OPCODE_";
-        if (str.length() + 10 < sizeof(buffer)) {
-            std::memcpy(buffer + 10, str.data(), str.length());
-            auto opcode = magic_enum::enum_cast<vm_opcode_t>({buffer, str.length() + 10}, magic_enum::case_insensitive);
-            if (opcode) {
-                return opcode.value();
-            }
-        }
-        error(fmt::format("Unknown opcode '{}'", str), TranslateError::UnknownOpcode);
-    }
-
     [[nodiscard]] static bool equals(std::string_view lhs, std::string_view rhs) noexcept {
         return std::ranges::equal(lhs, rhs, [](char a, char b) {
             return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
         });
+    }
+
+    static void pushUint16(vm_uint16_t val, std::vector<uint8_t>& buffer) {
+        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
+    }
+
+    static void pushUint32(vm_uint32_t val, std::vector<uint8_t>& buffer) {
+        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 16) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 24) & 0xFF));
+    }
+
+    static void pushInt32(vm_sint32_t val, std::vector<uint8_t>& buffer) {
+        pushUint32(static_cast<vm_uint32_t>(val), buffer);
+    }
+
+    static void pushFloat(vm_float32_t val, std::vector<uint8_t>& buffer) {
+        static_assert(sizeof(vm_float32_t) == sizeof(vm_uint32_t));
+        vm_uint32_t bits;
+        std::memcpy(&bits, &val, sizeof(vm_float32_t));
+        pushUint32(bits, buffer);
+    }
+
+    static void patchUint32(vm_uint32_t offset, vm_uint32_t val, std::vector<uint8_t>& buffer) {
+        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        buffer[offset + 0] = static_cast<uint8_t>((val >> 0) & 0xFF);
+        buffer[offset + 1] = static_cast<uint8_t>((val >> 8) & 0xFF);
+        buffer[offset + 2] = static_cast<uint8_t>((val >> 16) & 0xFF);
+        buffer[offset + 3] = static_cast<uint8_t>((val >> 24) & 0xFF);
+    }
+
+    [[nodiscard]] static vm_uint32_t pushStringData(std::string_view str, std::vector<uint8_t>& buffer) {
+        const auto offset = static_cast<vm_uint32_t>(buffer.size());
+        pushUint16(static_cast<vm_uint16_t>(str.length() - 2), buffer);
+        buffer.insert(buffer.end(), str.begin() + 1, str.end() - 1);
+        buffer.push_back(uint8_t('\0'));
+        return offset;
+    }
+
+    [[nodiscard]] static vm_uint32_t pollOffset(std::vector<uint8_t>& buffer) noexcept {
+        return static_cast<vm_uint32_t>(buffer.size());
     }
 
     Lexer& _lexer;
