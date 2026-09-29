@@ -10,9 +10,13 @@ namespace utils {
 struct TranslateError {
     enum ErrorCode {
         NoError = 0,
+        OutOfMemory,
         SyntaxError,
+        UnknownError,
         UnknownFormat,
         UnknownOpcode,
+        UnknownIdentifier,
+        RedefinedIdentifier,
         IncompatibleVersion,
         ValueOutOfRange,
         UnknownSection,
@@ -28,7 +32,7 @@ struct TranslateError {
     uint32_t column;
 };
 
-[[nodiscard]] bool isBinaryCode(std::span<const uint8_t> code) noexcept;
+[[nodiscard]] bool isBinaryCode(std::span<const char> code) noexcept;
 
 [[nodiscard]] std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept;
 

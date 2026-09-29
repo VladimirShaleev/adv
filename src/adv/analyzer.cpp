@@ -132,7 +132,7 @@ void Analyzer::resolveSymbols() {
         void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) { node->parent = parent; }
         void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) {
             node->parent = parent;
-            adv_uint32_t slotsBeforeBlock = 0;
+            adv_uint16_t slotsBeforeBlock = 0;
             const auto isNonFunctionBlock = parent->type != ADV_NODE_FUNCTION_DECL;
             if (isNonFunctionBlock) {
                 symbolTable.beginScope();

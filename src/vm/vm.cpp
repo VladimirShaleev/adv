@@ -26,7 +26,7 @@ public:
 
     [[nodiscard]] vm_script_h loadScriptFromMemory(std::span<const vm_char_t> code) noexcept {
         std::vector<vm_uint8_t> tmpBuffer;
-        if (!isBinary(code)) {
+        if (!utils::isBinaryCode(code)) {
             if (code = tryTranslate(code, tmpBuffer); code.empty()) {
                 return UndefinedScript;
             }
@@ -53,34 +53,13 @@ public:
     }
 
 private:
-    [[nodiscard]] static bool isBinary(std::span<const vm_char_t> code) noexcept {
-        if (code.size() >= sizeof(vm_script_header_t)) {
-            auto ptr = code.data();
-            vm_script_header_t* header;
-            memcpy((void*)&header, (void*)&ptr, sizeof(vm_script_header_t*));
-
-            const auto magic = header->magic;
-            if (magic[0] == 'a' && magic[1] == 'd' && magic[2] == 'v' && magic[3] == 'b') {
-                return true;
-            }
-        }
-        return false;
-    }
-
     std::span<const vm_char_t> tryTranslate(std::span<const vm_char_t> code, std::vector<vm_uint8_t>& buffer) {
         utils::TranslateError error{};
         buffer = utils::translateTextToBinary(code, error);
-        return {(const vm_char_t*)buffer.data(), buffer.size()};
-        // utils::AdvtLexer lexer(code);
-        // advt::AdvtParser parser(lexer);
-
-        // try {
-        //     auto ast = parser.parse();
-        //     int i = 4;
-        // } catch (const vm_error_t& err) {
-        //     return {};
-        // }
-        // return {buffer.data(), buffer.size()};
+        if (error.errorCode == utils::TranslateError::NoError) {
+            return {(const vm_char_t*)buffer.data(), buffer.size()};
+        }
+        return {};
     }
 
     utils::StringPool _mapModules;

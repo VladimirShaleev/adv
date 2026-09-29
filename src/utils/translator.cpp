@@ -1,10 +1,12 @@
 #include "translator.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
 #include <charconv>
 #include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
+#include <type_traits>
 #include <unordered_map>
 
 #include <vm/vm-opcode.h>
@@ -44,12 +46,24 @@ struct Instruction {
     vm_uint32_t line;
 };
 
+struct PatchInstruction {
+    std::string_view identifier;
+    vm_uint32_t offset;
+    vm_uint32_t line;
+};
+
 struct Advt {
+
     Format format;
     vm_uint32_t version;
     vm_uint32_t checksum;
-    std::unordered_map<std::string_view, std::string_view> dataSection;
-    std::vector<Instruction> textSection;
+    std::unordered_map<std::string_view, std::string_view> identifierMap;
+    std::vector<PatchInstruction> identifiers;
+    std::vector<PatchInstruction> labels;
+    std::unordered_map<std::string_view, vm_uint32_t> labelMap;
+    std::unordered_map<std::string_view, vm_uint32_t> dataSectionMap;
+    std::vector<uint8_t> dataSection;
+    std::vector<uint8_t> textSection;
 };
 
 class Lexer {
@@ -165,7 +179,7 @@ public:
                 } else if (equals(sec, ".version"sv)) {
                     result.version = parseVersion();
                 } else if (equals(sec, ".checksum"sv)) {
-                    result.checksum = parseUint32();
+                    result.checksum = parseValue<vm_uint32_t>(parseHeaderValue());
                 } else if (equals(sec, ".data")) {
                     parseDataSection(result);
                 } else if (equals(sec, ".text")) {
@@ -180,6 +194,7 @@ public:
         if (result.format == Format::Unknown) {
             error("Unknown format", TranslateError::UnknownFormat);
         }
+        resolveIdentifiers(result);
         return result;
     }
 
@@ -201,8 +216,11 @@ private:
         }
     }
 
-    [[noreturn]] void error(const std::string& message, TranslateError::ErrorCode errorCode) const {
-        throw TranslateError{errorCode, message, _prevToken.line, _prevToken.column};
+    [[noreturn]] void error(
+        const std::string& message,
+        TranslateError::ErrorCode errorCode,
+        std::optional<vm_uint32_t> line = std::nullopt) const {
+        throw TranslateError{errorCode, message, line.value_or(_prevToken.line), line ? 0 : _prevToken.column};
     }
 
     [[nodiscard]] vm_uint32_t parseVersion() {
@@ -232,9 +250,10 @@ private:
         error(fmt::format("Unknown format '{}'", str), TranslateError::UnknownFormat);
     }
 
-    [[nodiscard]] vm_uint32_t parseUint32() {
-        auto str = parseHeaderValue();
-        vm_uint32_t val = 0;
+    template <typename T>
+    [[nodiscard]] T parseValue(std::string_view str) const {
+        static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>);
+        T val = 0;
         const auto [_, ec] = std::from_chars(str.data(), str.data() + str.length(), val);
         if (ec == std::errc()) {
             return val;
@@ -274,7 +293,11 @@ private:
             advance();
             skipNewlinesAndComments();
             expect(TokenType::String, "Expected string literal in .data section");
-            result.dataSection[name] = _currentToken.value;
+            if (result.identifierMap.contains(_currentToken.value)) {
+                error(
+                    fmt::format("Duplicate identifier '{}'", _currentToken.value), TranslateError::RedefinedIdentifier);
+            }
+            result.identifierMap[name] = _currentToken.value;
             advance();
         }
     }
@@ -298,7 +321,7 @@ private:
                     advance();
                     skipNewlinesAndComments();
                     if (_currentToken.type != TokenType::Identifier) {
-                        result.textSection.push_back(instruction);
+                        pushInstruction(result, instruction);
                         continue;
                     }
                     instruction.opcode = parseOpcode(_currentToken.value);
@@ -318,7 +341,120 @@ private:
                 }
                 advance();
             }
-            result.textSection.push_back(instruction);
+            pushInstruction(result, instruction);
+        }
+    }
+
+    void pushUint16(vm_uint16_t val, std::vector<uint8_t>& buffer) {
+        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
+    }
+
+    void pushUint32(vm_uint32_t val, std::vector<uint8_t>& buffer) {
+        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 16) & 0xFF));
+        buffer.push_back(static_cast<uint8_t>((val >> 24) & 0xFF));
+    }
+
+    void pushInt32(vm_sint32_t val, std::vector<uint8_t>& buffer) { pushUint32(static_cast<vm_uint32_t>(val), buffer); }
+
+    void pushFloat(vm_float32_t val, std::vector<uint8_t>& buffer) {
+        static_assert(sizeof(vm_float32_t) == sizeof(vm_uint32_t));
+        vm_uint32_t bits;
+        std::memcpy(&bits, &val, sizeof(vm_float32_t));
+        pushUint32(bits, buffer);
+    }
+
+    void patchUint32(vm_uint32_t offset, vm_uint32_t val, std::vector<uint8_t>& buffer) {
+        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        buffer[offset + 0] = static_cast<uint8_t>((val >> 0) & 0xFF);
+        buffer[offset + 1] = static_cast<uint8_t>((val >> 8) & 0xFF);
+        buffer[offset + 2] = static_cast<uint8_t>((val >> 16) & 0xFF);
+        buffer[offset + 3] = static_cast<uint8_t>((val >> 24) & 0xFF);
+    }
+
+    [[nodiscard]] vm_uint32_t pushStringData(std::string_view str, std::vector<uint8_t>& buffer) {
+        const auto offset = static_cast<vm_uint32_t>(buffer.size());
+        pushUint16(static_cast<vm_uint16_t>(str.length() - 2), buffer);
+        buffer.insert(buffer.end(), str.begin() + 1, str.end() - 1);
+        buffer.push_back(uint8_t('\0'));
+        return offset;
+    }
+
+    void pushInstruction(Advt& result, const Instruction& instruction) {
+        const auto label = instruction.label;
+        const auto opcode = instruction.opcode;
+        const auto operand = instruction.operand;
+        if (!label.empty()) {
+            if (result.labelMap.contains(label)) {
+                error(fmt::format("Duplicate label identifier '{}'", label), TranslateError::RedefinedIdentifier);
+            }
+            result.labelMap[label] = static_cast<vm_uint32_t>(result.textSection.size());
+        }
+        result.textSection.push_back((uint8_t)opcode);
+        switch (instruction.opcode) {
+        case VM_OPCODE_PUSH_LOCAL:
+        case VM_OPCODE_POP_LOCAL:
+            pushUint16(parseValue<vm_uint16_t>(operand), result.textSection);
+            break;
+        case VM_OPCODE_JUMP:
+        case VM_OPCODE_JUMP_IF_FALSE:
+            result.labels.emplace_back(operand, static_cast<vm_uint32_t>(result.textSection.size()), instruction.line);
+            pushUint32(0, result.textSection);
+            break;
+        case VM_OPCODE_PUSH_INT:
+            pushInt32(parseValue<vm_sint32_t>(operand), result.textSection);
+            break;
+        case VM_OPCODE_PUSH_FLOAT:
+            pushFloat(parseValue<vm_float32_t>(operand), result.textSection);
+            break;
+        case VM_OPCODE_PUSH_STRING:
+        case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
+        case VM_OPCODE_POP_GLOBAL_BY_NAME:
+            if (!operand.empty() && operand[0] == '"') {
+                if (auto it = result.dataSectionMap.find(operand); it != result.dataSectionMap.end()) {
+                    pushUint32(it->second, result.textSection);
+                } else {
+                    const auto offset = pushStringData(operand, result.dataSection);
+                    result.dataSectionMap[operand] = offset;
+                    pushUint32(offset, result.textSection);
+                }
+            } else {
+                result.identifiers.emplace_back(
+                    operand, static_cast<vm_uint32_t>(result.textSection.size()), instruction.line);
+                pushUint32(0, result.textSection);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    void resolveIdentifiers(Advt& result) {
+        for (const auto& [id, offsetText, line] : result.identifiers) {
+            auto it = result.identifierMap.find(id);
+            if (it == result.identifierMap.end()) {
+                error(fmt::format("Identifier '{}' not found", id), TranslateError::UnknownIdentifier, line);
+            }
+            auto str = it->second;
+            if (auto m = result.dataSectionMap.find(str); m != result.dataSectionMap.end()) {
+                patchUint32(offsetText, m->second, result.textSection);
+            } else {
+                const auto offset = pushStringData(str, result.dataSection);
+                result.dataSectionMap[str] = offset;
+                patchUint32(offsetText, offset, result.textSection);
+            }
+        }
+        for (const auto& [id, offsetText, line] : result.labels) {
+            auto it = result.labelMap.find(id);
+            if (it == result.labelMap.end()) {
+                error(fmt::format("label identifier '{}' not found", id), TranslateError::UnknownIdentifier, line);
+            }
+            const auto offset = it->second;
+            patchUint32(offsetText, offset, result.textSection);
         }
     }
 
@@ -372,7 +508,7 @@ private:
 
 } // namespace
 
-[[nodiscard]] bool isBinaryCode(std::span<const vm_char_t> code) noexcept {
+bool isBinaryCode(std::span<const char> code) noexcept {
     if (code.size() >= sizeof(vm_script_header_t)) {
         auto ptr = code.data();
         vm_script_header_t* header;
@@ -386,17 +522,47 @@ private:
     return false;
 }
 
-[[nodiscard]] std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept {
+std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept {
     Lexer lexer(text);
     Parser parser(lexer);
+    std::vector<vm_uint8_t> bytecode;
     try {
         error = {};
-        auto advt = parser.parse();
-        int i = 4;
+        auto advb = parser.parse();
+        bytecode.resize(
+            sizeof(vm_script_header_t) + sizeof(vm_script_table_t) + advb.dataSection.size() + advb.textSection.size());
+        auto header = reinterpret_cast<vm_script_header_t*>(bytecode.data());
+        auto table = reinterpret_cast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t));
+        auto data = bytecode.data() + sizeof(vm_script_header_t) + sizeof(vm_script_table_t);
+        auto text = data + advb.dataSection.size();
+
+        header->magic[0] = 'a';
+        header->magic[1] = 'd';
+        header->magic[2] = 'v';
+        header->magic[3] = 'b';
+        header->checksum = 0;
+        header->version = VM_VERSION;
+        table->data_offset = static_cast<vm_uint32_t>(sizeof(vm_script_header_t) + sizeof(vm_script_table_t));
+        table->data_size = static_cast<vm_uint32_t>(advb.dataSection.size());
+        table->text_offset = table->data_offset + table->data_size;
+        table->data_size = static_cast<vm_uint32_t>(advb.textSection.size());
+        if (std::endian::native != std::endian::little) {
+            header->version = swap_bytes(header->version);
+            table->data_offset = swap_bytes(table->data_offset);
+            table->data_size = swap_bytes(table->data_size);
+            table->text_offset = swap_bytes(table->text_offset);
+            table->data_size = swap_bytes(table->data_size);
+        }
+        std::memcpy(data, advb.dataSection.data(), advb.dataSection.size());
+        std::memcpy(text, advb.textSection.data(), advb.textSection.size());
     } catch (const TranslateError& err) {
         error = err;
+    } catch (const std::bad_alloc&) {
+        error = {TranslateError::OutOfMemory, "Out of memory"};
+    } catch (...) {
+        error = {TranslateError::UnknownError, "Unknown error"};
     }
-    return {};
+    return bytecode;
 }
 
 } // namespace utils

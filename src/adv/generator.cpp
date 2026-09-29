@@ -15,13 +15,14 @@ public:
         : ctx(ctx), data(data), code(code) {}
 
     void emitByte(uint8_t byte) { code.push_back(byte); }
-    void emitInt16(adv_sint16_t val) { emitUint16(static_cast<adv_uint16_t>(val), code); }
+    void emitUint16(adv_uint16_t val) { emitUint16(val, code); }
+    void emitUint32(adv_uint32_t val) { emitUint32(val, code); }
     void emitInt32(adv_sint32_t val) { emitUint32(static_cast<adv_uint32_t>(val), code); }
     void emitFloat(adv_float32_t val) {
-        static_assert(sizeof(adv_float32_t) == sizeof(adv_sint32_t));
-        adv_sint32_t bits;
+        static_assert(sizeof(adv_float32_t) == sizeof(adv_uint32_t));
+        adv_uint32_t bits;
         std::memcpy(&bits, &val, sizeof(adv_float32_t));
-        emitInt32(bits);
+        emitUint32(bits);
     }
 
     void emitString(vm_string_h str) {
@@ -225,7 +226,7 @@ struct CodeGenVisitor {
             emitter.emitString(sym->name);
         } else {
             emitter.emitByte(VM_OPCODE_POP_LOCAL);
-            emitter.emitInt16(static_cast<int16_t>(sym->slotIndex));
+            emitter.emitUint16(sym->slotIndex);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
@@ -273,7 +274,7 @@ struct CodeGenVisitor {
         acceptNode(node->while_stmt.body);
 
         emitter.emitByte(VM_OPCODE_JUMP);
-        emitter.emitInt32(static_cast<adv_sint32_t>(loopStartIp));
+        emitter.emitUint32(loopStartIp);
 
         emitter.patchJump(exitJumpPos);
     }
@@ -303,7 +304,7 @@ struct CodeGenVisitor {
             emitter.emitString(sym->name);
         } else {
             emitter.emitByte(VM_OPCODE_PUSH_LOCAL);
-            emitter.emitInt16(static_cast<int16_t>(sym->slotIndex));
+            emitter.emitUint16(sym->slotIndex);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
@@ -318,7 +319,7 @@ struct CodeGenVisitor {
                 emitter.emitString(sym->name);
             } else {
                 emitter.emitByte(VM_OPCODE_POP_LOCAL);
-                emitter.emitInt16(static_cast<adv_sint16_t>(sym->slotIndex));
+                emitter.emitUint16(sym->slotIndex);
             }
         }
     }

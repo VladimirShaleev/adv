@@ -18,8 +18,8 @@ struct Symbol {
     vm_value_type_t type;
     std::vector<Symbol*> params;
     adv_location_t location;
-    adv_uint32_t slotIndex;
-    adv_uint32_t frameSlotCount;
+    adv_uint16_t slotIndex;
+    adv_uint16_t frameSlotCount;
     bool isGlobal;
 };
 

@@ -90,7 +90,7 @@ if(ADV_BUILD_TOOL)
     add_executable(advc "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/main.cpp")
     add_executable(${PROJECT_NAME}::advc ALIAS advc)
     set_default_properties(TARGET advc)
-    target_link_libraries(advc PRIVATE adv vm) # TODO: remove vm later
+    target_link_libraries(advc PRIVATE adv)
     target_link_libraries(advc PRIVATE argparse::argparse)
 endif()
 
