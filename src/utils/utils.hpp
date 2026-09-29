@@ -16,6 +16,7 @@
 
 #include <bit>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -101,6 +102,15 @@ UTILS_FORCE_INLINE uint32_t swap_bytes(uint32_t val) {
         }
     }
     return result;
+}
+
+[[nodiscard]] UTILS_FORCE_INLINE uint32_t adler32(std::span<const uint8_t> data) noexcept {
+    uint32_t a = 1, b = 0;
+    for (size_t i = 0; i < data.size(); ++i) {
+        a = (a + data[i]) % 65521;
+        b = (b + a) % 65521;
+    }
+    return (b << 16) | a;
 }
 
 } // namespace utils

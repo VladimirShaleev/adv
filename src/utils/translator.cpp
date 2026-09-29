@@ -53,6 +53,9 @@ struct PatchInstruction {
 };
 
 struct Advt {
+    static constexpr vm_uint32_t offsetData =
+        static_cast<vm_uint32_t>(sizeof(vm_script_header_t) + sizeof(vm_script_table_t));
+
     Format format;
     vm_uint32_t version;
     vm_uint32_t checksum;
@@ -61,7 +64,7 @@ struct Advt {
     std::vector<PatchInstruction> labels;
     std::unordered_map<std::string_view, vm_uint32_t> labelMap;
     std::unordered_map<std::string_view, vm_uint32_t> dataSectionMap;
-    std::vector<uint8_t> dataSection;
+    std::vector<uint8_t> headerAndDataSection;
     std::vector<uint8_t> textSection;
 };
 
@@ -163,9 +166,10 @@ class Parser {
 public:
     explicit Parser(Lexer& lexer) : _lexer(lexer) { advance(); }
 
-    Advt parse() {
+    std::vector<uint8_t> parse() {
         using namespace std::string_view_literals;
         Advt result{};
+        result.headerAndDataSection.resize(Advt::offsetData);
         while (_currentToken.type != TokenType::Eof) {
             skipNewlinesAndComments();
             if (_currentToken.type == TokenType::Eof) {
@@ -194,7 +198,7 @@ public:
             error("Unknown format", TranslateError::UnknownFormat);
         }
         resolveIdentifiers(result);
-        return result;
+        return mergeTextSection(result);
     }
 
 private:
@@ -252,7 +256,7 @@ private:
     template <typename T>
     [[nodiscard]] T parseValue(std::string_view str) const {
         static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>);
-        T val = 0;
+        T val{};
         const auto [_, ec] = std::from_chars(str.data(), str.data() + str.length(), val);
         if (ec == std::errc()) {
             return val;
@@ -378,7 +382,7 @@ private:
                 if (auto it = result.dataSectionMap.find(operand); it != result.dataSectionMap.end()) {
                     pushUint32(it->second, result.textSection);
                 } else {
-                    const auto offset = pushStringData(operand, result.dataSection);
+                    const auto offset = pushStringData(operand, result.headerAndDataSection, Advt::offsetData);
                     result.dataSectionMap[operand] = offset;
                     pushUint32(offset, result.textSection);
                 }
@@ -402,7 +406,7 @@ private:
             if (auto m = result.dataSectionMap.find(str); m != result.dataSectionMap.end()) {
                 patchUint32(offsetText, m->second, result.textSection);
             } else {
-                const auto offset = pushStringData(str, result.dataSection);
+                const auto offset = pushStringData(str, result.headerAndDataSection, Advt::offsetData);
                 result.dataSectionMap[str] = offset;
                 patchUint32(offsetText, offset, result.textSection);
             }
@@ -415,6 +419,39 @@ private:
             const auto offset = it->second;
             patchUint32(offsetText, offset, result.textSection);
         }
+    }
+
+    std::vector<vm_uint8_t> mergeTextSection(Advt& result) {
+        std::vector<vm_uint8_t> bytecode = std::move(result.headerAndDataSection);
+        const auto offsetText = bytecode.size();
+        bytecode.resize(offsetText + result.textSection.size());
+        auto header = reinterpret_cast<vm_script_header_t*>(bytecode.data());
+        auto table = reinterpret_cast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t));
+        auto text = bytecode.data() + offsetText;
+
+        header->magic[0] = 'a';
+        header->magic[1] = 'd';
+        header->magic[2] = 'v';
+        header->magic[3] = 'b';
+        header->checksum = 0;
+        header->version = VM_VERSION;
+        table->data_offset = Advt::offsetData;
+        table->data_size = static_cast<vm_uint32_t>(offsetText) - Advt::offsetData;
+        table->text_offset = offsetText;
+        table->text_size = static_cast<vm_uint32_t>(result.textSection.size());
+        if (std::endian::native != std::endian::little) {
+            header->version = swap_bytes(header->version);
+            table->data_offset = swap_bytes(table->data_offset);
+            table->data_size = swap_bytes(table->data_size);
+            table->text_offset = swap_bytes(table->text_offset);
+            table->text_size = swap_bytes(table->text_size);
+        }
+        std::memcpy(text, result.textSection.data(), result.textSection.size());
+        header->checksum = adler32({bytecode.data(), bytecode.size()});
+        if (std::endian::native != std::endian::little) {
+            header->checksum = swap_bytes(header->checksum);
+        }
+        return bytecode;
     }
 
     [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) {
@@ -493,8 +530,9 @@ private:
         buffer[offset + 3] = static_cast<uint8_t>((val >> 24) & 0xFF);
     }
 
-    [[nodiscard]] static vm_uint32_t pushStringData(std::string_view str, std::vector<uint8_t>& buffer) {
-        const auto offset = static_cast<vm_uint32_t>(buffer.size());
+    [[nodiscard]] static vm_uint32_t
+    pushStringData(std::string_view str, std::vector<uint8_t>& buffer, vm_uint32_t offsetData) {
+        const auto offset = static_cast<vm_uint32_t>(buffer.size()) - offsetData;
         pushUint16(static_cast<vm_uint16_t>(str.length() - 2), buffer);
         buffer.insert(buffer.end(), str.begin() + 1, str.end() - 1);
         buffer.push_back(uint8_t('\0'));
@@ -527,38 +565,11 @@ bool isBinaryCode(std::span<const char> code) noexcept {
 }
 
 std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept {
-    Lexer lexer(text);
-    Parser parser(lexer);
-    std::vector<vm_uint8_t> bytecode;
     try {
         error = {};
-        auto advb = parser.parse();
-        bytecode.resize(
-            sizeof(vm_script_header_t) + sizeof(vm_script_table_t) + advb.dataSection.size() + advb.textSection.size());
-        auto header = reinterpret_cast<vm_script_header_t*>(bytecode.data());
-        auto table = reinterpret_cast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t));
-        auto data = bytecode.data() + sizeof(vm_script_header_t) + sizeof(vm_script_table_t);
-        auto text = data + advb.dataSection.size();
-
-        header->magic[0] = 'a';
-        header->magic[1] = 'd';
-        header->magic[2] = 'v';
-        header->magic[3] = 'b';
-        header->checksum = 0;
-        header->version = VM_VERSION;
-        table->data_offset = static_cast<vm_uint32_t>(sizeof(vm_script_header_t) + sizeof(vm_script_table_t));
-        table->data_size = static_cast<vm_uint32_t>(advb.dataSection.size());
-        table->text_offset = table->data_offset + table->data_size;
-        table->data_size = static_cast<vm_uint32_t>(advb.textSection.size());
-        if (std::endian::native != std::endian::little) {
-            header->version = swap_bytes(header->version);
-            table->data_offset = swap_bytes(table->data_offset);
-            table->data_size = swap_bytes(table->data_size);
-            table->text_offset = swap_bytes(table->text_offset);
-            table->data_size = swap_bytes(table->data_size);
-        }
-        std::memcpy(data, advb.dataSection.data(), advb.dataSection.size());
-        std::memcpy(text, advb.textSection.data(), advb.textSection.size());
+        Lexer lexer(text);
+        Parser parser(lexer);
+        return parser.parse();
     } catch (const TranslateError& err) {
         error = err;
     } catch (const std::bad_alloc&) {
@@ -566,7 +577,7 @@ std::vector<uint8_t> translateTextToBinary(std::span<const char> text, Translate
     } catch (...) {
         error = {TranslateError::UnknownError, "Unknown error"};
     }
-    return bytecode;
+    return {};
 }
 
 } // namespace utils
