@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <fmt/format.h>
+#include <magic_enum/magic_enum.hpp>
 #include <optional>
 #include <unordered_map>
 
@@ -21,95 +22,85 @@ enum class Format {
 
 enum class TokenType {
     Eof,
-    Section,
-    Identifier,
-    String,
-    Number,
     Colon,
     Comment,
-    Newline
+    Newline,
+    Section,
+    String,
+    Identifier
 };
 
 struct Token {
-    TokenType type{TokenType::Eof};
+    TokenType type;
     std::string_view value;
-    uint32_t line{1};
-    uint32_t column{1};
+    vm_uint32_t line;
+    vm_uint32_t column;
 };
 
 struct Instruction {
     vm_opcode_t opcode;
     std::string_view operand;
     std::string_view label;
-    size_t line;
+    vm_uint32_t line;
 };
 
 struct Advt {
     Format format;
     vm_uint32_t version;
-    vm_uint32_t checksum{0};
+    vm_uint32_t checksum;
     std::unordered_map<std::string_view, std::string_view> dataSection;
     std::vector<Instruction> textSection;
 };
 
 class Lexer {
 public:
-    explicit Lexer(std::span<const vm_char_t> code) : _source(code.data(), code.size()) {}
+    explicit Lexer(std::span<const vm_char_t> code) noexcept : _source(code.data(), code.size()) {}
 
     [[nodiscard]] Token nextToken() noexcept {
-        skipWhitespacesExceptNewline();
-
+        skipWhitespaces();
         if (_cursor >= _source.size()) {
             return Token{TokenType::Eof, {}, _line, _column};
         }
-
+        const auto start = _cursor;
         const auto startCol = _column;
         const auto ch = _source[_cursor];
-
-        if (ch == '\n' || ch == '\r') {
-            auto start = _cursor;
+        switch (ch) {
+        case '\n':
+        case '\r': {
             if (ch == '\r' && peek() == '\n') {
                 advance();
             }
             advance();
-
             Token tok{TokenType::Newline, _source.substr(start, _cursor - start), _line, startCol};
             _line++;
             _column = 1;
             return tok;
         }
-
-        if (ch == ';') {
-            size_t start = _cursor;
+        case ';': {
             while (_cursor < _source.size() && _source[_cursor] != '\n' && _source[_cursor] != '\r') {
                 advance();
             }
             return Token{TokenType::Comment, _source.substr(start, _cursor - start), _line, startCol};
         }
-
-        if (ch == '.') {
-            size_t start = _cursor;
+        case '.': {
             advance();
             while (_cursor < _source.size() && (std::isalnum(_source[_cursor]) || _source[_cursor] == '_')) {
                 advance();
             }
             return Token{TokenType::Section, _source.substr(start, _cursor - start), _line, startCol};
         }
-
-        if (ch == ':') {
+        case ':': {
             advance();
             return Token{TokenType::Colon, _source.substr(_cursor - 1, 1), _line, startCol};
         }
-
-        if (ch == '"') {
-            size_t start = _cursor;
+        case '"': {
             advance();
-
             while (_cursor < _source.size()) {
                 if (_source[_cursor] == '\\') {
                     advance();
-                    if (_cursor < _source.size())
+                    if (_cursor < _source.size()) {
                         advance();
+                    }
                 } else if (_source[_cursor] == '"') {
                     advance();
                     break;
@@ -119,14 +110,11 @@ public:
             }
             return Token{TokenType::String, _source.substr(start, _cursor - start), _line, startCol};
         }
-
-        size_t start = _cursor;
+        }
         while (_cursor < _source.size() && !isDelimiter(_source[_cursor])) {
             advance();
         }
-
-        std::string_view val = _source.substr(start, _cursor - start);
-        return Token{TokenType::Identifier, val, _line, startCol};
+        return Token{TokenType::Identifier, _source.substr(start, _cursor - start), _line, startCol};
     }
 
 private:
@@ -135,11 +123,11 @@ private:
         _column++;
     }
 
-    [[nodiscard]] char peek() const noexcept { return (_cursor + 1 < _source.size()) ? _source[_cursor + 1] : '\0'; }
+    [[nodiscard]] char peek() const noexcept { return _cursor + 1 < _source.size() ? _source[_cursor + 1] : '\0'; }
 
-    void skipWhitespacesExceptNewline() noexcept {
+    void skipWhitespaces() noexcept {
         while (_cursor < _source.size()) {
-            char c = _source[_cursor];
+            const auto c = _source[_cursor];
             if (c == ' ' || c == '\t') {
                 advance();
             } else {
@@ -207,14 +195,14 @@ private:
         }
     }
 
-    [[noreturn]] void error(const std::string& message, TranslateErrorCode errorCode) const {
-        throw TranslateError{errorCode, message, _prevToken.line, _prevToken.column};
+    void expect(TokenType expected, const std::string& message) {
+        if (_currentToken.type != expected) {
+            error(message, TranslateErrorCode::SyntaxError);
+        }
     }
 
-    void expect(TokenType expected, const std::string& errMsg) {
-        if (_currentToken.type != expected) {
-            error(errMsg, TranslateErrorCode::SyntaxError);
-        }
+    [[noreturn]] void error(const std::string& message, TranslateErrorCode errorCode) const {
+        throw TranslateError{errorCode, message, _prevToken.line, _prevToken.column};
     }
 
     [[nodiscard]] vm_uint32_t parseVersion() {
@@ -313,25 +301,23 @@ private:
                         result.textSection.push_back(instruction);
                         continue;
                     }
-                    // instruction.opcode = std::string(_currentToken.value);
+                    instruction.opcode = parseOpcode(_currentToken.value);
                     advance();
                 } else {
-                    // instruction.opcode = firstToken;
+                    instruction.opcode = parseOpcode(firstToken);
                 }
             } else {
                 error("Expected instruction or label", TranslateErrorCode::ExpectedInstruction);
             }
-
             while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
                    _currentToken.type != TokenType::Eof) {
                 if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
-                    // statement.instr.operands.emplace_back(_currentToken.value);
+                    instruction.operand = _currentToken.value;
                 } else {
                     error("Unexpected token in operands", TranslateErrorCode::UnexpectedTokenInOperand);
                 }
                 advance();
             }
-
             result.textSection.push_back(instruction);
         }
     }
@@ -359,6 +345,18 @@ private:
             str.remove_prefix((ptr - str.data()) + 1);
         }
         return value;
+    }
+
+    [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) {
+        char buffer[64] = "VM_OPCODE_";
+        if (str.length() + 10 < sizeof(buffer)) {
+            std::memcpy(buffer + 10, str.data(), str.length());
+            auto opcode = magic_enum::enum_cast<vm_opcode_t>({buffer, str.length() + 10}, magic_enum::case_insensitive);
+            if (opcode) {
+                return opcode.value();
+            }
+        }
+        error(fmt::format("Unknown opcode '{}'", str), TranslateErrorCode::UnknownOpcode);
     }
 
     [[nodiscard]] static bool equals(std::string_view lhs, std::string_view rhs) noexcept {

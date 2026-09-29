@@ -41,6 +41,7 @@ file(GLOB UTILS_SOURCES
 add_library(utils OBJECT ${UTILS_SOURCES})
 set_default_properties(TARGET utils)
 target_link_libraries(utils PRIVATE fmt::fmt)
+target_link_libraries(utils PRIVATE magic_enum::magic_enum)
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")

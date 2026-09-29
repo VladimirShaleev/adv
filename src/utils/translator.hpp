@@ -11,6 +11,7 @@ enum class TranslateErrorCode {
     NoError = 0,
     SyntaxError,
     UnknownFormat,
+    UnknownOpcode,
     IncompatibleVersion,
     ValueOutOfRange,
     UnknownSection,
