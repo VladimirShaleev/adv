@@ -7,9 +7,9 @@ using namespace std::literals;
 
 int main(int argc, char* argv[]) {
     auto warnAsErr = false;
-    auto input     = std::filesystem::path();
-    auto output    = std::filesystem::current_path();
-    auto imports   = std::vector<std::string>();
+    auto input = std::filesystem::path();
+    auto output = std::filesystem::current_path();
+    auto imports = std::vector<std::string>();
     argparse::ArgumentParser program("advc", "1.0.0");
 
     program.add_argument("input").store_into(input).help("input .adv file");
@@ -55,8 +55,8 @@ int main(int argc, char* argv[]) {
 
     bool failed = false;
     if (result) {
-        const auto hasNotes  = adv_compilation_result_has_notes(result);
-        const auto hasWarns  = adv_compilation_result_has_warnings(result);
+        const auto hasNotes = adv_compilation_result_has_notes(result);
+        const auto hasWarns = adv_compilation_result_has_warnings(result);
         const auto hasErrors = adv_compilation_result_has_errors(result);
 
         if (hasErrors) {
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
             adv_compilation_result_get_messages(result, &count, messages.data());
 
             for (const auto& message : messages) {
-                auto messageType   = "<unknown>"sv;
+                auto messageType = "<unknown>"sv;
                 auto messagePrefix = 'U';
                 if (message.is_error) {
                     messageType = "error"sv;
@@ -96,7 +96,8 @@ int main(int argc, char* argv[]) {
                 std::cerr << '.' << std::endl;
             }
         }
-    } else if (code != ADV_RESULT_SUCCESS) {
+    }
+    if (code != ADV_RESULT_SUCCESS && !failed) {
         std::cerr << "error: " << adv_result_to_string(code) << std::endl;
         failed = true;
     }

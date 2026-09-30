@@ -427,11 +427,20 @@ adv_result_t Generator::gen() {
     if (_ctx.bytecode().empty()) {
         Emitter emitter(_ctx, _data, _code);
         accept<CodeGenVisitor>(_ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(emitter));
+        saveBinary();
     }
     return ADV_RESULT_SUCCESS;
 }
 
 adv_result_t Generator::text() {
+    switch (_options.getOutputFormat()) {
+    case ADV_FORMAT_TEXT:
+        break;
+    case ADV_FORMAT_BINARY:
+        return ADV_RESULT_SUCCESS;
+    default:
+        return ADV_RESULT_ERROR_INVALID_ARG;
+    }
     const auto tab = "       "s;
     size_t strLen = 0;
     std::cout << ".format: "sv << "ADVT"sv << std::endl;
@@ -576,6 +585,40 @@ adv_result_t Generator::text() {
         }
     }
     return ADV_RESULT_SUCCESS;
+}
+
+void Generator::saveBinary() {
+    constexpr size_t sizeHeader = sizeof(vm_script_header_t);
+    constexpr size_t sizeTable = sizeof(vm_script_table_t);
+    std::vector<uint8_t> binary(sizeHeader + sizeTable + _data.size() + _code.size());
+
+    auto header = utils::aliasCast<vm_script_header_t*>(binary.data());
+    auto table = utils::aliasCast<vm_script_table_t*>(binary.data() + sizeHeader);
+    header->magic[0] = 'a';
+    header->magic[1] = 'd';
+    header->magic[2] = 'v';
+    header->magic[3] = 'b';
+    header->checksum = 0;
+    header->version = ADV_VERSION;
+    table->data_offset = sizeHeader + sizeTable;
+    table->data_size = static_cast<adv_uint32_t>(_data.size());
+    table->text_offset = table->data_offset + table->data_size;
+    table->text_size = static_cast<adv_uint32_t>(_code.size());
+    memcpy(binary.data() + table->data_offset, _data.data(), table->data_size);
+    memcpy(binary.data() + table->text_offset, _code.data(), table->text_size);
+    if (std::endian::native != std::endian::little) {
+        header->version = utils::swapBytes(header->version);
+        table->data_offset = utils::swapBytes(table->data_offset);
+        table->data_size = utils::swapBytes(table->data_size);
+        table->text_offset = utils::swapBytes(table->text_offset);
+        table->text_size = utils::swapBytes(table->text_size);
+    }
+    auto view = std::views::all(binary);
+    header->checksum = utils::adler32(std::move(view));
+    if (std::endian::native != std::endian::little) {
+        header->checksum = utils::swapBytes(header->checksum);
+    }
+    _ctx.setBytecode(std::move(binary), utils::Format::Advb);
 }
 
 } // namespace adv

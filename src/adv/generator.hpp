@@ -14,6 +14,8 @@ public:
     [[nodiscard]] adv_result_t text();
 
 private:
+    void saveBinary();
+    
     const Options& _options;
     Context& _ctx;
     std::vector<uint8_t> _data;

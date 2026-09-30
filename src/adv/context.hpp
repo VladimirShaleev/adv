@@ -30,6 +30,8 @@ public:
 
     [[nodiscard]] const std::vector<adv_uint8_t>& bytecode() const noexcept { return _bytecode; }
 
+    [[nodiscard]] utils::Format codeFormat() const noexcept { return _codeFormat; }
+
     [[nodiscard]] std::filesystem::path getBasePath(const std::string& module) const noexcept;
 
     [[nodiscard]] bool hasImport(const std::filesystem::path& path) const noexcept;
@@ -38,7 +40,10 @@ public:
 
     void setNodeTree(const std::filesystem::path& path, adv_node_t* root);
 
-    void setBytecode(std::vector<adv_uint8_t>&& bytecode) noexcept { _bytecode = std::move(bytecode); }
+    void setBytecode(std::vector<adv_uint8_t>&& bytecode, utils::Format format) noexcept {
+        _bytecode = std::move(bytecode);
+        _codeFormat = format;
+    }
 
     template <adv_status_t Status, typename... Args>
     void log(const Options& options, const adv_location_t& loc, Args&&... args) {
@@ -89,6 +94,7 @@ private:
     bool _hasWarnings{};
     bool _hasErrors{};
     std::vector<adv_uint8_t> _bytecode{};
+    utils::Format _codeFormat{};
     utils::StringPool _strPool{};
     std::vector<std::vector<adv_node_t>> _nodes{};
     size_t _nodeCount{};

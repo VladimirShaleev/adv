@@ -9,6 +9,7 @@ namespace utils {
 
 enum Format {
     Unknown,
+    Advb,
     Advt
 };
 

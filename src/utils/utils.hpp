@@ -114,6 +114,15 @@ UTILS_FORCE_INLINE uint32_t swapBytes(uint32_t val) {
     return (b << 16) | a;
 }
 
+template <typename AliasedType, typename Type>
+UTILS_FORCE_INLINE AliasedType aliasCast(Type ptr) noexcept {
+    static_assert(std::is_pointer_v<AliasedType>, "AliasedType must be a pointer");
+    static_assert(std::is_pointer_v<Type>, "Type must be a pointer");
+    AliasedType result;
+    memcpy(&result, &ptr, sizeof(AliasedType));
+    return result;
+}
+
 } // namespace utils
 
 #endif // UTILS_UTILS_HPP

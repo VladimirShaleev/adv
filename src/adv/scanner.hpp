@@ -68,7 +68,7 @@ public:
 
         utils::TranslateResult err{};
         auto bytecode = std::move(utils::translateTextToBinary({data.data(), data.size()}, err));
-        if (err.format == utils::Format::Unknown) {
+        if (err.format != utils::Format::Advt) {
             return false;
         }
         _ctx.clearMessages();
@@ -82,7 +82,7 @@ public:
             }
             return false;
         }
-        _ctx.setBytecode(std::move(bytecode));
+        _ctx.setBytecode(std::move(bytecode), err.format);
         return true;
     }
 
@@ -124,11 +124,11 @@ private:
                 version = utils::swapBytes(version);
             }
             if (checksum != result) {
-                _ctx.setBytecode({});
+                _ctx.setBytecode({}, utils::Format::Unknown);
                 _ctx.log<ADV_STATUS_E3043>(_options, loc, result, checksum);
             }
             if ((version >> 16) == (ADV_VERSION >> 16)) {
-                _ctx.setBytecode({});
+                _ctx.setBytecode({}, utils::Format::Unknown);
                 auto verStr = fmt::format("{}.{}.{}", (version >> 16) & 0xFF, (version >> 8) & 0xFF, version & 0xFF);
                 _ctx.log<ADV_STATUS_E3044>(_options, loc, verStr, ADV_VERSION_STRING);
             }
@@ -223,7 +223,7 @@ private:
             if (utils::isBinaryCode({source->data, source->size})) {
                 std::vector<adv_uint8_t> bytecode(
                     (adv_uint8_t*)source->data, (adv_uint8_t*)source->data + source->size);
-                _ctx.setBytecode(std::move(bytecode));
+                _ctx.setBytecode(std::move(bytecode), utils::Format::Advb);
                 return true;
             }
         }
@@ -248,7 +248,7 @@ private:
             if (stream.read((char*)bytecode.data(), size) &&
                 utils::isBinaryCode({(const char*)bytecode.data(), bytecode.size()})) {
                 stream.close();
-                _ctx.setBytecode(std::move(bytecode));
+                _ctx.setBytecode(std::move(bytecode), utils::Format::Advb);
                 return true;
             }
         }
