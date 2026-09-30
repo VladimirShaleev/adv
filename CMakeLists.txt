@@ -23,6 +23,7 @@ include(GNUInstallDirs)
 include(cmake/utils.cmake)
 include(cmake/flex-install.cmake)
 include(cmake/bison-install.cmake)
+include(cmake/update-version.cmake)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(ADV_MSVC_DYNAMIC_RUNTIME "Link dynamic runtime library instead of static" OFF)
