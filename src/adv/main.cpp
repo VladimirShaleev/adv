@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     argparse::ArgumentParser program("advc", "1.0.0");
 
     program.add_argument("input").store_into(input).help("input .adv file");
-    program.add_argument("-o", "--output").store_into(output).help("output directory");
+    program.add_argument("-o", "--output").store_into(output).help("output path (directory or file)");
     program.add_argument("-i", "--imports").append().store_into(imports).help("import directories");
     program.add_argument("-w", "--warnings").store_into(warnAsErr).help("warnings as errors");
 
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     }
 
     const auto inputFile = input.string();
-    const auto outputDir = output.string();
+    const auto outputPath = output.string();
     std::vector<adv_utf8_t> dirs;
     for (const auto& import : imports) {
         dirs.push_back(import.c_str());
@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     adv_options_set_warnings_as_errors(options, warnAsErr ? 1 : 0);
-    adv_options_set_output_dir(options, outputDir.c_str());
+    adv_options_set_output_path(options, outputPath.c_str());
     adv_options_set_import_dirs(options, (adv_uint32_t)dirs.size(), dirs.data());
 
     adv_compiler_t compiler{};

@@ -174,28 +174,28 @@ adv_options_set_output_format(adv_options_t options,
                               adv_format_t format);
 
 /**
- * @brief     Get output directory.
- * @details   Returns the path that the compiler will use to save compilation output.
+ * @brief     Get output path.
+ * @details   Returns the directory or file path that the compiler will use to save compilation output.
  * @param[in] options Target options.
- * @return    Directory path.
- * @sa        ::adv_options_set_output_dir
+ * @return    Output directory or file path.
+ * @sa        ::adv_options_set_output_path
  * @ingroup   functions
  */
 ADV_API adv_utf8_t
-adv_options_get_output_dir(adv_options_t options);
+adv_options_get_output_path(adv_options_t options);
 
 /**
- * @brief     Set output directory.
- * @details   Configure the path that the compiler will use to save compilation output.
+ * @brief     Set output path.
+ * @details   Configure the directory or file path that the compiler will use to save compilation output.
  * @param[in] options Target options.
- * @param[in] dir Directory path.
+ * @param[in] path Output directory or file path.
  * @note      Compiler output to the file system does not occur if output via a ::adv_options_set_writer is configured.
- * @sa        ::adv_options_get_output_dir
+ * @sa        ::adv_options_get_output_path
  * @ingroup   functions
  */
 ADV_API void
-adv_options_set_output_dir(adv_options_t options,
-                           adv_utf8_t dir);
+adv_options_set_output_path(adv_options_t options,
+                            adv_utf8_t path);
 
 /**
  * @brief         Returns an array of directories to search for imports.
@@ -311,7 +311,7 @@ adv_options_get_writer(adv_options_t options,
 /**
  * @brief     Set write callback.
  * @details   Configures a callback to receive compiler output. If the callback is set, no output
- *            will be made to the file system (::adv_options_set_output_dir will also not be used).
+ *            will be made to the file system (::adv_options_set_output_path will also not be used).
  * @param[in] options Target options.
  * @param[in] callback Callback function.
  * @param[in] data Callback user data.

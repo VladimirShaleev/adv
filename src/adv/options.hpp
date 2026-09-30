@@ -15,8 +15,8 @@ public:
     [[nodiscard]] adv_format_t getOutputFormat() const noexcept;
     void setOutputFormat(adv_format_t format) noexcept;
 
-    [[nodiscard]] adv_utf8_t getOutputDir() const noexcept;
-    void setOutputDir(adv_utf8_t dir);
+    [[nodiscard]] adv_utf8_t getOutputPath() const noexcept;
+    void setOutputPath(adv_utf8_t path);
 
     void getImportDirs(adv_uint32_t& dirCount, adv_utf8_t* dirs) const noexcept;
     void setImportDirs(std::span<const adv_utf8_t> dirs);
@@ -34,7 +34,7 @@ private:
     bool _warningsAsErrors{};
 
     adv_format_t _outputFormat{};
-    std::string _outputDir{};
+    std::string _outputPath{};
     std::vector<std::string> _importDirs{};
 
     adv_import_callback_t _importer{};

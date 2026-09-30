@@ -39,8 +39,8 @@ private:
             adv_source_t source{module.c_str(), (const adv_char_t*)code.data(), static_cast<adv_uint32_t>(code.size())};
             writer(&source, data);
         } else {
-            auto cDir = options.getOutputDir();
-            auto outputPath = cDir && cDir[0] != '\0' ? std::filesystem::path(cDir) : std::filesystem::current_path();
+            auto cPath = options.getOutputPath();
+            auto outputPath = cPath && cPath[0] != '\0' ? std::filesystem::path(cPath) : std::filesystem::current_path();
             std::error_code error{};
             const auto isDirectory = std::filesystem::is_directory(outputPath, error);
             if (error && std::filesystem::exists(outputPath)) {

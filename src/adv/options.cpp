@@ -10,9 +10,9 @@ adv_format_t Options::getOutputFormat() const noexcept { return _outputFormat; }
 
 void Options::setOutputFormat(adv_format_t format) noexcept { _outputFormat = format; }
 
-adv_utf8_t Options::getOutputDir() const noexcept { return _outputDir.c_str(); }
+adv_utf8_t Options::getOutputPath() const noexcept { return _outputPath.c_str(); }
 
-void Options::setOutputDir(adv_utf8_t dir) { _outputDir = dir; }
+void Options::setOutputPath(adv_utf8_t path) { _outputPath = path; }
 
 void Options::getImportDirs(adv_uint32_t& dirCount, adv_utf8_t* dirs) const noexcept {
     if (dirs) {
@@ -121,13 +121,13 @@ void adv_options_set_output_format(adv_options_t options, adv_format_t format) {
     }
 }
 
-adv_utf8_t adv_options_get_output_dir(adv_options_t options) {
-    return options ? options->as<adv::Options>()->getOutputDir() : nullptr;
+adv_utf8_t adv_options_get_output_path(adv_options_t options) {
+    return options ? options->as<adv::Options>()->getOutputPath() : nullptr;
 }
 
-void adv_options_set_output_dir(adv_options_t options, adv_utf8_t dir) {
+void adv_options_set_output_path(adv_options_t options, adv_utf8_t path) {
     if (options) {
-        options->as<adv::Options>()->setOutputDir(dir);
+        options->as<adv::Options>()->setOutputPath(path);
     }
 }
 
