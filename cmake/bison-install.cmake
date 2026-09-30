@@ -1,5 +1,8 @@
 find_package(BISON 3.7.4)
 if(NOT BISON_FOUND)
+    if(POLICY CMP0135)
+        cmake_policy(SET CMP0135 NEW)
+    endif()
     include(ExternalProject)
     if(CMAKE_HOST_WIN32 OR WIN32 OR DEFINED ENV{SystemRoot})
         set(WINFLEXBISON_VERSION_INSTALL "2.5.24")
@@ -8,7 +11,7 @@ if(NOT BISON_FOUND)
         set(WINBISON_URL "https://github.com/lexxmark/winflexbison/releases/download/v${WINFLEXBISON_VERSION_INSTALL}/win_flex_bison-${WINFLEXBISON_VERSION_INSTALL}.zip")
         set(WINBISON_INSTALL_DIR "${CMAKE_BINARY_DIR}/winbison")
         set(BISON_EXECUTABLE "${WINBISON_INSTALL_DIR}/win_bison.exe")
-        
+
         ExternalProject_Add(
             winbison
             URL ${WINBISON_URL}

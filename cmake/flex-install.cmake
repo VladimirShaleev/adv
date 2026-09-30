@@ -3,6 +3,9 @@ if(NOT FLEX_INCLUDE_DIR)
     unset(FLEX_FOUND)
 endif()
 if(NOT FLEX_FOUND)
+    if(POLICY CMP0135)
+        cmake_policy(SET CMP0135 NEW)
+    endif()
     include(ExternalProject)
     if(CMAKE_HOST_WIN32 OR WIN32 OR DEFINED ENV{SystemRoot})
         set(WINFLEXBISON_VERSION_INSTALL "2.5.24")
@@ -12,7 +15,7 @@ if(NOT FLEX_FOUND)
         set(WINFLEX_INSTALL_DIR "${CMAKE_BINARY_DIR}/winflex")
         set(FLEX_EXECUTABLE "${WINFLEX_INSTALL_DIR}/win_flex.exe")
         set(FLEX_INCLUDE_DIR "${WINFLEX_INSTALL_DIR}")
-        
+
         ExternalProject_Add(
             winflex
             URL ${WINFLEX_URL}
