@@ -45,6 +45,9 @@ private:
                 result = status;
             }
             if (status == ADV_RESULT_SUCCESS) {
+                if (!context.bytecode().empty()) {
+                    return ADV_RESULT_SUCCESS;
+                }
                 auto moduleRoot = context.root(module);
                 if (parentImport) {
                     parentImport->import_stmt.root = moduleRoot;
@@ -82,11 +85,18 @@ private:
             return {ADV_RESULT_ERROR_SOURCE_NOT_FOUND, ""};
         }
 
+        if (depth == 0 && !context.bytecode().empty()) {
+            return {ADV_RESULT_SUCCESS, ""};
+        }
+
         const auto module = std::filesystem::path(*scanner.filename()).filename().replace_extension().string();
 
         const auto code = parser.parse();
 
         if (context.hasErrors() || code != 0) {
+            if (depth == 0 && scanner.parseAdvt() && !context.bytecode().empty()) {
+                return {ADV_RESULT_SUCCESS, ""};
+            }
             if (!context.hasErrors()) {
                 context.log<ADV_STATUS_E3002>(options, {});
             }

@@ -17,11 +17,6 @@ namespace utils {
 
 namespace {
 
-enum class Format {
-    Unknown,
-    Advt
-};
-
 enum class TokenType {
     Eof,
     Colon,
@@ -166,7 +161,7 @@ class Parser {
 public:
     explicit Parser(Lexer& lexer) : _lexer(lexer) { advance(); }
 
-    std::vector<uint8_t> parse() {
+    std::pair<std::vector<uint8_t>, Format> parse() {
         using namespace std::string_view_literals;
         Advt result{};
         result.headerAndDataSection.resize(Advt::offsetData);
@@ -188,17 +183,14 @@ public:
                 } else if (equals(sec, ".text")) {
                     parseTextSection(result);
                 } else {
-                    error(fmt::format("Unknown section '{}'", sec), TranslateError::UnknownSection);
+                    error(fmt::format("Unknown section '{}'", sec), TranslateResult::UnknownSection, true);
                 }
             } else {
-                error("Expected section header starting with '.'", TranslateError::ExpectedSectionStartingWithDot);
+                error("Expected section header starting with '.'", TranslateResult::ExpectedSectionStartingWithDot);
             }
         }
-        if (result.format == Format::Unknown) {
-            error("Unknown format", TranslateError::UnknownFormat);
-        }
         resolveIdentifiers(result);
-        return mergeTextSection(result);
+        return {mergeTextSection(result), result.format};
     }
 
 private:
@@ -215,15 +207,17 @@ private:
 
     void expect(TokenType expected, const std::string& message) {
         if (_currentToken.type != expected) {
-            error(message, TranslateError::SyntaxError);
+            error(message, TranslateResult::SyntaxError);
         }
     }
 
     [[noreturn]] void error(
         const std::string& message,
-        TranslateError::ErrorCode errorCode,
+        TranslateResult::ErrorCode errorCode,
+        bool currToken = false,
         std::optional<vm_uint32_t> line = std::nullopt) const {
-        throw TranslateError{errorCode, message, line.value_or(_prevToken.line), line ? 0 : _prevToken.column};
+        auto token = currToken ? _currentToken : _prevToken;
+        throw TranslateResult{_format, errorCode, message, line.value_or(token.line), line ? 0 : token.column};
     }
 
     [[nodiscard]] vm_uint32_t parseVersion() {
@@ -241,16 +235,18 @@ private:
         }
         error(
             fmt::format("Script version '{}' is incompatible with adv version '{}'", strVer, VM_VERSION_STRING),
-            TranslateError::IncompatibleVersion);
+            TranslateResult::IncompatibleVersion);
     }
 
     [[nodiscard]] Format parseFormat() {
         using namespace std::string_view_literals;
         auto str = parseHeaderValue();
         if (equals(str, "ADVT"sv)) {
+            _format = Format::Advt;
             return Format::Advt;
         }
-        error(fmt::format("Unknown format '{}'", str), TranslateError::UnknownFormat);
+        _format = Format::Unknown;
+        error(fmt::format("Unknown format '{}'", str), TranslateResult::UnknownFormat);
     }
 
     template <typename T>
@@ -261,9 +257,9 @@ private:
         if (ec == std::errc()) {
             return val;
         } else if (ec == std::errc::result_out_of_range) {
-            error(fmt::format("Value out of range '{}'", str), TranslateError::ValueOutOfRange);
+            error(fmt::format("Value out of range '{}'", str), TranslateResult::ValueOutOfRange);
         } else {
-            error(fmt::format("Syntax Error '{}'", str), TranslateError::SyntaxError);
+            error(fmt::format("Syntax Error '{}'", str), TranslateResult::SyntaxError);
         }
     }
 
@@ -273,7 +269,7 @@ private:
         advance();
         skipNewlinesAndComments();
         if (_currentToken.type != TokenType::Identifier) {
-            error("Expected header value", TranslateError::ExpectedHeaderValue);
+            error("Expected header value", TranslateResult::ExpectedHeaderValue);
         }
         auto result = _currentToken.value;
         advance();
@@ -298,7 +294,7 @@ private:
             expect(TokenType::String, "Expected string literal in .data section");
             if (result.identifierMap.contains(_currentToken.value)) {
                 error(
-                    fmt::format("Duplicate identifier '{}'", _currentToken.value), TranslateError::RedefinedIdentifier);
+                    fmt::format("Duplicate identifier '{}'", _currentToken.value), TranslateResult::RedefinedIdentifier);
             }
             result.identifierMap[name] = _currentToken.value;
             advance();
@@ -333,14 +329,14 @@ private:
                     instruction.opcode = parseOpcode(firstToken);
                 }
             } else {
-                error("Expected instruction or label", TranslateError::ExpectedInstruction);
+                error("Expected instruction or label", TranslateResult::ExpectedInstruction);
             }
             while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
                    _currentToken.type != TokenType::Eof) {
                 if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
                     instruction.operand = _currentToken.value;
                 } else {
-                    error("Unexpected token in operands", TranslateError::UnexpectedTokenInOperand);
+                    error("Unexpected token in operands", TranslateResult::UnexpectedTokenInOperand);
                 }
                 advance();
             }
@@ -354,7 +350,7 @@ private:
         const auto operand = instruction.operand;
         if (!label.empty()) {
             if (result.labelMap.contains(label)) {
-                error(fmt::format("Duplicate label identifier '{}'", label), TranslateError::RedefinedIdentifier);
+                error(fmt::format("Duplicate label identifier '{}'", label), TranslateResult::RedefinedIdentifier);
             }
             result.labelMap[label] = pollOffset(result.textSection);
         }
@@ -400,7 +396,7 @@ private:
         for (const auto& [id, offsetText, line] : result.identifiers) {
             auto it = result.identifierMap.find(id);
             if (it == result.identifierMap.end()) {
-                error(fmt::format("Identifier '{}' not found", id), TranslateError::UnknownIdentifier, line);
+                error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
             }
             auto str = it->second;
             if (auto m = result.dataSectionMap.find(str); m != result.dataSectionMap.end()) {
@@ -414,7 +410,8 @@ private:
         for (const auto& [id, offsetText, line] : result.labels) {
             auto it = result.labelMap.find(id);
             if (it == result.labelMap.end()) {
-                error(fmt::format("label identifier '{}' not found", id), TranslateError::UnknownIdentifier, line);
+                error(
+                    fmt::format("label identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
             }
             const auto offset = it->second;
             patchUint32(offsetText, offset, result.textSection);
@@ -463,7 +460,7 @@ private:
                 return opcode.value();
             }
         }
-        error(fmt::format("Unknown opcode '{}'", str), TranslateError::UnknownOpcode);
+        error(fmt::format("Unknown opcode '{}'", str), TranslateResult::UnknownOpcode);
     }
 
     [[nodiscard]] static std::optional<vm_uint32_t> parseComponent(std::string_view& str, bool isLast) noexcept {
@@ -546,11 +543,12 @@ private:
     Lexer& _lexer;
     Token _prevToken;
     Token _currentToken;
+    Format _format;
 };
 
 } // namespace
 
-bool isBinaryCode(std::span<const char> code) noexcept {
+bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
     if (code.size() < sizeof(vm_script_header_t) + sizeof(vm_script_table_t)) {
         return false;
     }
@@ -577,21 +575,26 @@ bool isBinaryCode(std::span<const char> code) noexcept {
     const auto textLeft = table.text_offset;
     const auto textRight = textLeft + table.text_size;
 
-    return dataRight <= code.size() && textRight <= code.size() && (dataRight <= textLeft || textRight <= dataLeft);
+    if (checkSize && (dataRight > code.size() || textRight > code.size())) {
+        return false;
+    }
+    return dataRight <= textLeft || textRight <= dataLeft;
 }
 
-std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept {
+std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateResult& error) noexcept {
     try {
         error = {};
         Lexer lexer(text);
         Parser parser(lexer);
-        return parser.parse();
-    } catch (const TranslateError& err) {
+        const auto [bytecode, format] = parser.parse();
+        error.format = format;
+        return std::move(bytecode);
+    } catch (const TranslateResult& err) {
         error = err;
     } catch (const std::bad_alloc&) {
-        error = {TranslateError::OutOfMemory, "Out of memory"};
+        error = {Format::Unknown, TranslateResult::OutOfMemory, "Out of memory"};
     } catch (...) {
-        error = {TranslateError::UnknownError, "Unknown error"};
+        error = {Format::Unknown, TranslateResult::UnknownError, "Unknown error"};
     }
     return {};
 }

@@ -424,8 +424,10 @@ struct CodeGenVisitor {
 Generator::Generator(const Options& options, Context& ctx) noexcept : _options(options), _ctx(ctx) {}
 
 adv_result_t Generator::gen() {
-    Emitter emitter(_ctx, _data, _code);
-    accept<CodeGenVisitor>(_ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(emitter));
+    if (_ctx.bytecode().empty()) {
+        Emitter emitter(_ctx, _data, _code);
+        accept<CodeGenVisitor>(_ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(emitter));
+    }
     return ADV_RESULT_SUCCESS;
 }
 

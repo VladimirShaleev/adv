@@ -54,9 +54,9 @@ public:
 
 private:
     std::span<const vm_char_t> tryTranslate(std::span<const vm_char_t> code, std::vector<vm_uint8_t>& buffer) {
-        utils::TranslateError error{};
+        utils::TranslateResult error{};
         buffer = utils::translateTextToBinary(code, error);
-        if (error.errorCode == utils::TranslateError::NoError) {
+        if (error.errorCode == utils::TranslateResult::NoError) {
             return {(const vm_char_t*)buffer.data(), buffer.size()};
         }
         return {};

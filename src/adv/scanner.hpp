@@ -54,6 +54,43 @@ public:
         loc.columns(yyleng);
     }
 
+    [[nodiscard]] bool parseAdvt() {
+        assert(filename());
+        // TODO: use _stream for read
+        std::ifstream stream(*filename(), std::ios::binary);
+        if (!stream.is_open()) {
+            return false;
+        }
+        auto size = stream.tellg();
+        stream.seekg(0, std::ios::end);
+        size = stream.tellg() - size;
+        stream.seekg(0, std::ios::beg);
+        std::vector<char> data(size);
+        if (!stream.read((char*)data.data(), size)) {
+            stream.close();
+            return false;
+        }
+        stream.close();
+        utils::TranslateResult err{};
+        auto bytecode = std::move(utils::translateTextToBinary({data.data(), data.size()}, err));
+        if (err.format == utils::Format::Unknown) {
+            return false;
+        }
+        _ctx.clearMessages();
+        if (err.errorCode != utils::TranslateResult::NoError) {
+            std::string_view fname{filename()->c_str(), filename()->length()};
+            adv_location_t loc{_ctx.intern(fname), err.line, err.column};
+            if (err.message.empty()) {
+                _ctx.log<ADV_STATUS_E3042>(_options, loc);
+            } else {
+                _ctx.log<ADV_STATUS_E3042>(_options, loc, err.message);
+            }
+            return false;
+        }
+        _ctx.setBytecode(std::move(bytecode));
+        return true;
+    }
+
 private:
     class MemoryBuffer : public std::streambuf {
     public:
@@ -76,6 +113,10 @@ private:
         _source = source;
         _needRelease = needRelease;
 
+        if (depth == 0 && readBytecode(source, path)) {
+            return;
+        }
+
         if (source) {
             _memBuffer = std::make_unique<MemoryBuffer>(source->data, (size_t)source->size);
             _stream = std::make_unique<std::istream>(_memBuffer.get());
@@ -95,13 +136,14 @@ private:
         _filename = path.string();
     }
 
-    static std::filesystem::path normalize(const std::filesystem::path& path, const std::filesystem::path& basePath) {
+    [[nodiscard]] static std::filesystem::path
+    normalize(const std::filesystem::path& path, const std::filesystem::path& basePath) {
         auto filename = path.is_absolute() ? std::filesystem::relative(path, basePath) : path;
         filename.make_preferred();
         return filename;
     }
 
-    static std::tuple<std::filesystem::path, const adv_source_t*, bool> findFile(
+    [[nodiscard]] static std::tuple<std::filesystem::path, const adv_source_t*, bool> findFile(
         const std::filesystem::path& file,
         std::span<const adv_source_t> sources,
         const std::filesystem::path& basePath,
@@ -156,6 +198,44 @@ private:
             }
         }
         return {{}, nullptr, false};
+    }
+
+    [[nodiscard]] bool readBytecode(const adv_source_t* source, const std::filesystem::path& filename) noexcept {
+        if (source) {
+            if (utils::isBinaryCode({source->data, source->size})) {
+                std::vector<adv_uint8_t> bytecode(
+                    (adv_uint8_t*)source->data, (adv_uint8_t*)source->data + source->size);
+                _ctx.setBytecode(std::move(bytecode));
+                return true;
+            }
+        }
+        std::ifstream stream(filename, std::ios::binary);
+        if (!stream.is_open()) {
+            return false;
+        }
+        std::array<adv_char_t, sizeof(vm_script_header_t) + sizeof(vm_script_table_t)> bytes;
+        if (!stream.read(bytes.data(), bytes.size())) {
+            stream.close();
+            return false;
+        }
+        if (utils::isBinaryCode({bytes.data(), bytes.size()}, false)) {
+            stream.seekg(0, std::ios::beg);
+            auto size = stream.tellg();
+            stream.seekg(0, std::ios::end);
+            size = stream.tellg() - size;
+            stream.seekg(0, std::ios::beg);
+
+            std::vector<adv_uint8_t> bytecode;
+            bytecode.resize(size);
+            if (stream.read((char*)bytecode.data(), size) &&
+                utils::isBinaryCode({(const char*)bytecode.data(), bytecode.size()})) {
+                stream.close();
+                _ctx.setBytecode(std::move(bytecode));
+                return true;
+            }
+        }
+        stream.close();
+        return false;
     }
 
     [[nodiscard]] adv_float32_t parseFloat(const adv_location_t& location, std::string_view str) noexcept {

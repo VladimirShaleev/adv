@@ -28,6 +28,8 @@ public:
 
     [[nodiscard]] adv_node_t* root(const std::string& module = {}) noexcept;
 
+    [[nodiscard]] const std::vector<adv_uint8_t>& bytecode() const noexcept { return _bytecode; }
+
     [[nodiscard]] std::filesystem::path getBasePath(const std::string& module) const noexcept;
 
     [[nodiscard]] bool hasImport(const std::filesystem::path& path) const noexcept;
@@ -35,6 +37,8 @@ public:
     void addImport(const std::filesystem::path& path);
 
     void setNodeTree(const std::filesystem::path& path, adv_node_t* root);
+
+    void setBytecode(std::vector<adv_uint8_t>&& bytecode) noexcept { _bytecode = std::move(bytecode); }
 
     template <adv_status_t Status, typename... Args>
     void log(const Options& options, const adv_location_t& loc, Args&&... args) {
@@ -53,6 +57,12 @@ public:
         std::function<std::string(void)> message) = 0;
 
     virtual void getMessages(adv_uint32_t& messageCount, adv_message_t* messages) const noexcept { messageCount = 0; }
+
+    virtual void clearMessages() noexcept {
+        _hasNotes = 0;
+        _hasWarnings = 0;
+        _hasErrors = 0;
+    };
 
 protected:
     bool applyStatusAndCheckIsError(adv_status_t status, bool warnAsError) noexcept;
@@ -78,6 +88,7 @@ private:
     bool _hasNotes{};
     bool _hasWarnings{};
     bool _hasErrors{};
+    std::vector<adv_uint8_t> _bytecode{};
     utils::StringPool _strPool{};
     std::vector<std::vector<adv_node_t>> _nodes{};
     size_t _nodeCount{};
@@ -97,6 +108,8 @@ public:
         std::function<std::string(void)> message) override;
 
     void getMessages(adv_uint32_t& messageCount, adv_message_t* messages) const noexcept override;
+
+    void clearMessages() noexcept override;
 
 private:
     std::vector<adv_message_t> _messages{};

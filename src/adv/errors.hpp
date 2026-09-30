@@ -115,6 +115,12 @@ inline std::string err(Args&&... args) {
         str = fmt::format("The 'wait' statement requires a numeric argument ('int' or 'float'), got '{}'", args...);
     } else if constexpr (Status == ADV_STATUS_E3041) {
         str = fmt::format("Missing argument for 'wait' statement");
+    } else if constexpr (Status == ADV_STATUS_E3042) {
+        if constexpr (sizeof...(args) > 0) {
+            str = fmt::format("Translate Advt (text assembler) failed: {}", args...);
+        } else {
+            str = fmt::format("Translate Advt (text assembler) failed");
+        }
     } else {
         assert(!"Unknown status code");
     }

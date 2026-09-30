@@ -22,6 +22,9 @@ adv_result_t Analyzer::build() {
     if (_ctx.hasErrors()) {
         return ADV_RESULT_COMPILATION_FAILED;
     }
+    if (!_ctx.bytecode().empty()) {
+        return ADV_RESULT_SUCCESS;
+    }
     resolveSymbols();
 
     if (_ctx.hasErrors()) {

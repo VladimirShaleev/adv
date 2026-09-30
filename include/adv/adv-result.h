@@ -89,7 +89,8 @@ typedef enum
     ADV_STATUS_E3039       = 3039, /**< Import path cannot be empty. */
     ADV_STATUS_E3040       = 3040, /**< The 'wait' statement requires a numeric argument ('int' or 'float'). */
     ADV_STATUS_E3041       = 3041, /**< Missing argument for 'wait' statement. */
-    ADV_STATUS_COUNT_ENUMS = 48, /**< Count of constants in the enumeration. */
+    ADV_STATUS_E3042       = 3042, /**< Translate Advt (text assembler) failed. */
+    ADV_STATUS_COUNT_ENUMS = 49, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
 

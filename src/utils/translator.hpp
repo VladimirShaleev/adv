@@ -7,7 +7,12 @@
 
 namespace utils {
 
-struct TranslateError {
+enum Format {
+    Unknown,
+    Advt
+};
+
+struct TranslateResult {
     enum ErrorCode {
         NoError = 0,
         OutOfMemory,
@@ -26,15 +31,16 @@ struct TranslateError {
         UnexpectedTokenInOperand
     };
 
+    Format format;
     ErrorCode errorCode;
     std::string message;
     uint32_t line;
     uint32_t column;
 };
 
-[[nodiscard]] bool isBinaryCode(std::span<const char> code) noexcept;
+[[nodiscard]] bool isBinaryCode(std::span<const char> code, bool checkSize = true) noexcept;
 
-[[nodiscard]] std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateError& error) noexcept;
+[[nodiscard]] std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateResult& error) noexcept;
 
 } // namespace utils
 

@@ -100,6 +100,11 @@ void ContextImpl::getMessages(adv_uint32_t& messageCount, adv_message_t* message
     }
 }
 
+void ContextImpl::clearMessages() noexcept {
+    Context::clearMessages();
+    _messages.clear();
+}
+
 void ContextStub::addMessage(
     adv_status_t status,
     bool warnAsError,
