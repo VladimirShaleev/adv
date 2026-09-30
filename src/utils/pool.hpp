@@ -131,7 +131,7 @@ public:
         if constexpr (!std::is_trivially_destructible_v<T>) {
             value.obj.~T();
         }
-        std::memset(&value.obj, 0, sizeof(value_type));
+        std::memset((void*)&value.obj, 0, sizeof(value_type));
         value.handle = Undefined;
         _handles[--_head] = handle;
     }
