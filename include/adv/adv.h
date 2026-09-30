@@ -34,6 +34,7 @@
 #define ADV_H
 
 #include "adv-options.h"
+#include "adv-version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,7 +96,7 @@ adv_compiler_destroy(adv_compiler_t compiler);
  *             - *sources* - then the source code array, if specified;
  *             - ::adv_options_set_import_dirs - then in the paths to the import directories, if specified;
  *             - then the current working directory.
- *             
+ *
  * @endparblock
  * @ingroup    functions
  */

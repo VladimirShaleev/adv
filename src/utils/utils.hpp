@@ -16,13 +16,14 @@
 
 #include <bit>
 #include <cstdint>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
 
 namespace utils {
 
-UTILS_FORCE_INLINE uint16_t swap_bytes(uint16_t val) {
+UTILS_FORCE_INLINE uint16_t swapBytes(uint16_t val) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap16(val);
 #else
@@ -30,7 +31,7 @@ UTILS_FORCE_INLINE uint16_t swap_bytes(uint16_t val) {
 #endif
 }
 
-UTILS_FORCE_INLINE uint32_t swap_bytes(uint32_t val) {
+UTILS_FORCE_INLINE uint32_t swapBytes(uint32_t val) {
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap32(val);
 #else
@@ -104,10 +105,10 @@ UTILS_FORCE_INLINE uint32_t swap_bytes(uint32_t val) {
     return result;
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE uint32_t adler32(std::span<const uint8_t> data) noexcept {
+[[nodiscard]] UTILS_FORCE_INLINE uint32_t adler32(std::ranges::viewable_range auto&& view) noexcept {
     uint32_t a = 1, b = 0;
-    for (size_t i = 0; i < data.size(); ++i) {
-        a = (a + data[i]) % 65521;
+    for (const uint8_t byte : view) {
+        a = (a + byte) % 65521;
         b = (b + a) % 65521;
     }
     return (b << 16) | a;

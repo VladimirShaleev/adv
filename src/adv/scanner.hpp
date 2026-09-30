@@ -56,21 +56,16 @@ public:
 
     [[nodiscard]] bool parseAdvt() {
         assert(filename());
-        // TODO: use _stream for read
-        std::ifstream stream(*filename(), std::ios::binary);
-        if (!stream.is_open()) {
-            return false;
-        }
-        auto size = stream.tellg();
-        stream.seekg(0, std::ios::end);
-        size = stream.tellg() - size;
-        stream.seekg(0, std::ios::beg);
-        std::vector<char> data(size);
-        if (!stream.read((char*)data.data(), size)) {
-            stream.close();
-            return false;
-        }
-        stream.close();
+        auto size = _stream->tellg();
+        _stream->seekg(0, std::ios::end);
+        size = _stream->tellg() - size;
+        _stream->seekg(0, std::ios::beg);
+
+        std::vector<char> data;
+        data.reserve(size);
+        std::copy(
+            std::istreambuf_iterator<char>(*_stream.get()), std::istreambuf_iterator<char>(), std::back_inserter(data));
+
         utils::TranslateResult err{};
         auto bytecode = std::move(utils::translateTextToBinary({data.data(), data.size()}, err));
         if (err.format == utils::Format::Unknown) {
@@ -114,6 +109,29 @@ private:
         _needRelease = needRelease;
 
         if (depth == 0 && readBytecode(source, path)) {
+            std::span bytecode{_ctx.bytecode().data(), _ctx.bytecode().size()};
+            vm_uint32_t sum = 0;
+            auto block0 = bytecode.subspan(0, offsetof(vm_script_header_t, checksum));
+            auto block1 = std::span{(const adv_uint8_t*)&sum, sizeof(vm_uint32_t)};
+            auto block2 = bytecode.subspan(sizeof(vm_script_header_t));
+            auto view = std::array<std::span<const uint8_t>, 3>{block0, block1, block2} | std::views::join;
+            const auto result = utils::adler32(std::move(view));
+
+            auto checksum = reinterpret_cast<const vm_script_header_t*>(bytecode.data())->checksum;
+            auto version = reinterpret_cast<const vm_script_header_t*>(bytecode.data())->version;
+            if (std::endian::native != std::endian::little) {
+                checksum = utils::swapBytes(checksum);
+                version = utils::swapBytes(version);
+            }
+            if (checksum != result) {
+                _ctx.setBytecode({});
+                _ctx.log<ADV_STATUS_E3043>(_options, loc, result, checksum);
+            }
+            if ((version >> 16) == (ADV_VERSION >> 16)) {
+                _ctx.setBytecode({});
+                auto verStr = fmt::format("{}.{}.{}", (version >> 16) & 0xFF, (version >> 8) & 0xFF, version & 0xFF);
+                _ctx.log<ADV_STATUS_E3044>(_options, loc, verStr, ADV_VERSION_STRING);
+            }
             return;
         }
 

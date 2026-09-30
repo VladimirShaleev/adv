@@ -227,7 +227,7 @@ private:
             if (auto minor = parseComponent(str, false)) {
                 if (auto micro = parseComponent(str, true)) {
                     auto version = VM_VERSION_ENCODE(major.value(), minor.value(), micro.value());
-                    if ((version >> 8) == (VM_VERSION >> 8)) {
+                    if ((version >> 16) == (VM_VERSION >> 16)) {
                         return version;
                     }
                 }
@@ -294,7 +294,8 @@ private:
             expect(TokenType::String, "Expected string literal in .data section");
             if (result.identifierMap.contains(_currentToken.value)) {
                 error(
-                    fmt::format("Duplicate identifier '{}'", _currentToken.value), TranslateResult::RedefinedIdentifier);
+                    fmt::format("Duplicate identifier '{}'", _currentToken.value),
+                    TranslateResult::RedefinedIdentifier);
             }
             result.identifierMap[name] = _currentToken.value;
             advance();
@@ -411,7 +412,10 @@ private:
             auto it = result.labelMap.find(id);
             if (it == result.labelMap.end()) {
                 error(
-                    fmt::format("label identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
+                    fmt::format("label identifier '{}' not found", id),
+                    TranslateResult::UnknownIdentifier,
+                    false,
+                    line);
             }
             const auto offset = it->second;
             patchUint32(offsetText, offset, result.textSection);
@@ -437,16 +441,17 @@ private:
         table->text_offset = offsetText;
         table->text_size = static_cast<vm_uint32_t>(result.textSection.size());
         if (std::endian::native != std::endian::little) {
-            header->version = swap_bytes(header->version);
-            table->data_offset = swap_bytes(table->data_offset);
-            table->data_size = swap_bytes(table->data_size);
-            table->text_offset = swap_bytes(table->text_offset);
-            table->text_size = swap_bytes(table->text_size);
+            header->version = swapBytes(header->version);
+            table->data_offset = swapBytes(table->data_offset);
+            table->data_size = swapBytes(table->data_size);
+            table->text_offset = swapBytes(table->text_offset);
+            table->text_size = swapBytes(table->text_size);
         }
         std::memcpy(text, result.textSection.data(), result.textSection.size());
-        header->checksum = adler32({bytecode.data(), bytecode.size()});
+        auto view = std::views::all(bytecode);
+        header->checksum = adler32(std::move(view));
         if (std::endian::native != std::endian::little) {
-            header->checksum = swap_bytes(header->checksum);
+            header->checksum = swapBytes(header->checksum);
         }
         return bytecode;
     }
@@ -495,13 +500,13 @@ private:
     }
 
     static void pushUint16(vm_uint16_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        val = std::endian::native == std::endian::little ? val : swapBytes(val);
         buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
     }
 
     static void pushUint32(vm_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        val = std::endian::native == std::endian::little ? val : swapBytes(val);
         buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 16) & 0xFF));
@@ -520,7 +525,7 @@ private:
     }
 
     static void patchUint32(vm_uint32_t offset, vm_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swap_bytes(val);
+        val = std::endian::native == std::endian::little ? val : swapBytes(val);
         buffer[offset + 0] = static_cast<uint8_t>((val >> 0) & 0xFF);
         buffer[offset + 1] = static_cast<uint8_t>((val >> 8) & 0xFF);
         buffer[offset + 2] = static_cast<uint8_t>((val >> 16) & 0xFF);
@@ -564,10 +569,10 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
     vm_script_table_t table;
     std::memcpy(&table, code.data() + sizeof(vm_script_header_t), sizeof(table));
     if (std::endian::native != std::endian::little) {
-        table.data_offset = swap_bytes(table.data_offset);
-        table.data_size = swap_bytes(table.data_size);
-        table.text_offset = swap_bytes(table.text_offset);
-        table.text_size = swap_bytes(table.text_size);
+        table.data_offset = swapBytes(table.data_offset);
+        table.data_size = swapBytes(table.data_size);
+        table.text_offset = swapBytes(table.text_offset);
+        table.text_size = swapBytes(table.text_size);
     }
 
     const auto dataLeft = table.data_offset;

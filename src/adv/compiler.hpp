@@ -17,12 +17,14 @@
 #include <array>
 #include <cassert>
 #include <charconv>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <stack>

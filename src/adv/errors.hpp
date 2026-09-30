@@ -121,6 +121,10 @@ inline std::string err(Args&&... args) {
         } else {
             str = fmt::format("Translate Advt (text assembler) failed");
         }
+    } else if constexpr (Status == ADV_STATUS_E3043) {
+        str = fmt::format("The checksum did not match, actual {}, expected {}", args...);
+    } else if constexpr (Status == ADV_STATUS_E3044) {
+        str = fmt::format("Unsupported version, script version {}, compiler version {}", args...);
     } else {
         assert(!"Unknown status code");
     }
