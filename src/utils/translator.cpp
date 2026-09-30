@@ -53,7 +53,6 @@ struct Advt {
 
     Format format;
     vm_uint32_t version;
-    vm_uint32_t checksum;
     std::unordered_map<std::string_view, std::string_view> identifierMap;
     std::vector<PatchInstruction> identifiers;
     std::vector<PatchInstruction> labels;
@@ -176,8 +175,6 @@ public:
                     result.format = parseFormat();
                 } else if (equals(sec, ".version"sv)) {
                     result.version = parseVersion();
-                } else if (equals(sec, ".checksum"sv)) {
-                    result.checksum = parseValue<vm_uint32_t>(parseHeaderValue());
                 } else if (equals(sec, ".data")) {
                     parseDataSection(result);
                 } else if (equals(sec, ".text")) {

@@ -436,33 +436,6 @@ adv_result_t Generator::text() {
     size_t strLen = 0;
     std::cout << ".format: "sv << "ADVT"sv << std::endl;
     std::cout << ".version: "sv << VM_VERSION_STRING << std::endl;
-    std::cout << ".checksum: "sv << 0 << std::endl;
-    /*std::map<size_t, size_t> dataOffsets;
-    size_t dataIndex = 0;
-
-    auto hasPrev = false;
-    if (!_data.empty()) {
-        std::cout << ".data:"sv << std::endl << tab;
-        size_t pos = 0;
-        while (pos < _data.size()) {
-            if (strLen > 50) {
-                strLen = 0;
-                std::cout << std::endl << tab;
-            } else {
-                if (hasPrev) {
-                    std::cout << ' ';
-                }
-            }
-            hasPrev = true;
-            dataOffsets[pos] = dataIndex++;
-            const auto len = Reader::readUint16(_data.data(), pos);
-            std::cout << '"' << std::string_view{(const char*)(_data.data() + pos), len} << '"';
-            pos += len + 1;
-            strLen += len + 2;
-        }
-        std::cout << std::endl;
-    }*/
-
     size_t literalCount = 0;
     std::map<std::string_view, std::string> names;
     std::map<std::string_view, size_t> strPool;
@@ -487,11 +460,6 @@ adv_result_t Generator::text() {
         auto opcodeName = magic_enum::enum_name(opcode).substr(10);
         op = opcodeName;
         switch (opcode) {
-        case VM_OPCODE_NO_OPERATION:
-        case VM_OPCODE_PUSH_ZERO:
-        case VM_OPCODE_PUSH_TRUE:
-        case VM_OPCODE_PUSH_FALSE:
-            break;
         case VM_OPCODE_PUSH_INT:
             val = Reader::readInt32(code, ip);
             break;
@@ -528,44 +496,11 @@ adv_result_t Generator::text() {
         case VM_OPCODE_POP_GLOBAL:
             assert(!"todo");
             break;
-        case VM_OPCODE_BOOL_TO_INT:
-        case VM_OPCODE_BOOL_TO_FLOAT:
-        case VM_OPCODE_BOOL_TO_STRING:
-        case VM_OPCODE_INT_TO_BOOL:
-        case VM_OPCODE_INT_TO_FLOAT:
-        case VM_OPCODE_INT_TO_STRING:
-        case VM_OPCODE_FLOAT_TO_BOOL:
-        case VM_OPCODE_FLOAT_TO_INT:
-        case VM_OPCODE_FLOAT_TO_STRING:
-        case VM_OPCODE_STRING_TO_BOOL:
-        case VM_OPCODE_STRING_TO_INT:
-        case VM_OPCODE_STRING_TO_FLOAT:
-        case VM_OPCODE_LOGICAL_NOT:
-        case VM_OPCODE_NUMERIC_NEGATION:
-        case VM_OPCODE_BITWISE_NOT:
-        case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
-        case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
-        case VM_OPCODE_LOGIC_SHIFT_LEFT:
-        case VM_OPCODE_LOGIC_SHIFT_RIGHT:
-        case VM_OPCODE_ADD:
-        case VM_OPCODE_SUBTRACT:
-        case VM_OPCODE_MULTIPLY:
-        case VM_OPCODE_DIVISION:
-        case VM_OPCODE_MOD:
-        case VM_OPCODE_EQUAL:
-        case VM_OPCODE_NOT_EQUAL:
-        case VM_OPCODE_LESS:
-        case VM_OPCODE_LESS_EQUAL:
-        case VM_OPCODE_GREAT:
-        case VM_OPCODE_GREAT_EQUAL:
-            break;
         case VM_OPCODE_CALL_NATIVE:
             assert(!"todo");
             break;
         case VM_OPCODE_CALL:
             assert(!"todo");
-            break;
-        case VM_OPCODE_RETURN:
             break;
         case VM_OPCODE_JUMP:
         case VM_OPCODE_JUMP_IF_FALSE: {
@@ -584,6 +519,8 @@ adv_result_t Generator::text() {
             assert(!"todo");
             break;
         case VM_OPCODE_HALT:
+            break;
+        default:
             break;
         }
     }
