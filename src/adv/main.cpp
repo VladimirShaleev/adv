@@ -6,13 +6,13 @@
 using namespace std::literals;
 
 int main(int argc, char* argv[]) {
-    auto warnAsErr = false;
     auto text = false;
+    auto warnAsErr = false;
     auto input = std::filesystem::path();
     auto output = std::filesystem::current_path();
     auto imports = std::vector<std::string>();
-    argparse::ArgumentParser program("advc", ADV_VERSION_STRING);
 
+    argparse::ArgumentParser program("advc", ADV_VERSION_STRING);
     program.add_argument("input").store_into(input).help("input .adv file");
     program.add_argument("-o", "--output").store_into(output).help("output path (directory or file)");
     program.add_argument("-t", "--text").store_into(text).help("write text assembly output");
@@ -100,6 +100,7 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+
     if (code != ADV_RESULT_SUCCESS && !failed) {
         std::cerr << "error: " << adv_result_to_string(code) << std::endl;
         failed = true;

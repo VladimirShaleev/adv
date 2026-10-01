@@ -50,10 +50,6 @@ if(NOT BISON_FOUND)
         endif()
         set(CONFIGURE_OPTS --build=${BUILD_TRIPLET})
         
-        if(POLICY CMP0135)  
-            cmake_policy(SET CMP0135 OLD)  
-        endif()
-
         ExternalProject_Add(
             bison_build
             URL ${BISON_URL}
