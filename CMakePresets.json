@@ -57,6 +57,19 @@
             }
         },
         {
+            "name": "linux-base",
+            "displayName": "Linux base configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-linux"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
             "name": "win64-release",
             "displayName": "Windows x64 (release)",
             "inherits": [
@@ -91,6 +104,24 @@
                 "debug",
                 "vcpkg"
             ]
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux config (release)",
+            "inherits": [
+                "linux-base",
+                "release",
+                "vcpkg"
+            ]
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux config (debug)",
+            "inherits": [
+                "linux-base",
+                "debug",
+                "vcpkg"
+            ]
         }
     ],
     "buildPresets": [
@@ -115,6 +146,16 @@
             "name": "osx-debug",
             "displayName": "Mac OS (debug)",
             "configurePreset": "osx-debug"
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux (release)",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux (debug)",
+            "configurePreset": "linux-debug"
         }
     ],
     "testPresets": [
@@ -137,6 +178,16 @@
             "name": "osx-debug",
             "displayName": "Mac OS (debug)",
             "configurePreset": "osx-debug"
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux (release)",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux (debug)",
+            "configurePreset": "linux-debug"
         }
     ],
     "workflowPresets": [
@@ -209,6 +260,42 @@
                 {
                     "type": "test",
                     "name": "osx-debug"
+                }
+            ]
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux (release)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "linux-release"
+                },
+                {
+                    "type": "build",
+                    "name": "linux-release"
+                },
+                {
+                    "type": "test",
+                    "name": "linux-release"
+                }
+            ]
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux (debug)",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "linux-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "linux-debug"
+                },
+                {
+                    "type": "test",
+                    "name": "linux-debug"
                 }
             ]
         }

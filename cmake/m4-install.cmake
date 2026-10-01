@@ -21,6 +21,10 @@ if(NOT M4_EXECUTABLE)
     set(M4_INSTALL_DIR "${CMAKE_BINARY_DIR}/m4_install")
     set(M4_EXECUTABLE "${M4_INSTALL_DIR}/bin/m4")
 
+    if(POLICY CMP0135)  
+        cmake_policy(SET CMP0135 OLD)  
+    endif()
+
     include(ProcessorCount)
     ProcessorCount(NPROC)
     if(NPROC EQUAL 0)

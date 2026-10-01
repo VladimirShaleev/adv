@@ -39,6 +39,10 @@ if(NOT FLEX_FOUND)
         set(FLEX_EXECUTABLE "${FLEX_INSTALL_DIR}/bin/flex")
         set(FLEX_INCLUDE_DIR "${FLEX_INSTALL_DIR}/include")
 
+        if(POLICY CMP0135)  
+            cmake_policy(SET CMP0135 OLD)  
+        endif()
+
         include(ProcessorCount)
         ProcessorCount(NPROC)
         if(NPROC EQUAL 0)

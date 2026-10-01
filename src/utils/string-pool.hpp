@@ -2,6 +2,8 @@
 #define UTILS_STRING_POOL_HPP
 
 #include <compare>
+#include <cstring>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string_view>
