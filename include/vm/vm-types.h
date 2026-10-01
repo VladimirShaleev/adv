@@ -15,17 +15,23 @@
 extern "C" {
 #endif
 
+/**
+ * @brief   Opaque handle to a virtual machine instance.
+ * @details The instance representation is hidden from API users.
+ * @ingroup types
+ */
 VM_TYPE(vm)
 
 /**
- * @name    String Handles
- * @brief   Opaque handles for interned string references.
- * @details Group of strongly-typed handle declarations used to reference string instances stored in the runtime string pool.
+ * @name    VM Resource Handles
+ * @brief   Index-based handles for VM resources.
+ * @details Strongly typed handles identify strings and compiled scripts
+ *          managed by the virtual machine.
  * @sa      VM_HANDLE
  * @{
  */
-VM_HANDLE(vm_string) /**< String handle representation. Unique identifier for the interned string */
-VM_HANDLE(vm_script)
+VM_HANDLE(vm_string) /**< Handle identifying an interned string in the VM string pool. */
+VM_HANDLE(vm_script) /**< Handle identifying a compiled script managed by the VM. */
 /** @} */
 
 #ifdef __cplusplus
