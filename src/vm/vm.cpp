@@ -25,11 +25,20 @@ public:
     void loadScript(vm_script_h handle) noexcept {}
 
     [[nodiscard]] vm_script_h loadScriptFromMemory(std::span<const vm_char_t> code) noexcept {
+        auto needValidateChecksum = true;
         std::vector<vm_uint8_t> tmpBuffer;
         if (!utils::isBinaryCode(code)) {
-            if (code = tryTranslate(code, tmpBuffer); code.empty()) {
-                return UndefinedScript;
-            }
+            code = tryTranslate(code, tmpBuffer);
+            needValidateChecksum = false;
+        }
+        if (code.empty()) {
+            return UndefinedScript;
+        }
+        if (!utils::validateVersion(code, VM_VERSION)) {
+            return UndefinedScript;
+        }
+        if (needValidateChecksum && !utils::validateChecksum(code)) {
+            return UndefinedScript;
         }
         return {};
     }
@@ -53,10 +62,11 @@ public:
     }
 
 private:
-    std::span<const vm_char_t> tryTranslate(std::span<const vm_char_t> code, std::vector<vm_uint8_t>& buffer) {
-        utils::TranslateResult error{};
-        buffer = utils::translateTextToBinary(code, error);
-        if (error.errorCode == utils::TranslateResult::NoError) {
+    [[nodiscard]] static std::span<const vm_char_t>
+    tryTranslate(std::span<const vm_char_t> code, std::vector<vm_uint8_t>& buffer) noexcept {
+        utils::TranslateResult result{};
+        buffer = utils::translateTextToBinary(code, result);
+        if (result.errorCode == utils::TranslateResult::NoError) {
             return {(const vm_char_t*)buffer.data(), buffer.size()};
         }
         return {};
@@ -85,6 +95,69 @@ vm_utf8_t vm_result_to_string(vm_result_t result) {
     default:
         return "<unknown result>";
     }
+}
+
+vm_uint32_t vm_adler_32(const vm_char_t* data, vm_uint32_t size) {
+    std::span<const vm_char_t> binary{data, size};
+    auto view = std::views::all(binary);
+    return utils::adler32(std::move(view));
+}
+
+vm_bool_t vm_validate_checksum(const vm_char_t* data, vm_uint32_t size) {
+    std::span<const vm_char_t> binary{data, size};
+    return utils::validateChecksum(binary) ? 1 : 0;
+}
+
+vm_bool_t vm_validate_version(const vm_char_t* data, vm_uint32_t size) {
+    std::span<const vm_char_t> binary{data, size};
+    return utils::validateVersion(binary, VM_VERSION) ? 1 : 0;
+}
+
+vm_uint16_t vm_swap_uint16(vm_uint16_t value) {
+    return std::endian::native == std::endian::little ? value : utils::swapBytes(value);
+}
+
+vm_uint32_t vm_swap_uint32(vm_uint32_t value) {
+    return std::endian::native == std::endian::little ? value : utils::swapBytes(value);
+}
+
+vm_float32_t vm_swap_float32(vm_float32_t value) {
+    if (std::endian::native == std::endian::little) {
+        return value;
+    }
+    vm_uint32_t bits;
+    std::memcpy(&bits, &value, sizeof(vm_float32_t));
+    bits = utils::swapBytes(bits);
+    std::memcpy(&value, &bits, sizeof(vm_float32_t));
+    return value;
+}
+
+vm_script_header_t vm_swap_script_header(const vm_script_header_t* header) {
+    if (!header) {
+        return {};
+    }
+    if (std::endian::native == std::endian::little) {
+        return *header;
+    }
+    vm_script_header_t result = *header;
+    result.version = utils::swapBytes(result.version);
+    result.checksum = utils::swapBytes(result.checksum);
+    return result;
+}
+
+vm_script_table_t vm_swap_script_table(const vm_script_table_t* table) {
+    if (!table) {
+        return {};
+    }
+    if (std::endian::native == std::endian::little) {
+        return *table;
+    }
+    vm_script_table_t result = *table;
+    result.data_offset = utils::swapBytes(result.data_offset);
+    result.data_size = utils::swapBytes(result.data_size);
+    result.text_offset = utils::swapBytes(result.text_offset);
+    result.text_size = utils::swapBytes(result.text_size);
+    return result;
 }
 
 vm_result_t vm_create(vm_t* vm) {

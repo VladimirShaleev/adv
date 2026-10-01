@@ -42,6 +42,12 @@ struct TranslateResult {
 
 [[nodiscard]] bool isBinaryCode(std::span<const char> code, bool checkSize = true) noexcept;
 
+[[nodiscard]] bool
+validateChecksum(std::span<const char> code, uint32_t* actual = nullptr, uint32_t* expected = nullptr) noexcept;
+
+[[nodiscard]] bool
+validateVersion(std::span<const char> code, uint32_t expectedVersion, uint32_t* compiledVersion = nullptr) noexcept;
+
 [[nodiscard]] std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateResult& error) noexcept;
 
 } // namespace utils

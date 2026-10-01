@@ -423,8 +423,8 @@ private:
         std::vector<vm_uint8_t> bytecode = std::move(result.headerAndDataSection);
         const auto offsetText = bytecode.size();
         bytecode.resize(offsetText + result.textSection.size());
-        auto header = reinterpret_cast<vm_script_header_t*>(bytecode.data());
-        auto table = reinterpret_cast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t));
+        auto header = aliasCast<vm_script_header_t*>(bytecode.data());
+        auto table = aliasCast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t));
         auto text = bytecode.data() + offsetText;
 
         header->magic[0] = 'a';
@@ -554,11 +554,8 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
     if (code.size() < sizeof(vm_script_header_t) + sizeof(vm_script_table_t)) {
         return false;
     }
-    auto ptrHeader = code.data();
-    vm_script_header_t* header;
-    memcpy((void*)&header, (void*)&ptrHeader, sizeof(vm_script_header_t*));
 
-    const auto magic = header->magic;
+    const auto magic = aliasCast<vm_script_header_t*>(code.data())->magic;
     if (magic[0] != 'a' || magic[1] != 'd' || magic[2] != 'v' || magic[3] != 'b') {
         return false;
     }
@@ -581,6 +578,46 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
         return false;
     }
     return dataRight <= textLeft || textRight <= dataLeft;
+}
+
+bool validateChecksum(std::span<const char> code, uint32_t* actual, uint32_t* expected) noexcept {
+    if (code.size() < sizeof(vm_script_header_t)) {
+        return false;
+    }
+    decltype(vm_script_header_t::checksum) sum = 0;
+    constexpr auto offsetChecksum = offsetof(vm_script_header_t, checksum);
+    constexpr auto sizeofChecksum = sizeof(vm_script_header_t::checksum);
+    static_assert(sizeof(sum) == sizeofChecksum, "checksum size mismatch");
+    auto checksum = aliasCast<const vm_script_header_t*>(code.data())->checksum;
+    if (std::endian::native != std::endian::little) {
+        checksum = swapBytes(checksum);
+    }
+    auto block0 = code.subspan(0, offsetChecksum);
+    auto block1 = std::span{(const vm_char_t*)&sum, sizeof(sum)};
+    auto block2 = code.subspan(offsetChecksum + sizeofChecksum);
+    auto view = std::array<std::span<const vm_char_t>, 3>{block0, block1, block2} | std::views::join;
+    auto result = adler32(std::move(view));
+    if (actual) {
+        *actual = result;
+    }
+    if (expected) {
+        *expected = checksum;
+    }
+    return result == checksum;
+}
+
+bool validateVersion(std::span<const char> code, uint32_t expectedVersion, uint32_t* compiledVersion) noexcept {
+    if (code.size() < sizeof(vm_script_header_t)) {
+        return false;
+    }
+    auto version = aliasCast<const vm_script_header_t*>(code.data())->version;
+    if (std::endian::native != std::endian::little) {
+        version = swapBytes(version);
+    }
+    if (compiledVersion) {
+        *compiledVersion = version;
+    }
+    return (version >> 16) == (expectedVersion >> 16);
 }
 
 std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateResult& error) noexcept {

@@ -9,6 +9,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "utils.hpp"
+
 namespace utils {
 
 template <typename T>
@@ -69,11 +71,11 @@ public:
         if (newPoolSize <= _capacity) {
             return;
         }
-        auto handles = reinterpret_cast<handle_type*>(realloc(_handles, newPoolSize * sizeof(handle_type)));
+        auto handles = aliasCast<handle_type*>(realloc(_handles, newPoolSize * sizeof(handle_type)));
         if (!handles) {
             throw std::bad_alloc();
         }
-        auto values = reinterpret_cast<Value*>(realloc(_values, newPoolSize * sizeof(Value)));
+        auto values = aliasCast<Value*>(realloc(_values, newPoolSize * sizeof(Value)));
         if (!values) {
             free(handles);
             throw std::bad_alloc();
@@ -145,7 +147,7 @@ public:
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
-        const auto& owner = *reinterpret_cast<const Value*>((const char*)value - offset);
+        const auto& owner = *aliasCast<const Value*>((const char*)value - offset);
         assert(&owner >= _values && &owner < _values + _capacity);
         return owner.handle;
     }

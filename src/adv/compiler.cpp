@@ -40,7 +40,8 @@ private:
             writer(&source, data);
         } else {
             auto cPath = options.getOutputPath();
-            auto outputPath = cPath && cPath[0] != '\0' ? std::filesystem::path(cPath) : std::filesystem::current_path();
+            auto outputPath =
+                cPath && cPath[0] != '\0' ? std::filesystem::path(cPath) : std::filesystem::current_path();
             std::error_code error{};
             const auto isDirectory = std::filesystem::is_directory(outputPath, error);
             if (error && std::filesystem::exists(outputPath)) {
@@ -70,7 +71,7 @@ private:
             if (!output) {
                 return ADV_RESULT_ERROR_FILE_CREATE;
             }
-            output.write(reinterpret_cast<const char*>(code.data()), static_cast<std::streamsize>(code.size()));
+            output.write((const char*)code.data(), static_cast<std::streamsize>(code.size()));
             if (!output) {
                 return ADV_RESULT_ERROR_FILE_CREATE;
             }

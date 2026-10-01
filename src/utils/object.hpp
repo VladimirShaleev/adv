@@ -27,10 +27,7 @@ public:
     template <typename T>
     [[nodiscard]] UTILS_FORCE_INLINE T* as() noexcept {
         static_assert(std::is_base_of_v<Object, T>, "T must inheritance from Object");
-        T* result;
-        Object* ptr = this;
-        memcpy(&result, &ptr, sizeof(T*));
-        return result;
+        return aliasCast<T*>(this);
     }
 
     template <typename R, typename D, typename T, typename... Args>

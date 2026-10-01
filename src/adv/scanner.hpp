@@ -66,23 +66,23 @@ public:
         std::copy(
             std::istreambuf_iterator<char>(*_stream.get()), std::istreambuf_iterator<char>(), std::back_inserter(data));
 
-        utils::TranslateResult err{};
-        auto bytecode = std::move(utils::translateTextToBinary({data.data(), data.size()}, err));
-        if (err.format != utils::Format::Advt) {
+        utils::TranslateResult result{};
+        auto bytecode = std::move(utils::translateTextToBinary({data.data(), data.size()}, result));
+        if (result.format != utils::Format::Advt) {
             return false;
         }
         _ctx.clearMessages();
-        if (err.errorCode != utils::TranslateResult::NoError) {
+        if (result.errorCode != utils::TranslateResult::NoError) {
             std::string_view fname{filename()->c_str(), filename()->length()};
-            adv_location_t loc{_ctx.intern(fname), err.line, err.column};
-            if (err.message.empty()) {
+            adv_location_t loc{_ctx.intern(fname), result.line, result.column};
+            if (result.message.empty()) {
                 _ctx.log<ADV_STATUS_E3042>(_options, loc);
             } else {
-                _ctx.log<ADV_STATUS_E3042>(_options, loc, err.message);
+                _ctx.log<ADV_STATUS_E3042>(_options, loc, result.message);
             }
             return false;
         }
-        _ctx.setBytecode(std::move(bytecode), err.format);
+        _ctx.setBytecode(std::move(bytecode), result.format);
         return true;
     }
 
@@ -109,25 +109,15 @@ private:
         _needRelease = needRelease;
 
         if (depth == 0 && readBytecode(source, path)) {
-            std::span bytecode{_ctx.bytecode().data(), _ctx.bytecode().size()};
-            vm_uint32_t sum = 0;
-            auto block0 = bytecode.subspan(0, offsetof(vm_script_header_t, checksum));
-            auto block1 = std::span{(const adv_uint8_t*)&sum, sizeof(vm_uint32_t)};
-            auto block2 = bytecode.subspan(sizeof(vm_script_header_t));
-            auto view = std::array<std::span<const uint8_t>, 3>{block0, block1, block2} | std::views::join;
-            const auto result = utils::adler32(std::move(view));
-
-            auto checksum = reinterpret_cast<const vm_script_header_t*>(bytecode.data())->checksum;
-            auto version = reinterpret_cast<const vm_script_header_t*>(bytecode.data())->version;
-            if (std::endian::native != std::endian::little) {
-                checksum = utils::swapBytes(checksum);
-                version = utils::swapBytes(version);
-            }
-            if (checksum != result) {
+            std::span bytecode{(const char*)_ctx.bytecode().data(), _ctx.bytecode().size()};
+            adv_uint32_t actual = 0;
+            adv_uint32_t expected = 0;
+            adv_uint32_t version = 0;
+            if (!utils::validateChecksum(bytecode, &actual, &expected)) {
                 _ctx.setBytecode({}, utils::Format::Unknown);
-                _ctx.log<ADV_STATUS_E3043>(_options, loc, result, checksum);
+                _ctx.log<ADV_STATUS_E3043>(_options, loc, actual, expected);
             }
-            if ((version >> 16) == (ADV_VERSION >> 16)) {
+            if (!utils::validateVersion(bytecode, ADV_VERSION, &version)) {
                 _ctx.setBytecode({}, utils::Format::Unknown);
                 auto verStr = fmt::format("{}.{}.{}", (version >> 16) & 0xFF, (version >> 8) & 0xFF, version & 0xFF);
                 _ctx.log<ADV_STATUS_E3044>(_options, loc, verStr, ADV_VERSION_STRING);
