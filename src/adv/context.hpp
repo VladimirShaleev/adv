@@ -32,6 +32,8 @@ public:
 
     [[nodiscard]] utils::Format codeFormat() const noexcept { return _codeFormat; }
 
+    [[nodiscard]] vm_string_h findFilenameByPath(const std::filesystem::path& path) const noexcept;
+
     [[nodiscard]] std::filesystem::path getBasePath(const std::string& module) const noexcept;
 
     [[nodiscard]] bool hasImport(const std::filesystem::path& path) const noexcept;

@@ -218,15 +218,13 @@ struct CodeGenVisitor {
         } else {
             emitter.emitByte(VM_OPCODE_PUSH_ZERO);
         }
-        auto& symbolTable = ctx.symbolTable();
-        symbolTable.setScope(node->var_decl.scope);
-        auto sym = symbolTable.lookup(options, ctx, node->location, node->var_decl.name);
-        if (sym->isGlobal) {
+        const auto sym = ctx.symbolTable().getSymbol(node->var_decl.symbol);
+        if (sym->is_global) {
             emitter.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
             emitter.emitString(sym->name);
         } else {
             emitter.emitByte(VM_OPCODE_POP_LOCAL);
-            emitter.emitUint16(sym->slotIndex);
+            emitter.emitUint16(sym->slot_index);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
@@ -239,9 +237,8 @@ struct CodeGenVisitor {
         emitter.patchJump(jumpOverBody);
 
         auto& symbolTable = ctx.symbolTable();
-        symbolTable.setScope(node->func_decl.scope);
-        auto sym = symbolTable.lookup(options, ctx, node->location, node->func_decl.name);
-
+        // symbolTable.setScope(node->func_decl.scope);
+        // auto sym = symbolTable.lookup(options, ctx, node->location, node->func_decl.name);
         // emitter.emitOpcode(VM_OPCODE_REGISTER_FUNCTION);
         // emitter.emitString(sym->name);
         // emitter.emitUint32(entryIp);
@@ -296,30 +293,26 @@ struct CodeGenVisitor {
         emitter.emitCast(node->cast_expr.from_type, node->cast_expr.to_type);
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
-        auto& symbolTable = ctx.symbolTable();
-        symbolTable.setScope(node->id_expr.scope);
-        auto sym = symbolTable.lookup(options, ctx, node->location, node->id_expr.name);
-        if (sym->isGlobal) {
+        const auto sym = ctx.symbolTable().getSymbol(node->id_expr.symbol);
+        if (sym->is_global) {
             emitter.emitByte(VM_OPCODE_PUSH_GLOBAL_BY_NAME);
             emitter.emitString(sym->name);
         } else {
             emitter.emitByte(VM_OPCODE_PUSH_LOCAL);
-            emitter.emitUint16(sym->slotIndex);
+            emitter.emitUint16(sym->slot_index);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
         acceptNode(node->assign_expr.val);
         auto target = node->assign_expr.target;
         if (target->type == ADV_NODE_IDENTIFIER_EXPR) {
-            auto& symbolTable = ctx.symbolTable();
-            symbolTable.setScope(target->id_expr.scope);
-            auto sym = symbolTable.lookup(options, ctx, node->location, target->id_expr.name);
-            if (sym->isGlobal) {
+            auto sym = ctx.symbolTable().getSymbol(target->id_expr.symbol);
+            if (sym->is_global) {
                 emitter.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
                 emitter.emitString(sym->name);
             } else {
                 emitter.emitByte(VM_OPCODE_POP_LOCAL);
-                emitter.emitUint16(sym->slotIndex);
+                emitter.emitUint16(sym->slot_index);
             }
         }
     }
@@ -604,15 +597,10 @@ void Generator::saveBinary() {
     table->data_size = static_cast<adv_uint32_t>(_data.size());
     table->text_offset = table->data_offset + table->data_size;
     table->text_size = static_cast<adv_uint32_t>(_code.size());
+    *header = vm_swap_script_header(header);
+    *table = vm_swap_script_table(table);
     memcpy(binary.data() + table->data_offset, _data.data(), table->data_size);
     memcpy(binary.data() + table->text_offset, _code.data(), table->text_size);
-    if (std::endian::native != std::endian::little) {
-        header->version = utils::swapBytes(header->version);
-        table->data_offset = utils::swapBytes(table->data_offset);
-        table->data_size = utils::swapBytes(table->data_size);
-        table->text_offset = utils::swapBytes(table->text_offset);
-        table->text_size = utils::swapBytes(table->text_size);
-    }
     auto view = std::views::all(binary);
     header->checksum = utils::adler32(std::move(view));
     if (std::endian::native != std::endian::little) {

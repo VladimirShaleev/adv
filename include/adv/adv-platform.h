@@ -99,4 +99,16 @@ typedef void*       adv_data_t;    /**< pointer to data. */
 #define ADV_TYPE(adv_name) \
 typedef struct _##adv_name* adv_name##_t;
 
+/**
+ * @def       ADV_HANDLE
+ * @brief     Declares an index-based handle type.
+ * @details   Creates a struct containing an index value, typically used for
+ *            resource handles in API designs that avoid direct pointers.
+ * @param[in] adv_name Base name for the handle type (suffix `_h` will be added).
+ */
+#define ADV_HANDLE(adv_name) \
+typedef struct {             \
+    adv_uint16_t handle;     \
+} adv_name##_h;
+
 #endif /* ADV_PLATFORM_H */

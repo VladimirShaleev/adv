@@ -10,6 +10,7 @@
 #define ADV_RESULT_H
 
 #include "adv-ast.h"
+#include "adv-symbol.h"
 #include "adv-types.h"
 
 #ifdef __cplusplus
@@ -202,16 +203,85 @@ ADV_API const adv_node_t*
 adv_compilation_result_get_root_node(adv_compilation_result_t compilation_result);
 
 /**
- * @brief     Get C string by string id.
- * @details   Returns the C string by ::vm_string_h.
+ * @brief     Get the global scope of the compilation result.
+ * @details   Returns a handle to the top-level global lexical scope of the compiled script.
  * @param[in] compilation_result Target compilation result instance.
- * @param[in] string String id.
- * @return    C string.
+ * @return    Handle to the global lexical scope (`adv_scope_h`).
  * @ingroup   functions
+ */
+ADV_API adv_scope_h
+adv_compilation_result_get_global_scope(adv_compilation_result_t compilation_result);
+
+/**
+ * @brief     Look up a symbol by name within a specific scope.
+ * @details   Searches for a symbol with the given name starting from the specified lexical scope.
+ * @param[in] compilation_result Target compilation result instance.
+ * @param[in] scope Lexical scope handle to start the lookup from.
+ * @param[in] name UTF-8 encoded string name of the symbol to find.
+ * @return    Handle to the found symbol, or an invalid handle if not found.
+ * @ingroup   functions
+ */
+ADV_API adv_symbol_h
+adv_compilation_result_lookup_symbol(adv_compilation_result_t compilation_result,
+                                     adv_scope_h scope,
+                                     adv_utf8_t name);
+
+/**
+ * @brief         Get symbols visible at a specific source code location.
+ * @details       Retrieves all symbol handles that are in scope and accessible at the given source code position.
+ * @param[in]     compilation_result Target compilation result instance.
+ * @param[in]     filename UTF-8 encoded string of the source file name.
+ * @param[in]     line Line number in the source file (1-based).
+ * @param[in]     column Column number in the source file (1-based).
+ * @param[out]    symbols Pointer to the buffer where visible symbol handles will be written.
+ * @param[in,out] symbol_count Pointer to the symbol count; specifies buffer capacity on input and receives the actual number of symbols on output.
+ * @ingroup       functions
+ */
+ADV_API void
+adv_compilation_result_get_visible_symbols_at(adv_compilation_result_t compilation_result,
+                                              adv_utf8_t filename,
+                                              adv_uint32_t line,
+                                              adv_uint32_t column,
+                                              adv_symbol_h* symbols,
+                                              adv_uint32_t* symbol_count);
+
+/**
+ * @brief     Get scope details by its handle.
+ * @details   Resolves a scope handle into a pointer to the constant ::adv_scope_t structure containing child scopes and symbols.
+ * @param[in] compilation_result Target compilation result instance.
+ * @param[in] scope Scope handle to resolve.
+ * @return    Pointer to the constant scope structure, or NULL if the handle is invalid.
+ * @ingroup   functions
+ */
+ADV_API const adv_scope_t*
+adv_compilation_result_get_scope(adv_compilation_result_t compilation_result,
+                                 adv_scope_h scope);
+
+/**
+ * @brief     Get symbol details by its handle.
+ * @details   Resolves a symbol handle into a pointer to the constant ::adv_symbol_t structure containing metadata and attributes.
+ * @param[in] compilation_result Target compilation result instance.
+ * @param[in] symbol Symbol handle to resolve.
+ * @return    Pointer to the constant symbol structure, or NULL if the handle is invalid.
+ * @ingroup   functions
+ */
+ADV_API const adv_symbol_t*
+adv_compilation_result_get_symbol(adv_compilation_result_t compilation_result,
+                                  adv_symbol_h symbol);
+
+/**
+ * @brief      Get C string by string id.
+ * @details    Returns the C string by ::vm_string_h.
+ * @param[in]  compilation_result Target compilation result instance.
+ * @param[in]  string String id.
+ * @param[out] length Length of the string, may be NULL.
+ * @return     C string.
+ * @ingroup    functions
  */
 ADV_API adv_utf8_t
 adv_compilation_result_get_string(adv_compilation_result_t compilation_result,
-                                  vm_string_h string);
+                                  vm_string_h string,
+                                  adv_uint32_t* length);
 
 /** @} */
 

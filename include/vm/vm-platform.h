@@ -35,6 +35,8 @@
 # endif
 #endif
 
+/* TODO: add doc for VM_PACKED_BEGIN, VM_PACKED_END, VM_PACKED_ATTR */
+
 #if defined(_MSC_VER)
 # define VM_PACKED_BEGIN _Pragma("pack(push, 1)")
 # define VM_PACKED_END   _Pragma("pack(pop)")

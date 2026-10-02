@@ -8,6 +8,7 @@ set_default_properties(TARGET tests)
 target_include_directories(tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(tests PRIVATE GTest::gmock_main)
 target_link_libraries(tests PRIVATE utils)
+target_link_libraries(tests PRIVATE vm)
 
 include(GoogleTest)
 gtest_discover_tests(tests)

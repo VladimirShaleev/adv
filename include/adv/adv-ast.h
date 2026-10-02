@@ -9,9 +9,7 @@
 #ifndef ADV_AST_H
 #define ADV_AST_H
 
-#include "adv-platform.h"
-
-#include <vm/vm.h>
+#include "adv-types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,11 +106,11 @@ struct adv_node_t
          */
         struct
         {
-            vm_string_h name;      /**< Variable name string handle. */
-            vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
-            adv_node_t* init_expr; /**< Initializer expression node (nullptr if uninitialized). */
-            adv_bool_t  is_global; /**< Flag indicating whether variable is globally scoped. */
-            void*       scope;     /**< Pointer to associated symbol scope. */
+            vm_string_h  name;      /**< Variable name string handle. */
+            vm_string_h  type_hint; /**< Type annotation handle (0 if omitted). */
+            adv_node_t*  init_expr; /**< Initializer expression node (nullptr if uninitialized). */
+            adv_bool_t   is_global; /**< Flag indicating whether variable is globally scoped. */
+            adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } var_decl;
 
         /**
@@ -125,7 +123,7 @@ struct adv_node_t
             adv_node_t*  first_param;      /**< Head of parameter declarations list (linked by next_sibling). */
             adv_uint32_t param_count;      /**< Number of parameters. */
             adv_node_t*  body;             /**< Pointer to BLOCK node. */
-            void*        scope;            /**< Pointer to function scope. */
+            adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } func_decl;
 
         /**
@@ -135,7 +133,7 @@ struct adv_node_t
         {
             vm_string_h name;      /**< Parameter name string handle. */
             vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
-            void*       scope;     /**< Pointer to function parameter scope. */
+            adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } param_decl;
 
         /**
@@ -190,9 +188,9 @@ struct adv_node_t
          */
         struct
         {
-            vm_string_h name;      /**< Identifier name string handle. */
-            vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
-            void*       scope;     /**< Pointer to resolved scope context. */
+            vm_string_h  name;      /**< Identifier name string handle. */
+            vm_string_h  type_hint; /**< Type annotation handle (0 if omitted). */
+            adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } id_expr;
 
         /**

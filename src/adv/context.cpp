@@ -19,7 +19,7 @@ adv_node_t* Context::allocNode(const adv_location_t& loc, adv_node_type_t type) 
     return &node;
 }
 
-[[nodiscard]] adv_node_t* Context::root(const std::string& module) noexcept {
+adv_node_t* Context::root(const std::string& module) noexcept {
     if (!module.empty()) {
         if (auto it = _imports.find(module); it != _imports.end()) {
             return it->second.root;
@@ -27,6 +27,19 @@ adv_node_t* Context::allocNode(const adv_location_t& loc, adv_node_type_t type) 
         return nullptr;
     }
     return _main;
+}
+
+vm_string_h Context::findFilenameByPath(const std::filesystem::path& path) const noexcept {
+    for (const auto& [module, import] : _imports) {
+        try {
+            if (std::filesystem::equivalent(import.filename, path)) {
+                const auto str = path.string();
+                return this->findString({str.c_str(), str.length()}).value_or({0});
+            }
+        } catch (const std::filesystem::filesystem_error&) {
+        }
+    }
+    return {0};
 }
 
 std::filesystem::path Context::getBasePath(const std::string& module) const noexcept {
@@ -178,6 +191,65 @@ const adv_node_t* adv_compilation_result_get_root_node(adv_compilation_result_t 
     return compilation_result ? compilation_result->as<adv::Context>()->root() : nullptr;
 }
 
-adv_utf8_t adv_compilation_result_get_string(adv_compilation_result_t compilation_result, vm_string_h string) {
-    return compilation_result ? compilation_result->as<adv::Context>()->getString(string).data() : nullptr;
+adv_scope_h adv_compilation_result_get_global_scope(adv_compilation_result_t compilation_result) {
+    return compilation_result ? compilation_result->as<adv::Context>()->symbolTable().getGlobalScope()
+                              : adv::Scope::Undefined;
+}
+
+adv_symbol_h
+adv_compilation_result_lookup_symbol(adv_compilation_result_t compilation_result, adv_scope_h scope, adv_utf8_t name) {
+    if (compilation_result && scope != adv::Scope::Undefined && name) {
+        if (auto str = compilation_result->as<adv::Context>()->findString(name)) {
+            return compilation_result->as<adv::Context>()->symbolTable().lookup(scope, str.value());
+        }
+    }
+    return adv::Symbol::Undefined;
+}
+
+void adv_compilation_result_get_visible_symbols_at(
+    adv_compilation_result_t compilation_result,
+    adv_utf8_t filename,
+    adv_uint32_t line,
+    adv_uint32_t column,
+    adv_symbol_h* symbols,
+    adv_uint32_t* symbol_count) {
+    if (!compilation_result || !filename || !symbol_count || (!symbol_count && !symbols)) {
+        if (symbol_count) {
+            *symbol_count = 0;
+        }
+        return;
+    }
+    auto path = compilation_result->as<adv::Context>()->findFilenameByPath(filename);
+    if (path == vm_string_h{0}) {
+        if (symbol_count) {
+            *symbol_count = 0;
+        }
+        return;
+    }
+    const adv_location_t location{path, line, column};
+    compilation_result->as<adv::Context>()->symbolTable().getVisibleSymbolsAt(location, symbols, *symbol_count);
+}
+
+const adv_scope_t* adv_compilation_result_get_scope(adv_compilation_result_t compilation_result, adv_scope_h scope) {
+    return compilation_result ? compilation_result->as<adv::Context>()->symbolTable().getRawScope(scope) : nullptr;
+}
+
+const adv_symbol_t*
+adv_compilation_result_get_symbol(adv_compilation_result_t compilation_result, adv_symbol_h symbol) {
+    return compilation_result ? compilation_result->as<adv::Context>()->symbolTable().getRawSymbol(symbol) : nullptr;
+}
+
+adv_utf8_t adv_compilation_result_get_string(
+    adv_compilation_result_t compilation_result, vm_string_h string, adv_uint32_t* length) {
+    if (compilation_result) {
+        const auto view = compilation_result->as<adv::Context>()->getString(string);
+        if (length) {
+            *length = static_cast<adv_uint32_t>(view.length());
+        }
+        return view.data();
+    }
+    if (length) {
+        *length = 0;
+    }
+    return "";
 }

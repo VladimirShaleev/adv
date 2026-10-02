@@ -69,10 +69,9 @@ void Analyzer::resolveSymbols() {
             analyzer.saveFrameSlot(sym);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
+            auto [handle, _] = symbolTable.lookup(options, ctx, node->location, node->id_expr.name);
             node->parent = parent;
-            if (auto sym = symbolTable.lookup(options, ctx, node->location, node->id_expr.name)) {
-                node->id_expr.scope = symbolTable.getScope();
-            }
+            node->id_expr.symbol = handle;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {
             node->parent = parent;
@@ -189,9 +188,7 @@ void Analyzer::resolveTypes() {
                     return;
                 }
             }
-            symbolTable.setScope(node->func_decl.scope);
-            auto sym = symbolTable.lookup(options, ctx, node->location, node->func_decl.name);
-            sym->type = returnType;
+            symbolTable.getSymbol(node->func_decl.symbol)->type = returnType;
             node->resolved_type = returnType;
 
             auto param = node->func_decl.first_param;
@@ -255,15 +252,11 @@ void Analyzer::resolveTypes() {
                 ctx.log<ADV_STATUS_E3017>(options, node->location, node->param_decl.type_hint, node->param_decl.name);
                 return;
             }
-            symbolTable.setScope(node->param_decl.scope);
-            if (auto sym = symbolTable.lookup(options, ctx, node->location, node->param_decl.name)) {
-                sym->type = paramType;
-            }
+            symbolTable.getSymbol(node->param_decl.symbol)->type = paramType;
             node->resolved_type = paramType;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
-            symbolTable.setScope(node->id_expr.scope);
-            auto* sym = symbolTable.lookup(options, ctx, node->location, node->id_expr.name);
+            const auto sym = symbolTable.getSymbol(node->id_expr.symbol);
             if (sym) {
                 if (sym->type == VM_VALUE_TYPE_UNKNOWN) {
                     ctx.log<ADV_STATUS_E3018>(options, node->location, node->id_expr.name);
@@ -336,25 +329,28 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
-            auto* fnSym = symbolTable.lookup(options, ctx, node->location, node->call_expr.name);
-            if (!fnSym) {
+            auto [_, sym] = symbolTable.lookup(options, ctx, node->location, node->call_expr.name);
+            if (!sym) {
                 ctx.log<ADV_STATUS_E3020>(options, node->location, node->call_expr.name);
                 return;
             }
-            if (fnSym->kind != SymbolKind::Function) {
+            if (sym->kind != ADV_SYMBOL_KIND_FUNCTION) {
                 ctx.log<ADV_STATUS_E3021>(options, node->location, node->call_expr.name);
                 return;
             }
-            node->resolved_type = fnSym->type;
+            node->resolved_type = sym->type;
 
             adv_node_t** argPtr = &node->call_expr.first_arg;
-            const auto& params = fnSym->params;
+            const auto& params = sym->linearParams;
             if (params.size() != node->call_expr.arg_count) {
                 ctx.log<ADV_STATUS_E3022>(
                     options, node->location, node->call_expr.name, params.size(), node->call_expr.arg_count);
                 return;
             }
-            for (const auto param : params) {
+            auto paramView = params | std::views::transform([this](const auto& paramHandle) {
+                                 return symbolTable.getSymbol(paramHandle);
+                             });
+            for (const auto param : paramView) {
                 auto arg = *argPtr;
                 const auto argType = acceptNode(arg);
                 const auto paramType = param->type;
@@ -432,11 +428,6 @@ void Analyzer::resolveTypes() {
             node->resolved_type = targetType;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
-            symbolTable.setScope(node->var_decl.scope);
-            auto sym = symbolTable.lookup(options, ctx, node->location, node->var_decl.name);
-            if (sym->type != VM_VALUE_TYPE_UNKNOWN) {
-                return;
-            }
             const bool hasTypeHint = node->var_decl.type_hint.handle != 0;
             const bool hasInitExpr = node->var_decl.init_expr != nullptr;
             if (!hasTypeHint && !hasInitExpr) {
@@ -480,7 +471,7 @@ void Analyzer::resolveTypes() {
             }
             const auto finalType = hasTypeHint ? hintType : initType;
 
-            sym->type = finalType;
+            symbolTable.getSymbol(node->var_decl.symbol)->type = finalType;
             node->resolved_type = finalType;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>) {
@@ -586,9 +577,8 @@ void Analyzer::visitStmtsWithRules(
                 }
                 accept(curr->func_decl.body, curr);
                 if (useScopes) {
-                    if (auto funcSym = symbolTable.lookup(_options, _ctx, curr->location, curr->func_decl.name)) {
-                        funcSym->frameSlotCount = currFrame().maxSlots;
-                    }
+                    auto sym = symbolTable.getSymbol(curr->func_decl.symbol);
+                    sym->frame_slot_count = currFrame().maxSlots;
                     popFrame();
                     symbolTable.endScope();
                 }
@@ -605,7 +595,7 @@ void Analyzer::popFrame() noexcept { _frameStack.pop(); }
 void Analyzer::saveFrameSlot(Symbol* sym) noexcept {
     if (hasFrame()) {
         auto& frame = currFrame();
-        sym->slotIndex = frame.currentSlot++;
+        sym->slot_index = frame.currentSlot++;
         frame.maxSlots = std::max(frame.maxSlots, frame.currentSlot);
     }
 }

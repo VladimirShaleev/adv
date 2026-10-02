@@ -7,12 +7,12 @@ struct StringPool::Impl {
 
     void init(size_t slotCapacity, size_t bufferCapacity, size_t hashTableCapacity) {
         buffer.resize(bufferCapacity);
-        buffer[0]  = '\0';
+        buffer[0] = '\0';
         bufferSize = 1;
 
         slots.resize(slotCapacity);
         slotCount = 1;
-        slots[0]  = {0, 0};
+        slots[0] = {0, 0};
 
         hashTable.resize(hashTableCapacity, EmptySlot);
     }
@@ -20,8 +20,11 @@ struct StringPool::Impl {
     void resize(size_t newCapacity) { buffer.resize(newCapacity); }
 
     std::string_view get(vm_string_h str) const noexcept {
-        const auto& slot = slots[str.handle];
-        return std::string_view(&buffer[slot.offset], slot.length);
+        if (str.handle < slotCount) {
+            const auto& slot = slots[str.handle];
+            return std::string_view(&buffer[slot.offset], slot.length);
+        }
+        return std::string_view();
     }
 
     vm_string_h insert(std::string_view str) {
@@ -67,7 +70,7 @@ struct StringPool::Impl {
 
         while (hashTable[bucket] != EmptySlot) {
             const auto slotIndex = hashTable[bucket];
-            const auto& slot     = slots[slotIndex];
+            const auto& slot = slots[slotIndex];
 
             if (slot.length == str.length()) {
                 if (std::memcmp(&buffer[slot.offset], str.data(), str.length()) == 0) {
@@ -88,10 +91,10 @@ struct StringPool::Impl {
 
         for (uint32_t i = 1; i < slotCount; i++) {
             const auto& slot = slots[i];
-            const auto str   = &buffer[slot.offset];
+            const auto str = &buffer[slot.offset];
 
             const auto hash = hashFnv1a(std::string_view(str, slot.length));
-            auto bucket     = hash % newCapacity;
+            auto bucket = hash % newCapacity;
 
             while (hashTable[bucket] != EmptySlot) {
                 bucket = (bucket + 1) % newCapacity;

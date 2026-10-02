@@ -13,6 +13,8 @@
 
 #include "adv-platform.h"
 
+#include <vm/vm.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,6 +36,18 @@ extern "C" {
 ADV_TYPE(adv_compilation_result) /**< Compilation result. */
 ADV_TYPE(adv_options)            /**< Compilation options. */
 ADV_TYPE(adv_compiler)           /**< Compiler interface. */
+/** @} */
+
+/**
+ * @name    ADV Resource Handles
+ * @brief   Index-based handles for ADV compiler resources.
+ * @details Strongly typed handles identify strings and compiled scripts
+ *          managed by the virtual machine.
+ * @sa      ADV_HANDLE
+ * @{
+ */
+ADV_HANDLE(adv_symbol) /**< Handle identifying a symbol in the symbol table. */
+ADV_HANDLE(adv_scope)  /**< Handle identifying a scope in the symbol table. */
 /** @} */
 
 /** @} */
