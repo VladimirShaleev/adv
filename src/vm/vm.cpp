@@ -113,18 +113,11 @@ vm_bool_t vm_validate_version(const vm_char_t* data, vm_uint32_t size) {
     return utils::validateVersion(binary, VM_VERSION) ? 1 : 0;
 }
 
-vm_uint16_t vm_swap_uint16(vm_uint16_t value) {
-    return std::endian::native == std::endian::little ? value : utils::swapBytes(value);
-}
+vm_uint16_t vm_swap_uint16(vm_uint16_t value) { return utils::swapBytes(value); }
 
-vm_uint32_t vm_swap_uint32(vm_uint32_t value) {
-    return std::endian::native == std::endian::little ? value : utils::swapBytes(value);
-}
+vm_uint32_t vm_swap_uint32(vm_uint32_t value) { return utils::swapBytes(value); }
 
 vm_float32_t vm_swap_float32(vm_float32_t value) {
-    if (std::endian::native == std::endian::little) {
-        return value;
-    }
     vm_uint32_t bits;
     std::memcpy(&bits, &value, sizeof(vm_float32_t));
     bits = utils::swapBytes(bits);

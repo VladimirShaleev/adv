@@ -47,8 +47,7 @@ public:
     }
 
     void patchJump(adv_uint32_t patchOffset) {
-        auto targetAddress = offset();
-        targetAddress = std::endian::native == std::endian::little ? targetAddress : utils::swapBytes(targetAddress);
+        auto targetAddress = utils::swapBytes(offset());
         code[patchOffset + 0] = static_cast<uint8_t>((targetAddress >> 0) & 0xFF);
         code[patchOffset + 1] = static_cast<uint8_t>((targetAddress >> 8) & 0xFF);
         code[patchOffset + 2] = static_cast<uint8_t>((targetAddress >> 16) & 0xFF);
@@ -137,13 +136,13 @@ public:
 
 private:
     static void emitUint16(adv_uint16_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : utils::swapBytes(val);
+        val = utils::swapBytes(val);
         buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
     }
 
     static void emitUint32(adv_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : utils::swapBytes(val);
+        val = utils::swapBytes(val);
         buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 16) & 0xFF));
@@ -157,7 +156,7 @@ struct Reader {
         const adv_uint16_t b1 = static_cast<adv_uint16_t>(code[ip + 1]) << 8;
         const adv_uint16_t val = b0 | b1;
         ip += 2;
-        return std::endian::native == std::endian::little ? val : utils::swapBytes(val);
+        return utils::swapBytes(val);
     }
 
     static adv_uint32_t readUint32(const uint8_t* code, size_t& ip) {
@@ -167,7 +166,7 @@ struct Reader {
         const adv_uint32_t b3 = static_cast<adv_uint32_t>(code[ip + 3]) << 24;
         const adv_uint32_t val = b0 | b1 | b2 | b3;
         ip += 4;
-        return std::endian::native == std::endian::little ? val : utils::swapBytes(val);
+        return utils::swapBytes(val);
     }
 
     static adv_sint16_t readInt16(const uint8_t* code, size_t& ip) {
@@ -602,10 +601,7 @@ void Generator::saveBinary() {
     memcpy(binary.data() + table->data_offset, _data.data(), table->data_size);
     memcpy(binary.data() + table->text_offset, _code.data(), table->text_size);
     auto view = std::views::all(binary);
-    header->checksum = utils::adler32(std::move(view));
-    if (std::endian::native != std::endian::little) {
-        header->checksum = utils::swapBytes(header->checksum);
-    }
+    header->checksum = utils::swapBytes(utils::adler32(std::move(view)));
     _ctx.setBytecode(std::move(binary), utils::Format::Advb);
 }
 

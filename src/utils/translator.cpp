@@ -432,24 +432,14 @@ private:
         header->magic[2] = 'v';
         header->magic[3] = 'b';
         header->checksum = 0;
-        header->version = VM_VERSION;
-        table->data_offset = Advt::offsetData;
-        table->data_size = static_cast<vm_uint32_t>(offsetText) - Advt::offsetData;
-        table->text_offset = offsetText;
-        table->text_size = static_cast<vm_uint32_t>(result.textSection.size());
-        if (std::endian::native != std::endian::little) {
-            header->version = swapBytes(header->version);
-            table->data_offset = swapBytes(table->data_offset);
-            table->data_size = swapBytes(table->data_size);
-            table->text_offset = swapBytes(table->text_offset);
-            table->text_size = swapBytes(table->text_size);
-        }
+        header->version = swapBytes(static_cast<vm_uint32_t>(VM_VERSION));
+        table->data_offset = swapBytes(Advt::offsetData);
+        table->data_size = swapBytes(static_cast<vm_uint32_t>(offsetText) - Advt::offsetData);
+        table->text_offset = swapBytes(static_cast<vm_uint32_t>(offsetText));
+        table->text_size = swapBytes(static_cast<vm_uint32_t>(result.textSection.size()));
         std::memcpy(text, result.textSection.data(), result.textSection.size());
         auto view = std::views::all(bytecode);
-        header->checksum = adler32(std::move(view));
-        if (std::endian::native != std::endian::little) {
-            header->checksum = swapBytes(header->checksum);
-        }
+        header->checksum = swapBytes(adler32(std::move(view)));
         return bytecode;
     }
 
@@ -497,13 +487,13 @@ private:
     }
 
     static void pushUint16(vm_uint16_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swapBytes(val);
+        val = swapBytes(val);
         buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
     }
 
     static void pushUint32(vm_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swapBytes(val);
+        val = swapBytes(val);
         buffer.push_back(static_cast<uint8_t>((val >> 0) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 8) & 0xFF));
         buffer.push_back(static_cast<uint8_t>((val >> 16) & 0xFF));
@@ -522,7 +512,7 @@ private:
     }
 
     static void patchUint32(vm_uint32_t offset, vm_uint32_t val, std::vector<uint8_t>& buffer) {
-        val = std::endian::native == std::endian::little ? val : swapBytes(val);
+        val = swapBytes(val);
         buffer[offset + 0] = static_cast<uint8_t>((val >> 0) & 0xFF);
         buffer[offset + 1] = static_cast<uint8_t>((val >> 8) & 0xFF);
         buffer[offset + 2] = static_cast<uint8_t>((val >> 16) & 0xFF);
@@ -562,12 +552,10 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
 
     vm_script_table_t table;
     std::memcpy(&table, code.data() + sizeof(vm_script_header_t), sizeof(table));
-    if (std::endian::native != std::endian::little) {
-        table.data_offset = swapBytes(table.data_offset);
-        table.data_size = swapBytes(table.data_size);
-        table.text_offset = swapBytes(table.text_offset);
-        table.text_size = swapBytes(table.text_size);
-    }
+    table.data_offset = swapBytes(table.data_offset);
+    table.data_size = swapBytes(table.data_size);
+    table.text_offset = swapBytes(table.text_offset);
+    table.text_size = swapBytes(table.text_size);
 
     const auto dataLeft = table.data_offset;
     const auto dataRight = dataLeft + table.data_size;
@@ -588,10 +576,7 @@ bool validateChecksum(std::span<const char> code, uint32_t* actual, uint32_t* ex
     constexpr auto offsetChecksum = offsetof(vm_script_header_t, checksum);
     constexpr auto sizeofChecksum = sizeof(vm_script_header_t::checksum);
     static_assert(sizeof(sum) == sizeofChecksum, "checksum size mismatch");
-    auto checksum = aliasCast<const vm_script_header_t*>(code.data())->checksum;
-    if (std::endian::native != std::endian::little) {
-        checksum = swapBytes(checksum);
-    }
+    auto checksum = swapBytes(aliasCast<const vm_script_header_t*>(code.data())->checksum);
     auto block0 = code.subspan(0, offsetChecksum);
     auto block1 = std::span{(const vm_char_t*)&sum, sizeof(sum)};
     auto block2 = code.subspan(offsetChecksum + sizeofChecksum);
@@ -610,10 +595,7 @@ bool validateVersion(std::span<const char> code, uint32_t expectedVersion, uint3
     if (code.size() < sizeof(vm_script_header_t)) {
         return false;
     }
-    auto version = aliasCast<const vm_script_header_t*>(code.data())->version;
-    if (std::endian::native != std::endian::little) {
-        version = swapBytes(version);
-    }
+    auto version = swapBytes(aliasCast<const vm_script_header_t*>(code.data())->version);
     if (compiledVersion) {
         *compiledVersion = version;
     }

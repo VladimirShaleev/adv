@@ -24,6 +24,9 @@
 namespace utils {
 
 UTILS_FORCE_INLINE uint16_t swapBytes(uint16_t val) {
+    if (std::endian::native == std::endian::little) {
+        return val;
+    }
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap16(val);
 #else
@@ -32,6 +35,9 @@ UTILS_FORCE_INLINE uint16_t swapBytes(uint16_t val) {
 }
 
 UTILS_FORCE_INLINE uint32_t swapBytes(uint32_t val) {
+    if (std::endian::native == std::endian::little) {
+        return val;
+    }
 #if defined(__GNUC__) || defined(__clang__)
     return __builtin_bswap32(val);
 #else
