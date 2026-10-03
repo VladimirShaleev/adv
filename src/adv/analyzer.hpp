@@ -3,8 +3,6 @@
 
 #include "compiler.hpp"
 
-constexpr vm_value_type_t VM_VALUE_TYPE_VOID = vm_value_type_t(int(VM_VALUE_TYPE_COUNT_ENUMS) + 1);
-
 namespace adv {
 
 class Options;

@@ -15,8 +15,9 @@ public:
         Context& ctx,
         std::unordered_map<vm_string_h, adv_uint32_t>& strings,
         std::vector<uint8_t>& data,
-        std::vector<uint8_t>& code) noexcept
-        : ctx(ctx), strings(strings), data(data), code(code) {}
+        std::vector<uint8_t>& code,
+        std::map<adv_symbol_h, adv_uint32_t>* functions = nullptr) noexcept
+        : ctx(ctx), strings(strings), data(data), code(code), functions(functions) {}
 
     void emitByte(uint8_t byte) { code.push_back(byte); }
     void emitUint16(adv_uint16_t val) { emitUint16(val, code); }
@@ -85,6 +86,7 @@ public:
     std::unordered_map<vm_string_h, adv_uint32_t>& strings;
     std::vector<uint8_t>& data;
     std::vector<uint8_t>& code;
+    std::map<adv_symbol_h, adv_uint32_t>* functions;
     adv_uint16_t count{};
 
 private:
@@ -217,18 +219,27 @@ struct CodeGenVisitor {
         const auto entryIp = static_cast<uint32_t>(code.offset());
 
         acceptNode(node->func_decl.body);
-        // code.emitByte(VM_OPCODE_PUSH_ZERO);
-        // code.emitByte(VM_OPCODE_RETURN);
+        const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
+        if (sym->type == VM_VALUE_TYPE_VOID) {
+            code.emitByte(VM_OPCODE_RETURN);
+        }
         code.patchJump(jumpOverBody);
 
-        auto& symbolTable = ctx.symbolTable();
-        // symbolTable.setScope(node->func_decl.scope);
-        // auto sym = symbolTable.lookup(options, ctx, node->location, node->func_decl.name);
-        // emitter.emitOpcode(VM_OPCODE_REGISTER_FUNCTION);
-        // emitter.emitString(sym->name);
-        // emitter.emitUint32(entryIp);
-        // emitter.emitUint16(static_cast<uint16_t>(sym->frameSlotCount)); // Сколько слотов выделить под CallFrame!
-        // emitter.emitUint8(static_cast<uint8_t>(sym->params.size()));
+        if (sym->is_global) {
+            exportFunc.emitString(sym->name);
+            exportFunc.emitUint32(entryIp);
+            exportFunc.emitUint16(sym->frame_slot_count);
+            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->type));
+            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
+            for (const auto paramHandle : sym->linearParams) {
+                const auto param = ctx.symbolTable().getSymbol(paramHandle);
+                exportFunc.emitString(param->name);
+                exportFunc.emitByte(static_cast<adv_uint8_t>(param->type));
+            }
+            ++exportFunc.count;
+        } else {
+            (*exportFunc.functions)[node->func_decl.symbol] = entryIp;
+        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {}
@@ -260,12 +271,18 @@ struct CodeGenVisitor {
 
         code.patchJump(exitJumpPos);
     }
-    void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {
+        if (node->expr_stmt.expr) {
+            acceptNode(node->expr_stmt.expr);
+        }
+        code.emitByte(VM_OPCODE_RETURN);
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
         acceptNode(node->expr_stmt.expr);
-        if (node->expr_stmt.expr->type != ADV_NODE_ASSIGN_EXPR) {
+        if (node->expr_stmt.expr->type != ADV_NODE_ASSIGN_EXPR &&
+            node->expr_stmt.expr->resolved_type != VM_VALUE_TYPE_VOID) {
             code.emitByte(VM_OPCODE_POP);
         }
     }
@@ -372,7 +389,22 @@ struct CodeGenVisitor {
             break;
         }
     }
-    void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
+        auto arg = node->call_expr.first_arg;
+        while (arg) {
+            acceptNode(arg);
+            arg = arg->next_sibling;
+        }
+
+        const auto sym = ctx.symbolTable().getSymbol(node->call_expr.symbol);
+        if (sym->is_global) {
+            code.emitByte(VM_OPCODE_CALL_BY_NAME);
+            code.emitString(sym->name);
+        } else {
+            code.emitByte(VM_OPCODE_CALL);
+            code.emitUint32((*exportFunc.functions)[node->call_expr.symbol]);
+        }
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) {
         code.emitByte(node->bool_val ? VM_OPCODE_PUSH_TRUE : VM_OPCODE_PUSH_FALSE);
@@ -407,6 +439,7 @@ Generator::Generator(const Options& options, Context& ctx) noexcept : _options(o
 adv_result_t Generator::gen() {
     if (_ctx.bytecode().empty()) {
         std::unordered_map<vm_string_h, adv_uint32_t> strings;
+        std::map<adv_symbol_h, adv_uint32_t> functions;
         std::vector<uint8_t> stub;
         std::vector<uint8_t> exportTable;
         std::vector<uint8_t> exportVar;
@@ -416,7 +449,7 @@ adv_result_t Generator::gen() {
         Emitter(_ctx, strings, data, stub).emitString(_ctx.rootModule());
         Emitter emitterCode(_ctx, strings, data, code);
         Emitter emitterExportVar(_ctx, strings, data, exportVar);
-        Emitter emitterExportFunc(_ctx, strings, data, exportFunc);
+        Emitter emitterExportFunc(_ctx, strings, data, exportFunc, &functions);
         accept<CodeGenVisitor>(
             _ctx.root(),
             std::cref(_options),
@@ -488,14 +521,15 @@ adv_result_t Generator::text() {
     std::set<std::string> identifiers;
     identifiers.insert("true");
     identifiers.insert("false");
-    auto genIdentifier = [&identifiers](std::string_view str) {
-        constexpr size_t maxNameLength = 7;
+    auto genIdentifier = [&identifiers](std::string_view str, size_t maxNameLength = 7) {
         std::string base;
         if (str.empty() || !std::isalpha(static_cast<unsigned char>(str.front()))) {
-            base = "lit";
+            if (str.front() != '@') {
+                base = "lit";
+            }
         }
         for (char ch : str) {
-            if (std::isalnum(ch)) {
+            if (std::isalnum(ch) || ch == '@') {
                 base += static_cast<char>(std::tolower(ch));
             }
             if (base.length() >= maxNameLength) {
@@ -529,10 +563,15 @@ adv_result_t Generator::text() {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
             std::cout << tab << "var "sv << name << ": "sv << type << std::endl;
-            identifiers.emplace(name.data(), name.length());
+            if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+                return ADV_RESULT_ERROR_INVALID_ARG;
+            }
         }
         if (exports.func_count > 0) {
             // TODO
+            // if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+            //     return ADV_RESULT_ERROR_INVALID_ARG;
+            // }
         }
     }
 
@@ -545,7 +584,7 @@ adv_result_t Generator::text() {
         std::variant<std::monostate, adv_sint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id> val;
     };
     std::map<std::string_view, std::pair<size_t, std::string>> strings;
-    std::map<adv_uint32_t, std::string> labels;
+    std::map<adv_uint32_t, std::pair<std::string, bool>> labels;
     std::vector<Line> codeLines;
     codeLines.reserve(table.text_size);
     if (table.text_size > 0) {
@@ -641,10 +680,10 @@ adv_result_t Generator::text() {
                 op = "stof"sv;
                 break;
             case VM_OPCODE_BITWISE_NOT:
-                assert(!"todo");
+                op = "bits_not"sv;
                 break;
             case VM_OPCODE_LOGICAL_NOT:
-                assert(!"todo");
+                op = "logic_not"sv;
                 break;
             case VM_OPCODE_NUMERIC_NEGATION:
                 op = "neg"sv;
@@ -706,25 +745,43 @@ adv_result_t Generator::text() {
             case VM_OPCODE_CALL_NATIVE:
                 assert(!"todo");
                 break;
-            case VM_OPCODE_CALL_BY_NAME:
-                assert(!"todo");
+            case VM_OPCODE_CALL_BY_NAME: {
+                op = "call"sv;
+                const auto [_, name] = Reader::readString(code, ip, data);
+                val = Id{name};
+                // if (auto it = labels.find(address); it != labels.end()) {
+                //     val = Id{it->second.first};
+                // } else {
+                auto [newIt, __] = labels.try_emplace(15, name, true);
+                //    val = Id{newIt->second.first};
+                //}
                 break;
-            case VM_OPCODE_CALL:
-                assert(!"todo");
+            }
+            case VM_OPCODE_CALL: {
+                op = "call"sv;
+                const auto address = Reader::readUint32(code, ip);
+                if (auto it = labels.find(address); it != labels.end()) {
+                    val = Id{it->second.first};
+                } else {
+                    const auto label = genIdentifier("@function", 15);
+                    auto [newIt, _] = labels.try_emplace(address, label, false);
+                    val = Id{newIt->second.first};
+                }
                 break;
+            }
             case VM_OPCODE_RETURN:
-                assert(!"todo");
+                op = "ret"sv;
                 break;
             case VM_OPCODE_JUMP:
             case VM_OPCODE_JUMP_IF_FALSE: {
                 op = opcode == VM_OPCODE_JUMP ? "jump"sv : "jfalse"sv;
                 const auto address = Reader::readUint32(code, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
-                    val = Id{it->second};
+                    val = Id{it->second.first};
                 } else {
                     const auto label = genIdentifier("label");
-                    auto [newIt, _] = labels.try_emplace(address, label);
-                    val = Id{newIt->second};
+                    auto [newIt, _] = labels.try_emplace(address, label, false);
+                    val = Id{newIt->second.first};
                 }
                 break;
             }
@@ -763,7 +820,10 @@ adv_result_t Generator::text() {
         for (const auto& [index, op, val] : codeLines) {
             std::string label{tab.data(), tab.length()};
             if (auto it = labels.find(index); it != labels.end()) {
-                std::cout << it->second << ':' << std::endl;
+                if (it->second.second) {
+                    std::cout << std::endl;
+                }
+                std::cout << it->second.first << ':' << std::endl;
             }
             std::cout << label << op;
             if (val.index() != 0) {

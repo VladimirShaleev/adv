@@ -230,6 +230,7 @@ struct adv_node_t
             adv_node_t*  first_arg; /**< Head of argument expressions list (linked by next_sibling). */
             adv_uint32_t arg_count; /**< Number of arguments passed. */
             adv_bool_t   is_async;  /**< True for asynchronous invocation `coroutine[a, b]`, false for standard `func(a, b)`. */
+            adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } call_expr;
 
         /**

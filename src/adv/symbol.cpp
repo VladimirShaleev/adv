@@ -85,7 +85,7 @@ Symbol* SymbolTable::addSymbol(const Options& options, Context& ctx, adv_node_t*
         ctx.log<ADV_STATUS_E3008>(options, sym->location, sym->name, location);
         return sym;
     }
-    auto currScope = scope;
+    auto currScope = getScope(scope->parent);
     while (currScope) {
         if (auto existsSym = currScope->symbolMap.find(sym->name); existsSym != currScope->symbolMap.end()) {
             const auto& location = getSymbol(existsSym->second)->location;

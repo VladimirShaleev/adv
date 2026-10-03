@@ -96,7 +96,9 @@ void Analyzer::resolveSymbols() {
             acceptNode(node->unary_expr.operand, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
+            auto [handle, _] = symbolTable.lookup(options, ctx, node->location, node->call_expr.name);
             node->parent = parent;
+            node->call_expr.symbol = handle;
             auto curr = node->call_expr.first_arg;
             while (curr) {
                 acceptNode(curr, node);
@@ -329,11 +331,7 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
-            auto [_, sym] = symbolTable.lookup(options, ctx, node->location, node->call_expr.name);
-            if (!sym) {
-                ctx.log<ADV_STATUS_E3020>(options, node->location, node->call_expr.name);
-                return;
-            }
+            auto sym = symbolTable.getSymbol(node->call_expr.symbol);
             if (sym->kind != ADV_SYMBOL_KIND_FUNCTION) {
                 ctx.log<ADV_STATUS_E3021>(options, node->location, node->call_expr.name);
                 return;
@@ -580,7 +578,6 @@ void Analyzer::resolveTypes() {
 void Analyzer::visitStmtsWithRules(
     adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes) {
     auto hasFunctions = false;
-
     auto curr = node->stmts.first_stmt;
     while (curr) {
         accept(curr, node);
