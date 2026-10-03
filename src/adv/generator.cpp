@@ -48,11 +48,31 @@ public:
     void emitCast(vm_value_type_t from, vm_value_type_t to) {
         assert(from != to);
         constexpr vm_opcode_t castOperations[VM_VALUE_TYPE_COUNT_ENUMS][VM_VALUE_TYPE_COUNT_ENUMS] = {
-            {VM_OPCODE_NO_OPERATION, VM_OPCODE_NO_OPERATION, VM_OPCODE_NO_OPERATION, VM_OPCODE_NO_OPERATION},
-            {VM_OPCODE_NO_OPERATION, VM_OPCODE_BOOL_TO_INT, VM_OPCODE_BOOL_TO_FLOAT, VM_OPCODE_BOOL_TO_STRING},
-            {VM_OPCODE_INT_TO_BOOL, VM_OPCODE_NO_OPERATION, VM_OPCODE_INT_TO_FLOAT, VM_OPCODE_INT_TO_STRING},
-            {VM_OPCODE_FLOAT_TO_BOOL, VM_OPCODE_FLOAT_TO_INT, VM_OPCODE_NO_OPERATION, VM_OPCODE_FLOAT_TO_STRING},
-            {VM_OPCODE_STRING_TO_BOOL, VM_OPCODE_STRING_TO_INT, VM_OPCODE_STRING_TO_FLOAT, VM_OPCODE_NO_OPERATION},
+            {VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_NO_OPERATION},
+            {VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_BOOL_TO_INT,
+             VM_OPCODE_BOOL_TO_FLOAT,
+             VM_OPCODE_BOOL_TO_STRING},
+            {VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_INT_TO_BOOL,
+             VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_INT_TO_FLOAT,
+             VM_OPCODE_INT_TO_STRING},
+            {VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_FLOAT_TO_BOOL,
+             VM_OPCODE_FLOAT_TO_INT,
+             VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_FLOAT_TO_STRING},
+            {VM_OPCODE_NO_OPERATION,
+             VM_OPCODE_STRING_TO_BOOL,
+             VM_OPCODE_STRING_TO_INT,
+             VM_OPCODE_STRING_TO_FLOAT,
+             VM_OPCODE_NO_OPERATION},
         };
         const auto castOp = castOperations[from][to];
         assert(castOp != VM_OPCODE_NO_OPERATION);
@@ -160,12 +180,27 @@ struct CodeGenVisitor {
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
+        const auto sym = ctx.symbolTable().getSymbol(node->var_decl.symbol);
         if (node->var_decl.init_expr) {
             acceptNode(node->var_decl.init_expr);
         } else {
-            code.emitByte(VM_OPCODE_PUSH_ZERO);
+            switch (sym->type) {
+            case VM_VALUE_TYPE_BOOL:
+                code.emitByte(VM_OPCODE_PUSH_FALSE);
+                break;
+            case VM_VALUE_TYPE_INT:
+                code.emitByte(VM_OPCODE_PUSH_INT);
+                code.emitInt32(0);
+                break;
+            case VM_VALUE_TYPE_FLOAT:
+                break;
+            case VM_VALUE_TYPE_STRING:
+                break;
+            default:
+                assert(!"unreachable code");
+                break;
+            }
         }
-        const auto sym = ctx.symbolTable().getSymbol(node->var_decl.symbol);
         if (sym->is_global) {
             code.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
             code.emitString(sym->name);
@@ -182,8 +217,8 @@ struct CodeGenVisitor {
         const auto entryIp = static_cast<uint32_t>(code.offset());
 
         acceptNode(node->func_decl.body);
-        code.emitByte(VM_OPCODE_PUSH_ZERO);
-        code.emitByte(VM_OPCODE_RETURN);
+        // code.emitByte(VM_OPCODE_PUSH_ZERO);
+        // code.emitByte(VM_OPCODE_RETURN);
         code.patchJump(jumpOverBody);
 
         auto& symbolTable = ctx.symbolTable();
@@ -451,6 +486,8 @@ adv_result_t Generator::text() {
     std::cout << tab << "version: "sv << VM_VERSION_STRING << std::endl;
 
     std::set<std::string> identifiers;
+    identifiers.insert("true");
+    identifiers.insert("false");
     auto genIdentifier = [&identifiers](std::string_view str) {
         constexpr size_t maxNameLength = 7;
         std::string base;
@@ -520,17 +557,26 @@ adv_result_t Generator::text() {
             auto& [index, op, val] = codeLines.back();
             index = ip;
             const auto opcode = (vm_opcode_t)code[ip++];
-            auto opcodeName = magic_enum::enum_name(opcode).substr(10);
-            op = opcodeName;
             switch (opcode) {
+            case VM_OPCODE_PUSH_TRUE:
+                op = "push"sv;
+                val = Id{"true"};
+                break;
+            case VM_OPCODE_PUSH_FALSE:
+                op = "push"sv;
+                val = Id{"false"};
+                break;
             case VM_OPCODE_PUSH_INT:
+                op = "push"sv;
                 val = Reader::readInt32(code, ip);
                 break;
             case VM_OPCODE_PUSH_FLOAT: {
+                op = "push"sv;
                 val = Reader::readFloat(code, ip);
                 break;
             }
             case VM_OPCODE_PUSH_STRING: {
+                op = "push"sv;
                 const auto [_, str] = Reader::readString(code, ip, data);
                 val = str;
                 if (auto it = strings.find(str); it != strings.end()) {
@@ -540,30 +586,138 @@ adv_result_t Generator::text() {
                 }
                 break;
             }
-            case VM_OPCODE_PUSH_LOCAL:
-            case VM_OPCODE_POP_LOCAL:
-                val = Reader::readInt16(code, ip);
-                break;
             case VM_OPCODE_POP_GLOBAL_BY_NAME:
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
+                op = opcode == VM_OPCODE_PUSH_GLOBAL_BY_NAME ? "push_global"sv : "pop_global"sv;
                 const auto [_, str] = Reader::readString(code, ip, data);
                 val = Id{str};
                 break;
             }
+            case VM_OPCODE_PUSH_LOCAL:
+            case VM_OPCODE_POP_LOCAL:
+                op = opcode == VM_OPCODE_PUSH_LOCAL ? "push_local"sv : "pop_local"sv;
+                val = Reader::readInt16(code, ip);
+                break;
             case VM_OPCODE_PUSH_GLOBAL:
                 assert(!"todo");
                 break;
             case VM_OPCODE_POP_GLOBAL:
                 assert(!"todo");
                 break;
+            case VM_OPCODE_BOOL_TO_INT:
+                op = "btoi"sv;
+                break;
+            case VM_OPCODE_BOOL_TO_FLOAT:
+                op = "btof"sv;
+                break;
+            case VM_OPCODE_BOOL_TO_STRING:
+                op = "btos"sv;
+                break;
+            case VM_OPCODE_INT_TO_BOOL:
+                op = "itob"sv;
+                break;
+            case VM_OPCODE_INT_TO_FLOAT:
+                op = "itof"sv;
+                break;
+            case VM_OPCODE_INT_TO_STRING:
+                op = "itos"sv;
+                break;
+            case VM_OPCODE_FLOAT_TO_BOOL:
+                op = "ftob"sv;
+                break;
+            case VM_OPCODE_FLOAT_TO_INT:
+                op = "ftoi"sv;
+                break;
+            case VM_OPCODE_FLOAT_TO_STRING:
+                op = "ftos"sv;
+                break;
+            case VM_OPCODE_STRING_TO_BOOL:
+                op = "stob"sv;
+                break;
+            case VM_OPCODE_STRING_TO_INT:
+                op = "stoi"sv;
+                break;
+            case VM_OPCODE_STRING_TO_FLOAT:
+                op = "stof"sv;
+                break;
+            case VM_OPCODE_BITWISE_NOT:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_LOGICAL_NOT:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_NUMERIC_NEGATION:
+                op = "neg"sv;
+                break;
+            case VM_OPCODE_BITWISE_AND:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_BITWISE_OR:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_BITWISE_XOR:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_LOGIC_SHIFT_LEFT:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_LOGIC_SHIFT_RIGHT:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_ADD:
+                op = "add"sv;
+                break;
+            case VM_OPCODE_SUBTRACT:
+                op = "sub"sv;
+                break;
+            case VM_OPCODE_MULTIPLY:
+                op = "mul"sv;
+                break;
+            case VM_OPCODE_DIVISION:
+                op = "div"sv;
+                break;
+            case VM_OPCODE_MOD:
+                op = "mod"sv;
+                break;
+            case VM_OPCODE_EQUAL:
+                op = "eq"sv;
+                break;
+            case VM_OPCODE_NOT_EQUAL:
+                op = "ne"sv;
+                break;
+            case VM_OPCODE_LESS:
+                op = "less"sv;
+                break;
+            case VM_OPCODE_LESS_EQUAL:
+                op = "less_equal"sv;
+                break;
+            case VM_OPCODE_GREAT:
+                op = "great"sv;
+                break;
+            case VM_OPCODE_GREAT_EQUAL:
+                op = "great_equal"sv;
+                break;
             case VM_OPCODE_CALL_NATIVE:
+                assert(!"todo");
+                break;
+            case VM_OPCODE_CALL_BY_NAME:
                 assert(!"todo");
                 break;
             case VM_OPCODE_CALL:
                 assert(!"todo");
                 break;
+            case VM_OPCODE_RETURN:
+                assert(!"todo");
+                break;
             case VM_OPCODE_JUMP:
             case VM_OPCODE_JUMP_IF_FALSE: {
+                op = opcode == VM_OPCODE_JUMP ? "jump"sv : "jfalse"sv;
                 const auto address = Reader::readUint32(code, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
                     val = Id{it->second};
@@ -580,9 +734,13 @@ adv_result_t Generator::text() {
             case VM_OPCODE_WAIT:
                 assert(!"todo");
                 break;
+            case VM_OPCODE_HALT:
+                op = "halt"sv;
+                break;
             default:
                 break;
             }
+            assert(!op.empty());
         }
     }
     auto hasDataSection = false;
@@ -620,14 +778,6 @@ adv_result_t Generator::text() {
                     } else {
                         std::cout << '"' << utils::escape(str) << '"';
                     }
-                    // if (strPool.contains(str)) {
-                    //     if (strPool[str] == 1) {
-                    //     } else {
-                    //         std::cout << names[str];
-                    //     }
-                    // } else {
-                    // std::cout << str;
-                    //}
                 } else if (std::holds_alternative<adv_sint16_t>(val)) {
                     std::cout << std::get<adv_sint16_t>(val);
                 } else if (std::holds_alternative<adv_sint32_t>(val)) {

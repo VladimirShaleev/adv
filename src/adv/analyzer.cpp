@@ -473,6 +473,34 @@ void Analyzer::resolveTypes() {
 
             symbolTable.getSymbol(node->var_decl.symbol)->type = finalType;
             node->resolved_type = finalType;
+
+            if (!hasInitExpr) {
+                adv_node_t* literal{};
+                switch (finalType) {
+                case VM_VALUE_TYPE_BOOL:
+                    literal = ctx.allocNode(node->location, ADV_NODE_BOOL_LITERAL);
+                    literal->bool_val = false;
+                    break;
+                case VM_VALUE_TYPE_INT:
+                    literal = ctx.allocNode(node->location, ADV_NODE_INT_LITERAL);
+                    literal->int_val = 0;
+                    break;
+                case VM_VALUE_TYPE_FLOAT:
+                    literal = ctx.allocNode(node->location, ADV_NODE_FLOAT_LITERAL);
+                    literal->float_val = 0.0f;
+                    break;
+                case VM_VALUE_TYPE_STRING:
+                    literal = ctx.allocNode(node->location, ADV_NODE_STRING_LITERAL);
+                    literal->str_val = {0};
+                    break;
+                default:
+                    assert(!"unreachable code");
+                    break;
+                }
+                literal->parent = node;
+                literal->resolved_type = finalType;
+                node->var_decl.init_expr = literal;
+            }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>) {
             const auto srcType = acceptNode(node->cast_expr.operand);
