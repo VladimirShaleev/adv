@@ -14,12 +14,11 @@ public:
     [[nodiscard]] adv_result_t text();
 
 private:
-    void saveBinary();
-    
+    void saveBinary(
+        const std::vector<uint8_t>& exportTable, const std::vector<uint8_t>& data, const std::vector<uint8_t>& code);
+
     const Options& _options;
     Context& _ctx;
-    std::vector<uint8_t> _data;
-    std::vector<uint8_t> _code;
 };
 
 } // namespace adv

@@ -541,7 +541,9 @@ private:
 } // namespace
 
 bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
-    if (code.size() < sizeof(vm_script_header_t) + sizeof(vm_script_table_t)) {
+    constexpr auto headerSize = sizeof(vm_script_header_t) + sizeof(vm_script_table_t);
+
+    if (code.size() < headerSize) {
         return false;
     }
 
@@ -552,17 +554,24 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
 
     vm_script_table_t table;
     std::memcpy(&table, code.data() + sizeof(vm_script_header_t), sizeof(table));
+    table.export_offset = swapBytes(table.export_offset);
+    table.export_size = swapBytes(table.export_size);
     table.data_offset = swapBytes(table.data_offset);
     table.data_size = swapBytes(table.data_size);
     table.text_offset = swapBytes(table.text_offset);
     table.text_size = swapBytes(table.text_size);
 
+    const auto exportLeft = table.export_offset;
+    const auto exportRight = exportLeft + table.export_size;
     const auto dataLeft = table.data_offset;
     const auto dataRight = dataLeft + table.data_size;
     const auto textLeft = table.text_offset;
     const auto textRight = textLeft + table.text_size;
-
-    if (checkSize && (dataRight > code.size() || textRight > code.size())) {
+    
+    if (exportLeft < headerSize || dataLeft < headerSize || textLeft < headerSize) {
+        return false;
+    }
+    if (checkSize && (exportRight > code.size() || dataRight > code.size() || textRight > code.size())) {
         return false;
     }
     return dataRight <= textLeft || textRight <= dataLeft;

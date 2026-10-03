@@ -27,6 +27,7 @@ public:
     [[nodiscard]] adv_node_t* allocNode(const adv_location_t& loc, adv_node_type_t type);
 
     [[nodiscard]] adv_node_t* root(const std::string& module = {}) noexcept;
+    [[nodiscard]] vm_string_h rootModule() const noexcept;
 
     [[nodiscard]] const std::vector<adv_uint8_t>& bytecode() const noexcept { return _bytecode; }
 
@@ -86,6 +87,10 @@ private:
         return std::format("{}:{}:{}", getString(loc.filename), loc.line, loc.column);
     }
 
+    [[nodiscard]] static std::string getModuleName(const std::filesystem::path& path) {
+        return path.filename().replace_extension().string();
+    }
+
     struct Import {
         adv_node_t* root{};
         std::filesystem::path filename{};
@@ -102,6 +107,7 @@ private:
     size_t _nodeCount{};
     std::unordered_map<std::string, Import> _imports{};
     adv_node_t* _main{};
+    vm_string_h _mainModule{};
     SymbolTable _symbolTable{};
 };
 

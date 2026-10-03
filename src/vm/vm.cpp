@@ -146,10 +146,39 @@ vm_script_table_t vm_swap_script_table(const vm_script_table_t* table) {
         return *table;
     }
     vm_script_table_t result = *table;
+    result.export_offset = utils::swapBytes(result.export_offset);
+    result.export_size = utils::swapBytes(result.export_size);
     result.data_offset = utils::swapBytes(result.data_offset);
     result.data_size = utils::swapBytes(result.data_size);
     result.text_offset = utils::swapBytes(result.text_offset);
     result.text_size = utils::swapBytes(result.text_size);
+    return result;
+}
+
+vm_script_export_t vm_swap_script_export(const vm_script_export_t* export_table) {
+    if (!export_table) {
+        return {};
+    }
+    if (std::endian::native == std::endian::little) {
+        return *export_table;
+    }
+    vm_script_export_t result = *export_table;
+    result.var_count = utils::swapBytes(result.var_count);
+    result.var_size = utils::swapBytes(result.var_size);
+    result.func_count = utils::swapBytes(result.func_count);
+    result.func_size = utils::swapBytes(result.func_size);
+    return result;
+}
+
+vm_script_export_var_t vm_swap_script_export_var(const vm_script_export_var_t* export_var) {
+    if (!export_var) {
+        return {};
+    }
+    if (std::endian::native == std::endian::little) {
+        return *export_var;
+    }
+    vm_script_export_var_t result = *export_var;
+    result.name = utils::swapBytes(result.name);
     return result;
 }
 

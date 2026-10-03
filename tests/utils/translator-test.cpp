@@ -11,7 +11,7 @@ std::vector<char> makeBinary(
     vm_uint32_t dataOffset, vm_uint32_t dataSize, vm_uint32_t textOffset, vm_uint32_t textSize, size_t fileSize = 64) {
     std::vector<char> code(fileSize);
     vm_script_header_t header{{'a', 'd', 'v', 'b'}, 0, 0};
-    vm_script_table_t table{dataOffset, dataSize, textOffset, textSize};
+    vm_script_table_t table{0, 0, dataOffset, dataSize, textOffset, textSize};
     std::memcpy(code.data(), &header, sizeof(header));
     std::memcpy(code.data() + sizeof(header), &table, sizeof(table));
     return code;

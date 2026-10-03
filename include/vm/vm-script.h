@@ -12,7 +12,7 @@
 #ifndef VM_SCRIPT_H
 #define VM_SCRIPT_H
 
-#include "vm-platform.h"
+#include "vm-types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,11 +48,37 @@ typedef struct
  */
 typedef struct
 {
+    vm_uint32_t export_offset; /**< Byte offfset of the export symbols block. */
+    vm_uint32_t export_size; /**< Size in bytes of the export symbols block */
     vm_uint32_t data_offset; /**< Byte offset of the string data block. */
     vm_uint32_t data_size; /**< Size in bytes of the string data block. */
     vm_uint32_t text_offset; /**< Byte offset of the bytecode block. */
     vm_uint32_t text_size; /**< Size in bytes of the bytecode block. */
 } VM_PACKED_ATTR vm_script_table_t;
+
+typedef struct
+{
+    vm_uint16_t var_count;
+    vm_uint16_t var_size;
+    vm_uint16_t func_count;
+    vm_uint16_t func_size;
+} VM_PACKED_ATTR vm_script_export_t;
+
+typedef struct
+{
+    vm_uint32_t name;
+    vm_uint8_t  type;
+} VM_PACKED_ATTR vm_script_export_var_t;
+
+typedef struct
+{
+    vm_uint32_t name;
+    vm_uint32_t text_offset;
+    vm_uint16_t frame_slot_count;
+    vm_uint8_t  return_type;
+    vm_uint8_t  param_count;
+    /* vm_script_export_var_t params[param_count]; */
+} VM_PACKED_ATTR vm_script_export_func_t;
 
 VM_PACKED_END
 
@@ -149,6 +175,12 @@ vm_swap_script_header(const vm_script_header_t* header);
  */
 VM_API vm_script_table_t
 vm_swap_script_table(const vm_script_table_t* table);
+
+VM_API vm_script_export_t
+vm_swap_script_export(const vm_script_export_t* export_table);
+
+VM_API vm_script_export_var_t
+vm_swap_script_export_var(const vm_script_export_var_t* export_var);
 
 /** @} */
 

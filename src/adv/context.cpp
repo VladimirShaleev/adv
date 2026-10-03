@@ -29,6 +29,8 @@ adv_node_t* Context::root(const std::string& module) noexcept {
     return _main;
 }
 
+vm_string_h Context::rootModule() const noexcept { return _mainModule; }
+
 vm_string_h Context::findFilenameByPath(const std::filesystem::path& path) const noexcept {
     for (const auto& [module, import] : _imports) {
         try {
@@ -50,26 +52,25 @@ std::filesystem::path Context::getBasePath(const std::string& module) const noex
 }
 
 bool Context::hasImport(const std::filesystem::path& path) const noexcept {
-    const auto module = path.filename().replace_extension().string();
-    return _imports.contains(module);
+    return _imports.contains(getModuleName(path));
 }
 
 void Context::addImport(const std::filesystem::path& path) {
-    const auto module = path.filename().replace_extension().string();
-    auto& import = _imports[module];
+    auto& import = _imports[getModuleName(path)];
     import.filename = path;
     import.basePath = path.parent_path();
 }
 
 void Context::setNodeTree(const std::filesystem::path& path, adv_node_t* root) {
-    const auto module = path.filename().replace_extension().string();
-    if (auto it = _imports.find(module); it != _imports.end()) {
+    const auto moduleName = getModuleName(path);
+    if (auto it = _imports.find(moduleName); it != _imports.end()) {
         it->second.root = root;
     } else {
         assert(!"unreachable code");
     }
     if (!_main) {
         _main = root;
+        _mainModule = intern(moduleName);
     }
 }
 
