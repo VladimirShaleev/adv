@@ -56,27 +56,49 @@ typedef struct
     vm_uint32_t text_size; /**< Size in bytes of the bytecode block. */
 } VM_PACKED_ATTR vm_script_table_t;
 
+/**
+ * @brief   Export table metadata for the script symbol block.
+ * @details Stores the number and byte size of exported variables and
+ *          functions. Values are kept in little-endian byte order and are
+ *          converted with vm_swap_script_export when read on big-endian hosts.
+ * @ingroup structs
+ */
 typedef struct
 {
-    vm_uint16_t var_count;
-    vm_uint16_t var_size;
-    vm_uint16_t func_count;
-    vm_uint16_t func_size;
+    vm_uint16_t var_count; /**< Number of exported variables. */
+    vm_uint16_t var_size; /**< Size in bytes of the variable export block. */
+    vm_uint16_t func_count; /**< Number of exported functions. */
+    vm_uint16_t func_size; /**< Size in bytes of the function export block. */
 } VM_PACKED_ATTR vm_script_export_t;
 
+/**
+ * @brief   Exported variable metadata.
+ * @details Describes a single global variable symbol stored in the script
+ *          export block. The name field indexes a string in the script data
+ *          section, while the type field identifies the variable kind.
+ * @ingroup structs
+ */
 typedef struct
 {
-    vm_uint32_t name;
-    vm_uint8_t  type;
+    vm_uint32_t name; /**< Offset or index of the variable name in the data block. */
+    vm_uint8_t  type; /**< Type code of the exported variable. */
 } VM_PACKED_ATTR vm_script_export_var_t;
 
+/**
+ * @brief   Exported function metadata.
+ * @details Describes a single function symbol stored in the script export
+ *          block. The name field indexes a string in the script data section,
+ *          while the text offset points to the function bytecode in the text
+ *          block.
+ * @ingroup structs
+ */
 typedef struct
 {
-    vm_uint32_t name;
-    vm_uint32_t text_offset;
-    vm_uint16_t frame_slot_count;
-    vm_uint8_t  return_type;
-    vm_uint8_t  param_count;
+    vm_uint32_t name; /**< Offset or index of the function name in the data block. */
+    vm_uint32_t text_offset; /**< Byte offset of the function body in the text block. */
+    vm_uint16_t frame_slot_count; /**< Number of slots reserved for the function frame. */
+    vm_uint8_t  return_type; /**< Type code returned by the function. */
+    vm_uint8_t  param_count; /**< Number of parameters expected by the function. */
     /* vm_script_export_var_t params[param_count]; */
 } VM_PACKED_ATTR vm_script_export_func_t;
 
@@ -159,7 +181,7 @@ vm_swap_float32(vm_float32_t value);
  * @details    Does nothing on little-endian hosts and swaps the multibyte
  *             fields on big-endian hosts.
  * @param[in]  header Header to convert.
- * @return     Converted header, or a zero-initialized header if null.
+ * @return     Converted header, or a zero-initialized header if NULL.
  * @ingroup    functions
  */
 VM_API vm_script_header_t
@@ -170,18 +192,46 @@ vm_swap_script_header(const vm_script_header_t* header);
  * @details    Does nothing on little-endian hosts and swaps all fields on
  *             big-endian hosts.
  * @param[in]  table Table to convert.
- * @return     Converted table, or a zero-initialized table if null.
+ * @return     Converted table, or a zero-initialized table if NULL.
  * @ingroup    functions
  */
 VM_API vm_script_table_t
 vm_swap_script_table(const vm_script_table_t* table);
 
+/**
+ * @brief      Converts an export table between host and little-endian order.
+ * @details    Does nothing on little-endian hosts and swaps the multibyte
+ *             fields in the export metadata on big-endian hosts.
+ * @param[in]  export_table Export table to convert.
+ * @return     Converted export table, or a zero-initialized table if NULL.
+ * @ingroup    functions
+ */
 VM_API vm_script_export_t
 vm_swap_script_export(const vm_script_export_t* export_table);
 
+/**
+ * @brief      Converts an exported variable descriptor between host and
+ *             little-endian order.
+ * @details    Does nothing on little-endian hosts and swaps the multibyte
+ *             fields on big-endian hosts.
+ * @param[in]  export_var Variable descriptor to convert.
+ * @return     Converted variable descriptor, or a zero-initialized value if
+ *             NULL.
+ * @ingroup    functions
+ */
 VM_API vm_script_export_var_t
 vm_swap_script_export_var(const vm_script_export_var_t* export_var);
 
+/**
+ * @brief      Converts an exported function descriptor between host and
+ *             little-endian order.
+ * @details    Does nothing on little-endian hosts and swaps the multibyte
+ *             fields on big-endian hosts.
+ * @param[in]  export_func Function descriptor to convert.
+ * @return     Converted function descriptor, or a zero-initialized value if
+ *             NULL.
+ * @ingroup    functions
+ */
 VM_API vm_script_export_func_t
 vm_swap_script_export_func(const vm_script_export_func_t* export_func);
 
