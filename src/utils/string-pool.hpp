@@ -1,14 +1,7 @@
 #ifndef UTILS_STRING_POOL_HPP
 #define UTILS_STRING_POOL_HPP
 
-#include <compare>
-#include <cstring>
-#include <limits>
-#include <memory>
-#include <optional>
-#include <string_view>
-#include <vector>
-#include <vm/vm-types.h>
+#include "utils.hpp"
 
 [[nodiscard]] inline bool operator==(vm_string_h lhs, vm_string_h rhs) noexcept { return lhs.handle == rhs.handle; }
 

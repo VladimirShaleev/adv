@@ -1,13 +1,7 @@
 #include "translator.hpp"
-#include "utils.hpp"
 
-#include <algorithm>
-#include <charconv>
 #include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
-#include <optional>
-#include <type_traits>
-#include <unordered_map>
 
 #include <vm/vm-opcode.h>
 #include <vm/vm-script.h>
@@ -567,7 +561,7 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
     const auto dataRight = dataLeft + table.data_size;
     const auto textLeft = table.text_offset;
     const auto textRight = textLeft + table.text_size;
-    
+
     if (exportLeft < headerSize || dataLeft < headerSize || textLeft < headerSize) {
         return false;
     }

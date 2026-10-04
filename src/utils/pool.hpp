@@ -1,14 +1,6 @@
 #ifndef UTILS_POOL_HPP
 #define UTILS_POOL_HPP
 
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <limits>
-#include <type_traits>
-#include <utility>
-
 #include "utils.hpp"
 
 namespace utils {

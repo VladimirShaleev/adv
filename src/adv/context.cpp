@@ -36,7 +36,7 @@ vm_string_h Context::findFilenameByPath(const std::filesystem::path& path) const
         try {
             if (std::filesystem::equivalent(import.filename, path)) {
                 const auto str = path.string();
-                return this->findString({str.c_str(), str.length()}).value_or({0});
+                return this->findString({str.c_str(), str.length()}).value_or(vm_string_h{0});
             }
         } catch (const std::filesystem::filesystem_error&) {
         }

@@ -674,6 +674,9 @@ adv_result_t Generator::text() {
             case VM_OPCODE_POP_GLOBAL:
                 return ADV_RESULT_ERROR_INVALID_ARG;
                 break;
+            case VM_OPCODE_POP:
+                op = "pop"sv;
+                break;
             case VM_OPCODE_BOOL_TO_INT:
                 op = "btoi"sv;
                 break;

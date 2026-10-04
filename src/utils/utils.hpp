@@ -9,17 +9,28 @@
 #define UTILS_FORCE_INLINE inline
 #endif
 
-#include "object.hpp"
-#include "pool.hpp"
-#include "string-pool.hpp"
-#include "translator.hpp"
-
+#include <algorithm>
 #include <bit>
+#include <cassert>
+#include <charconv>
+#include <compare>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <limits>
+#include <memory>
+#include <new>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include <vm/vm-types.h>
 
 namespace utils {
 
@@ -130,5 +141,10 @@ UTILS_FORCE_INLINE AliasedType aliasCast(Type ptr) noexcept {
 }
 
 } // namespace utils
+
+#include "object.hpp"
+#include "pool.hpp"
+#include "string-pool.hpp"
+#include "translator.hpp"
 
 #endif // UTILS_UTILS_HPP

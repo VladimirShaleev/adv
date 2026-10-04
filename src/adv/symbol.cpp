@@ -107,7 +107,7 @@ void SymbolTable::getVisibleSymbolsAt(
     const adv_location_t& loc, adv_symbol_h* symbols, adv_uint32_t& symbolCount) noexcept {}
 
 adv_scope_h SymbolTable::allocScope(adv_scope_h parent) {
-    const adv_scope_h handle = {static_cast<decltype(adv_scope_h::handle)>(_scopePool.size()) + 1u};
+    const adv_scope_h handle = {static_cast<decltype(adv_scope_h::handle)>(_scopePool.size() + 1u)};
     _scopePool.emplace_back();
     auto& scope = _scopePool.back();
     scope.parent = parent;
@@ -138,7 +138,7 @@ adv_symbol_h SymbolTable::allocSymbol(adv_node_t* node) {
         vm_string_h name{};
         adv_symbol_kind_t kind{};
     };
-    const adv_symbol_h handle = {static_cast<decltype(adv_symbol_h::handle)>(_symbolPool.size()) + 1u};
+    const adv_symbol_h handle = {static_cast<decltype(adv_symbol_h::handle)>(_symbolPool.size() + 1u)};
     const auto visitor = accept<KindVisitor>(node, handle);
 
     _symbolPool.emplace_back();

@@ -1,10 +1,7 @@
 #ifndef UTILS_TRANSLATOR_HPP
 #define UTILS_TRANSLATOR_HPP
 
-#include <cstdint>
-#include <span>
-#include <string>
-#include <vector>
+#include "utils.hpp"
 
 namespace utils {
 
