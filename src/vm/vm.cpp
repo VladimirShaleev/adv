@@ -182,6 +182,20 @@ vm_script_export_var_t vm_swap_script_export_var(const vm_script_export_var_t* e
     return result;
 }
 
+vm_script_export_func_t vm_swap_script_export_func(const vm_script_export_func_t* export_func) {
+    if (!export_func) {
+        return {};
+    }
+    if (std::endian::native == std::endian::little) {
+        return *export_func;
+    }
+    vm_script_export_func_t result = *export_func;
+    result.name = utils::swapBytes(result.name);
+    result.text_offset = utils::swapBytes(result.text_offset);
+    result.frame_slot_count = utils::swapBytes(result.frame_slot_count);
+    return result;
+}
+
 vm_result_t vm_create(vm_t* vm) {
     return vm ? utils::Object::create<vm_result_t, vm::VM>(*vm) : VM_RESULT_ERROR_INVALID_ARG;
 }

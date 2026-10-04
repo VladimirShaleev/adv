@@ -182,6 +182,9 @@ vm_swap_script_export(const vm_script_export_t* export_table);
 VM_API vm_script_export_var_t
 vm_swap_script_export_var(const vm_script_export_var_t* export_var);
 
+VM_API vm_script_export_func_t
+vm_swap_script_export_func(const vm_script_export_func_t* export_func);
+
 /** @} */
 
 #ifdef __cplusplus

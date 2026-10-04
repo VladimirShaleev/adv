@@ -547,16 +547,18 @@ adv_result_t Generator::text() {
         }
     };
 
+    std::unordered_map<std::string_view, adv_uint32_t> functions;
     if (exports.var_count > 0 || exports.func_count > 0) {
         std::cout << std::endl << ".export"sv << std::endl;
         auto varOffset = table.export_offset + sizeof(vm_script_export_t);
-        const auto varBegin = utils::aliasCast<const vm_script_export_var_t*>(bytecode.data() + varOffset);
+        auto funOffset = varOffset + exports.var_size;
+        const auto varIt = utils::aliasCast<const vm_script_export_var_t*>(bytecode.data() + varOffset);
         for (size_t i = 0; i < exports.var_count; ++i) {
             varOffset += sizeof(vm_script_export_var_t);
             if (varOffset > bytecode.size()) {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
-            const auto var = vm_swap_script_export_var(varBegin + i);
+            const auto var = vm_swap_script_export_var(varIt + i);
             const auto name = readString(var.name);
             const auto type = readType(var.type);
             if (type.empty()) {
@@ -567,11 +569,42 @@ adv_result_t Generator::text() {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
         }
-        if (exports.func_count > 0) {
-            // TODO
-            // if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
-            //     return ADV_RESULT_ERROR_INVALID_ARG;
-            // }
+        for (size_t i = 0; i < exports.func_count; ++i) {
+            const auto funPtr = utils::aliasCast<const vm_script_export_func_t*>(bytecode.data() + funOffset);
+            funOffset += sizeof(vm_script_export_func_t);
+            if (funOffset > bytecode.size()) {
+                return ADV_RESULT_ERROR_INVALID_ARG;
+            }
+            const auto fun = vm_swap_script_export_func(funPtr);
+            const auto name = readString(fun.name);
+            const auto ret = readType(fun.return_type);
+            std::cout << tab << "function "sv << name << '(';
+            const auto param = utils::aliasCast<const vm_script_export_var_t*>(bytecode.data() + funOffset);
+            for (size_t p = 0; p < fun.param_count; ++p) {
+                funOffset += sizeof(vm_script_export_var_t);
+                if (funOffset > bytecode.size()) {
+                    return ADV_RESULT_ERROR_INVALID_ARG;
+                }
+                const auto var = vm_swap_script_export_var(param + p);
+                const auto name = readString(var.name);
+                const auto type = readType(var.type);
+                if (type.empty()) {
+                    return ADV_RESULT_ERROR_INVALID_ARG;
+                }
+                if (p > 0) {
+                    std::cout << ", "sv;
+                }
+                std::cout << name << ": "sv << type;
+            }
+            std::cout << ')';
+            if (!ret.empty()) {
+                std::cout << ": "sv << ret;
+            }
+            std::cout << ' ' << fun.frame_slot_count << std::endl;
+            if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+                return ADV_RESULT_ERROR_INVALID_ARG;
+            }
+            functions[name] = fun.text_offset;
         }
     }
 
@@ -638,10 +671,8 @@ adv_result_t Generator::text() {
                 val = Reader::readInt16(code, ip);
                 break;
             case VM_OPCODE_PUSH_GLOBAL:
-                assert(!"todo");
-                break;
             case VM_OPCODE_POP_GLOBAL:
-                assert(!"todo");
+                return ADV_RESULT_ERROR_INVALID_ARG;
                 break;
             case VM_OPCODE_BOOL_TO_INT:
                 op = "btoi"sv;
@@ -748,13 +779,9 @@ adv_result_t Generator::text() {
             case VM_OPCODE_CALL_BY_NAME: {
                 op = "call"sv;
                 const auto [_, name] = Reader::readString(code, ip, data);
+                const auto address = functions[name];
+                labels.try_emplace(address, name, true);
                 val = Id{name};
-                // if (auto it = labels.find(address); it != labels.end()) {
-                //     val = Id{it->second.first};
-                // } else {
-                auto [newIt, __] = labels.try_emplace(15, name, true);
-                //    val = Id{newIt->second.first};
-                //}
                 break;
             }
             case VM_OPCODE_CALL: {
@@ -817,10 +844,11 @@ adv_result_t Generator::text() {
     }
     if (!codeLines.empty()) {
         std::cout << std::endl << ".text"sv << std::endl;
+        std::string_view prevOp = "";
         for (const auto& [index, op, val] : codeLines) {
             std::string label{tab.data(), tab.length()};
             if (auto it = labels.find(index); it != labels.end()) {
-                if (it->second.second) {
+                if (it->second.second || prevOp == "ret"sv) {
                     std::cout << std::endl;
                 }
                 std::cout << it->second.first << ':' << std::endl;
@@ -851,6 +879,7 @@ adv_result_t Generator::text() {
                 }
             }
             std::cout << std::endl;
+            prevOp = op;
         }
     }
     return ADV_RESULT_SUCCESS;
