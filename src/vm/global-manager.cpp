@@ -9,7 +9,7 @@ void GlobalManager::addGlobals(std::span<const uint8_t> bytecode) {
     const size_t varCount = utils::read<vm_script_export_t>(bytecode).var_count;
     for (size_t i = 0; i < varCount; ++i) {
         const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
-        auto name = utils::readString(var.name, data.data());
+        auto name = utils::readString(var.name, data);
         auto type = static_cast<vm_value_type_t>(var.type);
         addGlobal(name, type);
     }

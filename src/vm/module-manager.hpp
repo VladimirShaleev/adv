@@ -11,8 +11,9 @@ public:
 
     [[nodiscard]] std::span<const uint8_t> getModule(vm_script_h script) const noexcept;
 
-    [[nodiscard]] vm_script_h loadScript(vm_utf8_t file);
-    [[nodiscard]] vm_script_h loadScript(std::span<const vm_char_t> code, std::string_view moduleName = {});
+    [[nodiscard]] std::pair<vm_script_h, bool> loadScript(vm_utf8_t file, bool forceLoad);
+    [[nodiscard]] std::pair<vm_script_h, bool>
+    loadScript(std::span<const vm_char_t> code, bool forceLoad, std::string_view moduleName = {});
 
 private:
     [[nodiscard]] static std::string_view getModuleName(std::span<const vm_uint8_t> bytecode) noexcept;

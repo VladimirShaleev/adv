@@ -5,6 +5,9 @@
 
 namespace vm {
 
+constexpr size_t StackSize = 256;
+constexpr size_t MaxFrames = 32;
+
 enum class ThreadState {
     Dead = 0,
     Running = 1,
@@ -26,15 +29,13 @@ struct ScriptThread {
     using Handle = ScriptThreadHandle;
 
     ThreadState state;
-    uint32_t scriptId;
-    uint32_t ip;
-    uint32_t waitTicks;
-
-    // vm_value_t stack[STACK_SIZE];
-    int32_t sp;
-
-    // CallFrame frames[MAX_FRAMES];
-    int32_t frameCount;
+    vm_script_h script;
+    vm_uint32_t instructionPos;
+    vm_uint32_t waitTicks;
+    vm_uint32_t stackPos;
+    vm_uint32_t frameCount;
+    vm_value_t stack[StackSize];
+    CallFrame frames[MaxFrames];
 };
 
 } // namespace vm

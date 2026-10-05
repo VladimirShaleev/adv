@@ -119,49 +119,6 @@ private:
     }
 };
 
-struct Reader {
-    static adv_uint16_t readUint16(const uint8_t* code, size_t& ip) {
-        const adv_uint16_t b0 = static_cast<adv_uint16_t>(code[ip + 0]) << 0;
-        const adv_uint16_t b1 = static_cast<adv_uint16_t>(code[ip + 1]) << 8;
-        const adv_uint16_t val = b0 | b1;
-        ip += 2;
-        return utils::swapBytes(val);
-    }
-
-    static adv_uint32_t readUint32(const uint8_t* code, size_t& ip) {
-        const adv_uint32_t b0 = static_cast<adv_uint32_t>(code[ip + 0]) << 0;
-        const adv_uint32_t b1 = static_cast<adv_uint32_t>(code[ip + 1]) << 8;
-        const adv_uint32_t b2 = static_cast<adv_uint32_t>(code[ip + 2]) << 16;
-        const adv_uint32_t b3 = static_cast<adv_uint32_t>(code[ip + 3]) << 24;
-        const adv_uint32_t val = b0 | b1 | b2 | b3;
-        ip += 4;
-        return utils::swapBytes(val);
-    }
-
-    static adv_sint16_t readInt16(const uint8_t* code, size_t& ip) {
-        return static_cast<adv_sint16_t>(readUint16(code, ip));
-    }
-
-    static adv_sint32_t readInt32(const uint8_t* code, size_t& ip) {
-        return static_cast<adv_sint32_t>(readUint32(code, ip));
-    }
-
-    static adv_float32_t readFloat(const uint8_t* code, size_t& ip) {
-        static_assert(sizeof(adv_float32_t) == sizeof(adv_sint32_t));
-        auto bits = readInt32(code, ip);
-        adv_float32_t val;
-        std::memcpy(&val, &bits, sizeof(adv_float32_t));
-        return val;
-    }
-
-    static std::pair<adv_uint32_t, std::string_view> readString(const uint8_t* code, size_t& ip, const uint8_t* data) {
-        auto dataOffset = readUint32(code, ip);
-        auto strOffset = static_cast<size_t>(dataOffset);
-        const auto strLen = readUint16(data, strOffset);
-        return {dataOffset, std::string_view((const char*)data + strOffset, strLen)};
-    }
-};
-
 struct CodeGenVisitor {
     CodeGenVisitor(
         const Options& options, Context& ctx, Emitter& code, Emitter& exportVar, Emitter& exportFunc) noexcept
@@ -484,17 +441,8 @@ adv_result_t Generator::text() {
         return ADV_RESULT_ERROR_INVALID_ARG;
     }
 
-    const auto table =
-        vm_swap_script_table(utils::aliasCast<const vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t)));
-    const auto exports =
-        vm_swap_script_export(utils::aliasCast<const vm_script_export_t*>(bytecode.data() + table.export_offset));
-    const auto data = bytecode.data() + table.data_offset;
-    const auto text = bytecode.data() + table.text_offset;
-
-    auto readString = [data](size_t strOffset) noexcept {
-        const auto strLen = Reader::readUint16(data, strOffset);
-        return std::string_view{(const char*)data + strOffset, strLen};
-    };
+    const auto data = utils::read<utils::SectionData>(bytecode).data;
+    const auto text = utils::read<utils::SectionText>(bytecode).text;
 
     auto readType = [](size_t index) noexcept {
         switch (index) {
@@ -510,11 +458,12 @@ adv_result_t Generator::text() {
         return ""sv;
     };
 
+    auto moduleName = utils::readString(0, data);
     constexpr std::string_view tab = "    "sv;
     std::cout << ".header"sv << std::endl;
     std::cout << tab << "format: ADVT"sv << std::endl;
-    if (table.data_size > 0) {
-        std::cout << tab << "module: "sv << readString(0) << std::endl;
+    if (!moduleName.empty()) {
+        std::cout << tab << "module: "sv << moduleName << std::endl;
     }
     std::cout << tab << "version: "sv << VM_VERSION_STRING << std::endl;
 
@@ -548,18 +497,12 @@ adv_result_t Generator::text() {
     };
 
     std::unordered_map<std::string_view, adv_uint32_t> functions;
+    const auto exports = utils::read<vm_script_export_t>(bytecode);
     if (exports.var_count > 0 || exports.func_count > 0) {
         std::cout << std::endl << ".export"sv << std::endl;
-        auto varOffset = table.export_offset + sizeof(vm_script_export_t);
-        auto funOffset = varOffset + exports.var_size;
-        const auto varIt = utils::aliasCast<const vm_script_export_var_t*>(bytecode.data() + varOffset);
         for (size_t i = 0; i < exports.var_count; ++i) {
-            varOffset += sizeof(vm_script_export_var_t);
-            if (varOffset > bytecode.size()) {
-                return ADV_RESULT_ERROR_INVALID_ARG;
-            }
-            const auto var = vm_swap_script_export_var(varIt + i);
-            const auto name = readString(var.name);
+            const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
+            const auto name = utils::readString(var.name, data);
             const auto type = readType(var.type);
             if (type.empty()) {
                 return ADV_RESULT_ERROR_INVALID_ARG;
@@ -570,23 +513,13 @@ adv_result_t Generator::text() {
             }
         }
         for (size_t i = 0; i < exports.func_count; ++i) {
-            const auto funPtr = utils::aliasCast<const vm_script_export_func_t*>(bytecode.data() + funOffset);
-            funOffset += sizeof(vm_script_export_func_t);
-            if (funOffset > bytecode.size()) {
-                return ADV_RESULT_ERROR_INVALID_ARG;
-            }
-            const auto fun = vm_swap_script_export_func(funPtr);
-            const auto name = readString(fun.name);
+            const auto fun = utils::read<vm_script_export_func_t>(bytecode, i);
+            const auto name = utils::readString(fun.name, data);
             const auto ret = readType(fun.return_type);
             std::cout << tab << "function "sv << name << '(';
-            const auto param = utils::aliasCast<const vm_script_export_var_t*>(bytecode.data() + funOffset);
             for (size_t p = 0; p < fun.param_count; ++p) {
-                funOffset += sizeof(vm_script_export_var_t);
-                if (funOffset > bytecode.size()) {
-                    return ADV_RESULT_ERROR_INVALID_ARG;
-                }
-                const auto var = vm_swap_script_export_var(param + p);
-                const auto name = readString(var.name);
+                const auto var = utils::read<vm_script_export_param_t>(bytecode, i, p);
+                const auto name = utils::readString(var.name, data);
                 const auto type = readType(var.type);
                 if (type.empty()) {
                     return ADV_RESULT_ERROR_INVALID_ARG;
@@ -619,16 +552,14 @@ adv_result_t Generator::text() {
     std::map<std::string_view, std::pair<size_t, std::string>> strings;
     std::map<adv_uint32_t, std::pair<std::string, bool>> labels;
     std::vector<Line> codeLines;
-    codeLines.reserve(table.text_size);
-    if (table.text_size > 0) {
-        size_t ip = 0;
-        size_t codeSize = table.text_size;
-        const auto code = text;
-        while (ip < codeSize) {
+    codeLines.reserve(text.size());
+    if (!text.empty()) {
+        vm_uint32_t ip = 0;
+        while (ip < text.size()) {
             codeLines.emplace_back();
             auto& [index, op, val] = codeLines.back();
-            index = ip;
-            const auto opcode = (vm_opcode_t)code[ip++];
+            index = static_cast<size_t>(ip);
+            const auto opcode = (vm_opcode_t)text.data()[ip++];
             switch (opcode) {
             case VM_OPCODE_PUSH_TRUE:
                 op = "push"sv;
@@ -640,16 +571,16 @@ adv_result_t Generator::text() {
                 break;
             case VM_OPCODE_PUSH_INT:
                 op = "push"sv;
-                val = Reader::readInt32(code, ip);
+                val = utils::readInt32(text, ip);
                 break;
             case VM_OPCODE_PUSH_FLOAT: {
                 op = "push"sv;
-                val = Reader::readFloat(code, ip);
+                val = utils::readFloat(text, ip);
                 break;
             }
             case VM_OPCODE_PUSH_STRING: {
                 op = "push"sv;
-                const auto [_, str] = Reader::readString(code, ip, data);
+                const auto str = utils::readString(text, ip, data);
                 val = str;
                 if (auto it = strings.find(str); it != strings.end()) {
                     it->second.first++;
@@ -661,14 +592,13 @@ adv_result_t Generator::text() {
             case VM_OPCODE_POP_GLOBAL_BY_NAME:
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
                 op = opcode == VM_OPCODE_PUSH_GLOBAL_BY_NAME ? "push_global"sv : "pop_global"sv;
-                const auto [_, str] = Reader::readString(code, ip, data);
-                val = Id{str};
+                val = Id{utils::readString(text, ip, data)};
                 break;
             }
             case VM_OPCODE_PUSH_LOCAL:
             case VM_OPCODE_POP_LOCAL:
                 op = opcode == VM_OPCODE_PUSH_LOCAL ? "push_local"sv : "pop_local"sv;
-                val = Reader::readInt16(code, ip);
+                val = utils::readUint16(text, ip);
                 break;
             case VM_OPCODE_PUSH_GLOBAL:
             case VM_OPCODE_POP_GLOBAL:
@@ -781,7 +711,7 @@ adv_result_t Generator::text() {
                 break;
             case VM_OPCODE_CALL_BY_NAME: {
                 op = "call"sv;
-                const auto [_, name] = Reader::readString(code, ip, data);
+                const auto name = utils::readString(text, ip, data);
                 const auto address = functions[name];
                 labels.try_emplace(address, name, true);
                 val = Id{name};
@@ -789,7 +719,7 @@ adv_result_t Generator::text() {
             }
             case VM_OPCODE_CALL: {
                 op = "call"sv;
-                const auto address = Reader::readUint32(code, ip);
+                const auto address = utils::readUint32(text, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
                     val = Id{it->second.first};
                 } else {
@@ -805,7 +735,7 @@ adv_result_t Generator::text() {
             case VM_OPCODE_JUMP:
             case VM_OPCODE_JUMP_IF_FALSE: {
                 op = opcode == VM_OPCODE_JUMP ? "jump"sv : "jfalse"sv;
-                const auto address = Reader::readUint32(code, ip);
+                const auto address = utils::readUint32(text, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
                     val = Id{it->second.first};
                 } else {
@@ -908,8 +838,8 @@ void Generator::saveBinary(
     table->data_size = static_cast<adv_uint32_t>(data.size());
     table->text_offset = table->data_offset + table->data_size;
     table->text_size = static_cast<adv_uint32_t>(code.size());
-    *header = vm_swap_script_header(header);
-    *table = vm_swap_script_table(table);
+    *header = utils::swapBytes(*header);
+    *table = utils::swapBytes(*table);
     memcpy(binary.data() + table->export_offset, exportTable.data(), table->export_size);
     memcpy(binary.data() + table->data_offset, data.data(), table->data_size);
     memcpy(binary.data() + table->text_offset, code.data(), table->text_size);

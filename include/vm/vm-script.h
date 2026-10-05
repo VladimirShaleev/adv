@@ -84,6 +84,12 @@ typedef struct
     vm_uint8_t  type; /**< Type code of the exported variable. */
 } VM_PACKED_ATTR vm_script_export_var_t;
 
+typedef struct
+{
+    vm_uint32_t name;
+    vm_uint8_t  type;
+} VM_PACKED_ATTR vm_script_export_param_t;
+
 /**
  * @brief   Exported function metadata.
  * @details Describes a single function symbol stored in the script export
@@ -118,138 +124,84 @@ VM_PACKED_END
  * @ingroup    functions
  */
 VM_API vm_uint32_t
-vm_adler_32(const vm_char_t* data, 
+vm_adler_32(const vm_char_t* buffer, 
             vm_uint32_t size);
-
-VM_API vm_uint16_t
-vm_read_uint16(const vm_char_t* buffer,
-               vm_uint32_t* offset);
-
-VM_API vm_uint32_t
-vm_read_uint32(const vm_char_t* buffer,
-               vm_uint32_t* offset);
-
-VM_API vm_sint32_t
-vm_read_int32(const vm_char_t* buffer,
-              vm_uint32_t* offset);
-
-VM_API vm_float32_t
-vm_read_float(const vm_char_t* buffer,
-              vm_uint32_t* offset);
 
 /**
  * @brief      Validates the checksum in a script.
- * @param[in]  data Script bytes.
+ * @param[in]  buffer Script bytes.
  * @param[in]  size Number of bytes in @p data.
  * @return     *TRUE* if the checksum is valid; otherwise *FALSE*.
  * @ingroup    functions
  */
 VM_API vm_bool_t
-vm_validate_checksum(const vm_char_t* data, 
+vm_validate_checksum(const vm_char_t* buffer, 
                      vm_uint32_t size);
 
 /**
  * @brief      Validates the version in a script.
- * @param[in]  data Script bytes.
+ * @param[in]  buffer Script bytes.
  * @param[in]  size Number of bytes in @p data.
  * @return     *TRUE* if the version is supported; otherwise *FALSE*.
  * @ingroup    functions
  */
 VM_API vm_bool_t
-vm_validate_version(const vm_char_t* data, 
+vm_validate_version(const vm_char_t* buffer, 
                     vm_uint32_t size);
 
-/**
- * @brief   Converts a 16-bit value between host and little-endian byte order.
- * @details Does nothing on little-endian hosts and swaps the bytes on
- *          big-endian hosts.
- * @param   value Value to convert.
- * @return  Converted value.
- * @ingroup functions
- */
 VM_API vm_uint16_t
-vm_swap_uint16(vm_uint16_t value);
+vm_read_uint16(const vm_char_t* buffer,
+               vm_uint32_t size,
+               vm_uint32_t* offset);
 
-/**
- * @brief   Converts a 32-bit value between host and little-endian byte order.
- * @details Does nothing on little-endian hosts and swaps the bytes on
- *          big-endian hosts.
- * @param   value Value to convert.
- * @return  Converted value.
- * @ingroup functions
- */
 VM_API vm_uint32_t
-vm_swap_uint32(vm_uint32_t value);
+vm_read_uint32(const vm_char_t* buffer,
+               vm_uint32_t size,
+               vm_uint32_t* offset);
 
-/**
- * @brief   Converts a 32-bit float between host and little-endian byte order.
- * @details Does nothing on little-endian hosts and swaps the bytes of its
- *          representation on big-endian hosts.
- * @param   value Value to convert.
- * @return  Converted value.
- * @ingroup functions
- */
+VM_API vm_sint32_t
+vm_read_int32(const vm_char_t* buffer,
+              vm_uint32_t size,
+              vm_uint32_t* offset);
+
 VM_API vm_float32_t
-vm_swap_float32(vm_float32_t value);
+vm_read_float(const vm_char_t* buffer,
+              vm_uint32_t size,
+              vm_uint32_t* offset);
 
-/**
- * @brief      Converts a script header between host and little-endian order.
- * @details    Does nothing on little-endian hosts and swaps the multibyte
- *             fields on big-endian hosts.
- * @param[in]  header Header to convert.
- * @return     Converted header, or a zero-initialized header if NULL.
- * @ingroup    functions
- */
-VM_API vm_script_header_t
-vm_swap_script_header(const vm_script_header_t* header);
+VM_API vm_script_header_t*
+vm_read_script_header(const vm_char_t* buffer,
+                      vm_uint32_t size,
+                      vm_script_header_t* header);
 
-/**
- * @brief      Converts a script table between host and little-endian order.
- * @details    Does nothing on little-endian hosts and swaps all fields on
- *             big-endian hosts.
- * @param[in]  table Table to convert.
- * @return     Converted table, or a zero-initialized table if NULL.
- * @ingroup    functions
- */
-VM_API vm_script_table_t
-vm_swap_script_table(const vm_script_table_t* table);
+VM_API vm_script_table_t*
+vm_read_script_table(const vm_char_t* buffer,
+                     vm_uint32_t size,
+                     vm_script_table_t* table);
 
-/**
- * @brief      Converts an export table between host and little-endian order.
- * @details    Does nothing on little-endian hosts and swaps the multibyte
- *             fields in the export metadata on big-endian hosts.
- * @param[in]  export_table Export table to convert.
- * @return     Converted export table, or a zero-initialized table if NULL.
- * @ingroup    functions
- */
-VM_API vm_script_export_t
-vm_swap_script_export(const vm_script_export_t* export_table);
+VM_API vm_script_export_t*
+vm_read_script_export(const vm_char_t* buffer,
+                      vm_uint32_t size,
+                      vm_script_export_t* export_table);
 
-/**
- * @brief      Converts an exported variable descriptor between host and
- *             little-endian order.
- * @details    Does nothing on little-endian hosts and swaps the multibyte
- *             fields on big-endian hosts.
- * @param[in]  export_var Variable descriptor to convert.
- * @return     Converted variable descriptor, or a zero-initialized value if
- *             NULL.
- * @ingroup    functions
- */
-VM_API vm_script_export_var_t
-vm_swap_script_export_var(const vm_script_export_var_t* export_var);
+VM_API vm_script_export_var_t*
+vm_read_script_export_var(const vm_char_t* buffer,
+                          vm_uint32_t size,
+                          vm_uint32_t var_index,
+                          vm_script_export_var_t* export_var);
 
-/**
- * @brief      Converts an exported function descriptor between host and
- *             little-endian order.
- * @details    Does nothing on little-endian hosts and swaps the multibyte
- *             fields on big-endian hosts.
- * @param[in]  export_func Function descriptor to convert.
- * @return     Converted function descriptor, or a zero-initialized value if
- *             NULL.
- * @ingroup    functions
- */
-VM_API vm_script_export_func_t
-vm_swap_script_export_func(const vm_script_export_func_t* export_func);
+VM_API vm_script_export_func_t*
+vm_read_script_export_func(const vm_char_t* buffer,
+                           vm_uint32_t size,
+                           vm_uint32_t func_index,
+                           vm_script_export_func_t* export_func);
+
+VM_API vm_script_export_param_t*
+vm_read_script_export_func_param(const vm_char_t* buffer,
+                                 vm_uint32_t size,
+                                 vm_uint32_t func_index,
+                                 vm_uint32_t param_index,
+                                 vm_script_export_param_t* param);
 
 /** @} */
 

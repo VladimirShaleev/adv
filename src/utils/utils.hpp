@@ -113,6 +113,15 @@ template <typename AliasedType, typename Type>
     return result;
 }
 
+[[nodiscard]] UTILS_FORCE_INLINE vm_script_export_param_t swapBytes(const vm_script_export_param_t& param) noexcept {
+    if (std::endian::native == std::endian::little) {
+        return param;
+    }
+    auto result = param;
+    result.name = swapBytes(result.name);
+    return result;
+}
+
 [[nodiscard]] UTILS_FORCE_INLINE vm_script_export_func_t swapBytes(const vm_script_export_func_t& exportFunc) noexcept {
     if (std::endian::native == std::endian::little) {
         return exportFunc;
@@ -124,29 +133,35 @@ template <typename AliasedType, typename Type>
     return result;
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE vm_uint16_t readUint16(const uint8_t* code, size_t& offset) noexcept {
-    const vm_uint16_t b0 = static_cast<vm_uint16_t>(code[offset + 0]) << 0;
-    const vm_uint16_t b1 = static_cast<vm_uint16_t>(code[offset + 1]) << 8;
-    const vm_uint16_t val = b0 | b1;
-    offset += 2;
-    return swapBytes(val);
+[[nodiscard]] UTILS_FORCE_INLINE vm_uint16_t readUint16(std::span<const uint8_t> code, vm_uint32_t& offset) noexcept {
+    if (offset + 2 <= code.size()) {
+        const vm_uint16_t b0 = static_cast<vm_uint16_t>(code[offset + 0]) << 0;
+        const vm_uint16_t b1 = static_cast<vm_uint16_t>(code[offset + 1]) << 8;
+        const vm_uint16_t val = b0 | b1;
+        offset += 2;
+        return swapBytes(val);
+    }
+    return 0;
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE vm_uint32_t readUint32(const uint8_t* code, size_t& offset) noexcept {
-    const vm_uint32_t b0 = static_cast<vm_uint32_t>(code[offset + 0]) << 0;
-    const vm_uint32_t b1 = static_cast<vm_uint32_t>(code[offset + 1]) << 8;
-    const vm_uint32_t b2 = static_cast<vm_uint32_t>(code[offset + 2]) << 16;
-    const vm_uint32_t b3 = static_cast<vm_uint32_t>(code[offset + 3]) << 24;
-    const vm_uint32_t val = b0 | b1 | b2 | b3;
-    offset += 4;
-    return swapBytes(val);
+[[nodiscard]] UTILS_FORCE_INLINE vm_uint32_t readUint32(std::span<const uint8_t> code, vm_uint32_t& offset) noexcept {
+    if (offset + 4 <= code.size()) {
+        const vm_uint32_t b0 = static_cast<vm_uint32_t>(code[offset + 0]) << 0;
+        const vm_uint32_t b1 = static_cast<vm_uint32_t>(code[offset + 1]) << 8;
+        const vm_uint32_t b2 = static_cast<vm_uint32_t>(code[offset + 2]) << 16;
+        const vm_uint32_t b3 = static_cast<vm_uint32_t>(code[offset + 3]) << 24;
+        const vm_uint32_t val = b0 | b1 | b2 | b3;
+        offset += 4;
+        return swapBytes(val);
+    }
+    return 0;
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE vm_sint32_t readInt32(const uint8_t* code, size_t& offset) noexcept {
+[[nodiscard]] UTILS_FORCE_INLINE vm_sint32_t readInt32(std::span<const uint8_t> code, vm_uint32_t& offset) noexcept {
     return static_cast<vm_sint32_t>(readUint32(code, offset));
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE vm_float32_t readFloat(const uint8_t* code, size_t& offset) noexcept {
+[[nodiscard]] UTILS_FORCE_INLINE vm_float32_t readFloat(std::span<const uint8_t> code, vm_uint32_t& offset) noexcept {
     static_assert(sizeof(vm_float32_t) == sizeof(vm_sint32_t));
     auto bits = readInt32(code, offset);
     vm_float32_t val;
@@ -154,20 +169,27 @@ template <typename AliasedType, typename Type>
     return val;
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE std::string_view readString(vm_uint32_t offset, const uint8_t* data) noexcept {
-    auto strOffset = static_cast<size_t>(offset);
-    const auto strLen = readUint16(data, strOffset);
-    return std::string_view((const char*)data + strOffset, strLen);
+[[nodiscard]] UTILS_FORCE_INLINE std::string_view
+readString(vm_uint32_t offset, std::span<const uint8_t> data) noexcept {
+    const auto strLen = readUint16(data, offset);
+    if (offset + strLen <= data.size()) {
+        return std::string_view((const char*)data.data() + offset, strLen);
+    }
+    return {};
 }
 
 [[nodiscard]] UTILS_FORCE_INLINE std::string_view
-readString(const uint8_t* code, size_t& offset, const uint8_t* data) noexcept {
+readString(std::span<const uint8_t> code, vm_uint32_t& offset, std::span<const uint8_t> data) noexcept {
     auto dataOffset = readUint32(code, offset);
     return readString(dataOffset, data);
 }
 
 struct SectionData {
     std::span<const uint8_t> data;
+};
+
+struct SectionText {
+    std::span<const uint8_t> text;
 };
 
 namespace internal {
@@ -186,14 +208,22 @@ struct Result<SectionData> {
     }
 };
 
+template <>
+struct Result<SectionText> {
+    static SectionText get(std::span<const vm_uint8_t> bytecode, size_t offset, size_t size) {
+        return SectionText{.text = {bytecode.data() + offset, size}};
+    }
+};
+
 template <typename>
 struct Offset {};
 
 template <>
 struct Offset<vm_script_header_t> {
     [[nodiscard]] static constexpr std::pair<size_t, size_t>
-    offset(std::span<const vm_uint8_t> /* bytecode */, size_t i) noexcept {
+    offset(std::span<const vm_uint8_t> /* bytecode */, size_t i, size_t j) noexcept {
         assert(i == 0u);
+        assert(j == 0u);
         return {0, sizeof(vm_script_header_t)};
     }
 };
@@ -201,53 +231,106 @@ struct Offset<vm_script_header_t> {
 template <>
 struct Offset<vm_script_table_t> {
     [[nodiscard]] static constexpr std::pair<size_t, size_t>
-    offset(std::span<const vm_uint8_t> /* bytecode */, size_t i) noexcept {
+    offset(std::span<const vm_uint8_t> /* bytecode */, size_t i, size_t j) noexcept {
         assert(i == 0u);
+        assert(j == 0u);
         return {sizeof(vm_script_header_t), sizeof(vm_script_table_t)};
     }
 };
 
 template <>
 struct Offset<SectionData> {
-    [[nodiscard]] static std::pair<size_t, size_t> offset(std::span<const vm_uint8_t> bytecode, size_t i) noexcept;
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
+template <>
+struct Offset<SectionText> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
 };
 
 template <>
 struct Offset<vm_script_export_t> {
-    [[nodiscard]] static std::pair<size_t, size_t> offset(std::span<const vm_uint8_t> bytecode, size_t i) noexcept;
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
 };
 
 template <>
 struct Offset<vm_script_export_var_t> {
-    [[nodiscard]] static std::pair<size_t, size_t> offset(std::span<const vm_uint8_t> bytecode, size_t i) noexcept;
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
+template <>
+struct Offset<vm_script_export_param_t> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
+template <>
+struct Offset<vm_script_export_func_t> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
 };
 
 } // namespace internal
 
 template <typename Section>
-[[nodiscard]] UTILS_FORCE_INLINE Section read(std::span<const vm_uint8_t> bytecode, size_t i = 0) noexcept {
-    const auto [offset, size] = internal::Offset<Section>::offset(bytecode, i);
+[[nodiscard]] UTILS_FORCE_INLINE Section
+read(std::span<const vm_uint8_t> bytecode, size_t i = 0, size_t j = 0) noexcept {
+    const auto [offset, size] = internal::Offset<Section>::offset(bytecode, i, j);
     return internal::Result<Section>::get(bytecode, offset, size);
 }
 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
-internal::Offset<SectionData>::offset(std::span<const vm_uint8_t> bytecode, size_t i) noexcept {
+internal::Offset<SectionData>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     assert(i == 0u);
+    assert(j == 0u);
     const auto result = read<vm_script_table_t>(bytecode);
     return {result.data_offset, result.data_size};
 }
 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
-internal::Offset<vm_script_export_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i) noexcept {
+internal::Offset<SectionText>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     assert(i == 0u);
+    assert(j == 0u);
+    const auto result = read<vm_script_table_t>(bytecode);
+    return {result.text_offset, result.text_size};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<vm_script_export_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    assert(i == 0u);
+    assert(j == 0u);
     const auto result = read<vm_script_table_t>(bytecode);
     return {result.export_offset, result.export_size};
 }
 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
-internal::Offset<vm_script_export_var_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i) noexcept {
-    const auto [offset, _] = internal::Offset<vm_script_export_t>::offset(bytecode, 0);
+internal::Offset<vm_script_export_var_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    const auto [offset, _] = internal::Offset<vm_script_export_t>::offset(bytecode, 0, 0);
     return {offset + sizeof(vm_script_export_t) + sizeof(vm_script_export_var_t) * i, sizeof(vm_script_export_var_t)};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<vm_script_export_param_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    const auto [offset, _] = Offset<vm_script_export_func_t>::offset(bytecode, i, 0);
+    return {
+        offset + sizeof(vm_script_export_func_t) + sizeof(vm_script_export_var_t) * j, sizeof(vm_script_export_var_t)};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<vm_script_export_func_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    const auto varCount = read<vm_script_export_t>(bytecode).var_count;
+    const auto [offset, _] = internal::Offset<vm_script_export_var_t>::offset(bytecode, varCount, 0);
+    size_t funcOffset = offset;
+    for (size_t f = 0; f < i; ++f) {
+        const auto params =
+            Result<vm_script_export_func_t>::get(bytecode, funcOffset, sizeof(vm_script_export_func_t)).param_count;
+        funcOffset += sizeof(vm_script_export_func_t) + params * sizeof(vm_script_export_var_t);
+    }
+    return {funcOffset, sizeof(vm_script_export_func_t)};
 }
 
 [[nodiscard]] inline std::string escape(std::string_view input) {

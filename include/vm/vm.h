@@ -147,6 +147,9 @@ vm_load_script_from_memory(vm_t vm,
                            const vm_char_t* code,
                            vm_uint32_t code_size);
 
+VM_API void
+vm_tick(vm_t vm);
+
 /** @} */
 
 #ifdef __cplusplus

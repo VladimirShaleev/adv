@@ -546,15 +546,7 @@ bool isBinaryCode(std::span<const char> code, bool checkSize) noexcept {
         return false;
     }
 
-    vm_script_table_t table;
-    std::memcpy(&table, code.data() + sizeof(vm_script_header_t), sizeof(table));
-    table.export_offset = swapBytes(table.export_offset);
-    table.export_size = swapBytes(table.export_size);
-    table.data_offset = swapBytes(table.data_offset);
-    table.data_size = swapBytes(table.data_size);
-    table.text_offset = swapBytes(table.text_offset);
-    table.text_size = swapBytes(table.text_size);
-
+    const auto table = utils::read<vm_script_table_t>({(const vm_uint8_t*)code.data(), code.size()});
     const auto exportLeft = table.export_offset;
     const auto exportRight = exportLeft + table.export_size;
     const auto dataLeft = table.data_offset;

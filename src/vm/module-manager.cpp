@@ -10,10 +10,10 @@ std::span<const uint8_t> ModuleManager::getModule(vm_script_h script) const noex
     return {bytecode.data(), bytecode.size()};
 }
 
-vm_script_h ModuleManager::loadScript(vm_utf8_t file) {
+std::pair<vm_script_h, bool> ModuleManager::loadScript(vm_utf8_t file, bool forceLoad) {
     std::ifstream stream(file, std::ios::binary);
     if (!stream.is_open()) {
-        return UndefinedScript;
+        return {UndefinedScript, false};
     }
     auto size = stream.tellg();
     stream.seekg(0, std::ios::end);
@@ -26,10 +26,11 @@ vm_script_h ModuleManager::loadScript(vm_utf8_t file) {
     stream.close();
 
     const auto name = std::filesystem::path(file).filename().replace_extension().string();
-    return loadScript({bytes.data(), bytes.size()}, name);
+    return loadScript({bytes.data(), bytes.size()}, forceLoad, name);
 }
 
-vm_script_h ModuleManager::loadScript(std::span<const vm_char_t> code, std::string_view moduleName) {
+std::pair<vm_script_h, bool>
+ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::string_view moduleName) {
     auto needValidateChecksum = true;
     std::vector<vm_uint8_t> tmpBuffer;
     if (!utils::isBinaryCode(code)) {
@@ -37,40 +38,44 @@ vm_script_h ModuleManager::loadScript(std::span<const vm_char_t> code, std::stri
         needValidateChecksum = false;
     }
     if (code.empty()) {
-        return UndefinedScript;
+        return {UndefinedScript, false};
     }
     if (!utils::validateVersion(code, VM_VERSION)) {
-        return UndefinedScript;
+        return {UndefinedScript, false};
     }
     if (needValidateChecksum && !utils::validateChecksum(code)) {
-        return UndefinedScript;
+        return {UndefinedScript, false};
     }
     if (moduleName.empty()) {
         moduleName = getModuleName({(const vm_uint8_t*)code.data(), code.size()});
     }
     if (moduleName.empty()) {
-        return UndefinedScript;
+        return {UndefinedScript, false};
     }
     if (auto loadedModule = _mapModules.find(moduleName)) {
-        return vm_script_h{loadedModule.value().handle};
+        const auto script = vm_script_h{loadedModule.value().handle};
+        auto reloaded = false;
+        if (forceLoad) {
+            const auto oldChecksum = utils::read<vm_script_header_t>(getModule(script)).checksum;
+            const auto newChecksum =
+                utils::read<vm_script_header_t>({(const vm_uint8_t*)code.data(), code.size()}).checksum;
+            if (oldChecksum != newChecksum) {
+                const auto buffer = (const uint8_t*)code.data();
+                _modules[loadedModule.value().handle].assign(buffer, buffer + code.size());
+                reloaded = true;
+            }
+        }
+        return {script, reloaded};
     }
     const auto script = vm_script_h{_mapModules.insert(moduleName).handle};
     const auto buffer = (const uint8_t*)code.data();
     _modules.emplace_back(buffer, buffer + code.size());
-    return script;
+    return {script, true};
 }
 
 std::string_view ModuleManager::getModuleName(std::span<const vm_uint8_t> bytecode) noexcept {
-    const auto table =
-        vm_swap_script_table(utils::aliasCast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t)));
-    if (table.data_size > 0) {
-        size_t offset = table.data_offset;
-        const auto length = utils::readUint16(bytecode.data(), offset);
-        if (length > 0) {
-            return {(const char*)(bytecode.data() + offset), length};
-        }
-    }
-    return {};
+    auto data = utils::read<utils::SectionData>(bytecode).data;
+    return utils::readString(0, data);
 }
 
 std::span<const vm_char_t>
