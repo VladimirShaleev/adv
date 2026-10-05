@@ -5,8 +5,6 @@
 
 namespace vm {
 
-constexpr vm_script_h UndefinedScript{std::numeric_limits<decltype(vm_script_h::handle)>::max()};
-
 enum class ThreadState {
     Dead = 0,
     Running = 1,

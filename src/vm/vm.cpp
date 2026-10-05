@@ -1,3 +1,5 @@
+#include "global-manager.hpp"
+#include "module-manager.hpp"
 #include "script.hpp"
 
 struct _vm : public utils::Object {};
@@ -10,74 +12,34 @@ enum class Format {
     Text
 };
 
-struct Module {
-    using Handle = vm_script_h;
-
-    vm_script_header_t header;
-    vm_script_table_t table;
-    std::vector<uint8_t> bytecode;
-};
-
 class VM final : public _vm {
 public:
-    VM() : _mapModules(16, 2048, 64), _modules(16), _threads(64), _mapGlobals(512, 4096, 2048) {}
+    VM()
+    /* _threads(64), { _modules.emplace_back(); } */
+    {}
 
-    void loadScript(vm_script_h handle) noexcept {}
+    void loadScript(vm_script_h handle) noexcept {
+        auto module = _moduleManager.getModule(handle);
+        _globalManager.addGlobals(module);
+    }
 
     [[nodiscard]] vm_script_h loadScriptFromMemory(std::span<const vm_char_t> code) noexcept {
-        auto needValidateChecksum = true;
-        std::vector<vm_uint8_t> tmpBuffer;
-        if (!utils::isBinaryCode(code)) {
-            code = tryTranslate(code, tmpBuffer);
-            needValidateChecksum = false;
-        }
-        if (code.empty()) {
-            return UndefinedScript;
-        }
-        if (!utils::validateVersion(code, VM_VERSION)) {
-            return UndefinedScript;
-        }
-        if (needValidateChecksum && !utils::validateChecksum(code)) {
-            return UndefinedScript;
-        }
-        return {};
+        auto script = _moduleManager.loadScript(code);
+        loadScript(script);
+        return script;
     }
 
     [[nodiscard]] vm_script_h loadScriptFromFile(vm_utf8_t file) noexcept {
-        std::ifstream stream(file, std::ios::binary);
-        if (!stream.is_open()) {
-            return UndefinedScript;
-        }
-        auto size = stream.tellg();
-        stream.seekg(0, std::ios::end);
-        size = stream.tellg() - size;
-        stream.seekg(0, std::ios::beg);
-
-        std::vector<vm_char_t> bytes;
-        bytes.resize(size);
-        stream.read(bytes.data(), size);
-        stream.close();
-
-        return loadScriptFromMemory({bytes.data(), bytes.size()});
+        auto script = _moduleManager.loadScript(file);
+        loadScript(script);
+        return script;
     }
 
 private:
-    [[nodiscard]] static std::span<const vm_char_t>
-    tryTranslate(std::span<const vm_char_t> code, std::vector<vm_uint8_t>& buffer) noexcept {
-        utils::TranslateResult result{};
-        buffer = utils::translateTextToBinary(code, result);
-        if (result.errorCode == utils::TranslateResult::NoError) {
-            return {(const vm_char_t*)buffer.data(), buffer.size()};
-        }
-        return {};
-    }
-
-    utils::StringPool _mapModules;
-    utils::Pool<Module> _modules;
-    utils::Pool<ScriptThread> _threads;
-    std::vector<ScriptThreadHandle> _threadHandles;
-    utils::StringPool _mapGlobals;
-    std::vector<vm_value_t> _globals;
+    ModuleManager _moduleManager;
+    GlobalManager _globalManager;
+    // utils::Pool<ScriptThread> _threads;
+    // std::vector<ScriptThreadHandle> _threadHandles;
 };
 
 } // namespace vm
@@ -101,6 +63,46 @@ vm_uint32_t vm_adler_32(const vm_char_t* data, vm_uint32_t size) {
     std::span<const vm_char_t> binary{data, size};
     auto view = std::views::all(binary);
     return utils::adler32(std::move(view));
+}
+
+vm_uint16_t vm_read_uint16(const vm_char_t* buffer, vm_uint32_t* offset) {
+    if (buffer && offset) {
+        auto resultOffset = static_cast<size_t>(*offset);
+        const auto result = utils::readUint16((const vm_uint8_t*)buffer, resultOffset);
+        *offset = static_cast<vm_uint32_t>(resultOffset);
+        return result;
+    }
+    return 0u;
+}
+
+vm_uint32_t vm_read_uint32(const vm_char_t* buffer, vm_uint32_t* offset) {
+    if (buffer && offset) {
+        auto resultOffset = static_cast<size_t>(*offset);
+        const auto result = utils::readUint32((const vm_uint8_t*)buffer, resultOffset);
+        *offset = static_cast<vm_uint32_t>(resultOffset);
+        return result;
+    }
+    return 0u;
+}
+
+vm_sint32_t vm_read_int32(const vm_char_t* buffer, vm_uint32_t* offset) {
+    if (buffer && offset) {
+        auto resultOffset = static_cast<size_t>(*offset);
+        const auto result = utils::readInt32((const vm_uint8_t*)buffer, resultOffset);
+        *offset = static_cast<vm_uint32_t>(resultOffset);
+        return result;
+    }
+    return 0u;
+}
+
+vm_float32_t vm_read_float(const vm_char_t* buffer, vm_uint32_t* offset) {
+    if (buffer && offset) {
+        auto resultOffset = static_cast<size_t>(*offset);
+        const auto result = utils::readFloat((const vm_uint8_t*)buffer, resultOffset);
+        *offset = static_cast<vm_uint32_t>(resultOffset);
+        return result;
+    }
+    return 0u;
 }
 
 vm_bool_t vm_validate_checksum(const vm_char_t* data, vm_uint32_t size) {
@@ -129,71 +131,35 @@ vm_script_header_t vm_swap_script_header(const vm_script_header_t* header) {
     if (!header) {
         return {};
     }
-    if (std::endian::native == std::endian::little) {
-        return *header;
-    }
-    vm_script_header_t result = *header;
-    result.version = utils::swapBytes(result.version);
-    result.checksum = utils::swapBytes(result.checksum);
-    return result;
+    return std::endian::native == std::endian::little ? *header : utils::swapBytes(*header);
 }
 
 vm_script_table_t vm_swap_script_table(const vm_script_table_t* table) {
     if (!table) {
         return {};
     }
-    if (std::endian::native == std::endian::little) {
-        return *table;
-    }
-    vm_script_table_t result = *table;
-    result.export_offset = utils::swapBytes(result.export_offset);
-    result.export_size = utils::swapBytes(result.export_size);
-    result.data_offset = utils::swapBytes(result.data_offset);
-    result.data_size = utils::swapBytes(result.data_size);
-    result.text_offset = utils::swapBytes(result.text_offset);
-    result.text_size = utils::swapBytes(result.text_size);
-    return result;
+    return std::endian::native == std::endian::little ? *table : utils::swapBytes(*table);
 }
 
 vm_script_export_t vm_swap_script_export(const vm_script_export_t* export_table) {
     if (!export_table) {
         return {};
     }
-    if (std::endian::native == std::endian::little) {
-        return *export_table;
-    }
-    vm_script_export_t result = *export_table;
-    result.var_count = utils::swapBytes(result.var_count);
-    result.var_size = utils::swapBytes(result.var_size);
-    result.func_count = utils::swapBytes(result.func_count);
-    result.func_size = utils::swapBytes(result.func_size);
-    return result;
+    return std::endian::native == std::endian::little ? *export_table : utils::swapBytes(*export_table);
 }
 
 vm_script_export_var_t vm_swap_script_export_var(const vm_script_export_var_t* export_var) {
     if (!export_var) {
         return {};
     }
-    if (std::endian::native == std::endian::little) {
-        return *export_var;
-    }
-    vm_script_export_var_t result = *export_var;
-    result.name = utils::swapBytes(result.name);
-    return result;
+    return std::endian::native == std::endian::little ? *export_var : utils::swapBytes(*export_var);
 }
 
 vm_script_export_func_t vm_swap_script_export_func(const vm_script_export_func_t* export_func) {
     if (!export_func) {
         return {};
     }
-    if (std::endian::native == std::endian::little) {
-        return *export_func;
-    }
-    vm_script_export_func_t result = *export_func;
-    result.name = utils::swapBytes(result.name);
-    result.text_offset = utils::swapBytes(result.text_offset);
-    result.frame_slot_count = utils::swapBytes(result.frame_slot_count);
-    return result;
+    return std::endian::native == std::endian::little ? *export_func : utils::swapBytes(*export_func);
 }
 
 vm_result_t vm_create(vm_t* vm) {

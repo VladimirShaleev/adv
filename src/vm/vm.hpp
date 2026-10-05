@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <compare>
+#include <filesystem>
 #include <fstream>
 #include <regex>
 #include <span>
@@ -23,6 +25,25 @@
 #include "vm/vm.h"
 
 #include <utils/utils.hpp>
+
+constexpr vm_script_h UndefinedScript = vm_script_h{};
+[[nodiscard]] inline bool operator==(vm_script_h lhs, vm_script_h rhs) noexcept { return lhs.handle == rhs.handle; }
+[[nodiscard]] inline bool operator!=(vm_script_h lhs, vm_script_h rhs) noexcept { return lhs.handle != rhs.handle; }
+[[nodiscard]] inline std::strong_ordering operator<=>(vm_script_h lhs, vm_script_h rhs) noexcept {
+    return lhs.handle <=> rhs.handle;
+}
+
+namespace std {
+
+template <>
+struct hash<vm_script_h> {
+    [[nodiscard]] size_t operator()(vm_script_h script) const noexcept {
+        hash<uint32_t> handleHash;
+        return handleHash(script.handle);
+    }
+};
+
+} // namespace std
 
 namespace utils {
 template <>

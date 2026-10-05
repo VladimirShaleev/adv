@@ -121,6 +121,22 @@ VM_API vm_uint32_t
 vm_adler_32(const vm_char_t* data, 
             vm_uint32_t size);
 
+VM_API vm_uint16_t
+vm_read_uint16(const vm_char_t* buffer,
+               vm_uint32_t* offset);
+
+VM_API vm_uint32_t
+vm_read_uint32(const vm_char_t* buffer,
+               vm_uint32_t* offset);
+
+VM_API vm_sint32_t
+vm_read_int32(const vm_char_t* buffer,
+              vm_uint32_t* offset);
+
+VM_API vm_float32_t
+vm_read_float(const vm_char_t* buffer,
+              vm_uint32_t* offset);
+
 /**
  * @brief      Validates the checksum in a script.
  * @param[in]  data Script bytes.
