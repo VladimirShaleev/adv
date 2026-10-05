@@ -73,6 +73,36 @@ ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::
     return {script, true};
 }
 
+void ModuleManager::changeNameToSlot(
+    vm_script_h script, vm_uint32_t instructionPos, vm_opcode_t newOpcode, vm_uint32_t slot) noexcept {
+    assert(script.handle < _modules.size());
+    const auto& bytecode = getModule(script);
+    auto text = utils::read<utils::SectionText>(bytecode).text;
+    assert(instructionPos < text.size());
+    auto ptr = const_cast<uint8_t*>(text.data()) + instructionPos;
+    const auto prevOpcode = static_cast<vm_opcode_t>(*ptr);
+    switch (prevOpcode) {
+    case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
+        assert(newOpcode == VM_OPCODE_PUSH_GLOBAL);
+        break;
+    case VM_OPCODE_POP_GLOBAL_BY_NAME:
+        assert(newOpcode == VM_OPCODE_POP_GLOBAL);
+        break;
+    case VM_OPCODE_CALL_BY_NAME:
+        assert(newOpcode == VM_OPCODE_CALL);
+        break;
+    default:
+        assert(!"unreachable code");
+        break;
+    }
+    slot = utils::swapBytes(slot);
+    *ptr++ = newOpcode;
+    *ptr++ = static_cast<uint8_t>((slot >> 0) & 0xFF);
+    *ptr++ = static_cast<uint8_t>((slot >> 8) & 0xFF);
+    *ptr++ = static_cast<uint8_t>((slot >> 16) & 0xFF);
+    *ptr++ = static_cast<uint8_t>((slot >> 24) & 0xFF);
+}
+
 std::string_view ModuleManager::getModuleName(std::span<const vm_uint8_t> bytecode) noexcept {
     auto data = utils::read<utils::SectionData>(bytecode).data;
     return utils::readString(0, data);

@@ -29,4 +29,6 @@ TEST(VM, Test) {
 
     auto script = vm_load_script_from_file(vm, "D:\\Development\\Projects\\adv\\build\\test.adb");
     EXPECT_NE(script, Undefined);
+
+    vm_tick(vm);
 }

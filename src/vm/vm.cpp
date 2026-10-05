@@ -6,6 +6,30 @@ struct _vm : public utils::Object {};
 
 namespace vm {
 
+struct Mul {
+    [[nodiscard]] static bool allowed(vm_value_type_t type) noexcept {
+        return type == VM_VALUE_TYPE_INT || type == VM_VALUE_TYPE_FLOAT;
+    }
+    [[nodiscard]] static vm_sint32_t op(vm_sint32_t a, vm_sint32_t b) noexcept { return a * b; }
+    [[nodiscard]] static vm_sint32_t op(vm_float32_t a, vm_float32_t b) noexcept { return a * b; }
+    template <typename T>
+    [[nodiscard]] static T op(T a, T b) noexcept {
+        return {};
+    }
+};
+
+struct Div {
+    [[nodiscard]] static bool allowed(vm_value_type_t type) noexcept {
+        return type == VM_VALUE_TYPE_INT || type == VM_VALUE_TYPE_FLOAT;
+    }
+    [[nodiscard]] static vm_sint32_t op(vm_sint32_t a, vm_sint32_t b) noexcept { return a / b; }
+    [[nodiscard]] static vm_sint32_t op(vm_float32_t a, vm_float32_t b) noexcept { return a / b; }
+    template <typename T>
+    [[nodiscard]] static T op(T a, T b) noexcept {
+        return {};
+    }
+};
+
 class VM final : public _vm {
 public:
     VM()
@@ -69,31 +93,54 @@ private:
 
     void stepThread(ScriptThread* thread) {
         auto text = utils::read<utils::SectionText>(_moduleManager.getModule(thread->script)).text;
+        auto data = utils::read<utils::SectionData>(_moduleManager.getModule(thread->script)).data;
         while (thread->state == ThreadState::Running && thread->instructionPos < text.size()) {
-            const auto opcode = text[thread->instructionPos];
+            const auto opcode = static_cast<vm_opcode_t>(text[thread->instructionPos++]);
             switch (opcode) {
-            case VM_OPCODE_NO_OPERATION: {
-                const auto vaule = utils::readInt32(text, thread->instructionPos);
+            case VM_OPCODE_NO_OPERATION:
                 break;
-            }
             case VM_OPCODE_PUSH_TRUE:
                 break;
             case VM_OPCODE_PUSH_FALSE:
                 break;
-            case VM_OPCODE_PUSH_INT:
+            case VM_OPCODE_PUSH_INT: {
+                const auto value = utils::readInt32(text, thread->instructionPos);
+                thread->stack[thread->stackPos++] = valueFromInt32(value);
                 break;
-            case VM_OPCODE_PUSH_FLOAT:
+            }
+            case VM_OPCODE_PUSH_FLOAT: {
+                const auto value = utils::readFloat(text, thread->instructionPos);
+                thread->stack[thread->stackPos++] = valueFromFloat(value);
                 break;
+            }
             case VM_OPCODE_PUSH_STRING:
                 break;
-            case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
+            case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
+                const auto name = utils::readString(text, thread->instructionPos, data);
+                if (auto slot = _globalManager.resolveOffset(name)) {
+                    _moduleManager.changeNameToSlot(
+                        thread->script, thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.value());
+                    thread->stack[thread->stackPos++] = _globalManager.global(slot.value());
+                } else {
+                    // TODO: log
+                }
                 break;
+            }
             case VM_OPCODE_PUSH_GLOBAL:
                 break;
             case VM_OPCODE_PUSH_LOCAL:
                 break;
-            case VM_OPCODE_POP_GLOBAL_BY_NAME:
+            case VM_OPCODE_POP_GLOBAL_BY_NAME: {
+                const auto name = utils::readString(text, thread->instructionPos, data);
+                if (auto slot = _globalManager.resolveOffset(name)) {
+                    _moduleManager.changeNameToSlot(
+                        thread->script, thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.value());
+                    _globalManager.global(slot.value()) = thread->stack[--thread->stackPos];
+                } else {
+                    // TODO: log
+                }
                 break;
+            }
             case VM_OPCODE_POP_GLOBAL:
                 break;
             case VM_OPCODE_POP_LOCAL:
@@ -108,8 +155,11 @@ private:
                 break;
             case VM_OPCODE_INT_TO_BOOL:
                 break;
-            case VM_OPCODE_INT_TO_FLOAT:
+            case VM_OPCODE_INT_TO_FLOAT: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromFloat(value.i32);
                 break;
+            }
             case VM_OPCODE_INT_TO_STRING:
                 break;
             case VM_OPCODE_FLOAT_TO_BOOL:
@@ -148,10 +198,18 @@ private:
                 break;
             case VM_OPCODE_SUBTRACT:
                 break;
-            case VM_OPCODE_MULTIPLY:
+            case VM_OPCODE_MULTIPLY: {
+                auto b = thread->stack[--thread->stackPos];
+                auto a = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueOperation<Mul>(a, b);
                 break;
-            case VM_OPCODE_DIVISION:
+            }
+            case VM_OPCODE_DIVISION: {
+                auto b = thread->stack[--thread->stackPos];
+                auto a = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueOperation<Div>(a, b);
                 break;
+            }
             case VM_OPCODE_MOD:
                 break;
             case VM_OPCODE_EQUAL:
@@ -191,6 +249,43 @@ private:
                 return;
             }
         }
+    }
+
+    template <typename Op>
+    [[nodiscard]] vm_value_t valueOperation(const vm_value_t& a, const vm_value_t& b) noexcept {
+        if (a.type == b.type && Op::allowed(a.type)) {
+            switch (a.type) {
+            case VM_VALUE_TYPE_BOOL:
+                return valueFromBool(Op::op(a.b, a.b));
+            case VM_VALUE_TYPE_INT:
+                return valueFromInt32(Op::op(a.i32, b.i32));
+            case VM_VALUE_TYPE_FLOAT:
+                return valueFromFloat(Op::op(a.f32, b.f32));
+            case VM_VALUE_TYPE_STRING:
+                return valueFromString(Op::op(a.str, b.str));
+            default:
+                assert(!"unreachable code");
+                break;
+            }
+        }
+        // TODO: log
+        return {};
+    }
+
+    [[nodiscard]] static vm_value_t valueFromBool(bool value) noexcept {
+        return vm_value_t{.type = VM_VALUE_TYPE_BOOL, .b = value};
+    }
+
+    [[nodiscard]] static vm_value_t valueFromInt32(int32_t value) noexcept {
+        return vm_value_t{.type = VM_VALUE_TYPE_INT, .i32 = value};
+    }
+
+    [[nodiscard]] static vm_value_t valueFromFloat(float value) noexcept {
+        return vm_value_t{.type = VM_VALUE_TYPE_FLOAT, .f32 = value};
+    }
+
+    [[nodiscard]] static vm_value_t valueFromString(vm_string_h str) noexcept {
+        return vm_value_t{.type = VM_VALUE_TYPE_STRING, .str = str};
     }
 
     ModuleManager _moduleManager;
