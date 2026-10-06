@@ -54,6 +54,7 @@ add_library(vm ${VM_SOURCES})
 add_library(${PROJECT_NAME}::vm ALIAS vm)
 set_default_properties(TARGET vm STATIC VM_STATIC_BUILD)
 target_link_libraries(vm PRIVATE utils)
+target_link_libraries(vm PRIVATE fmt::fmt)
 target_precompile_headers(vm PRIVATE "src/vm/vm.hpp")
 target_include_directories(vm PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/vm")
 target_include_directories(vm PUBLIC

@@ -21,6 +21,7 @@
 #include <span>
 #include <unordered_map>
 #include <vector>
+#include <fmt/format.h>
 
 #include "vm/vm.h"
 

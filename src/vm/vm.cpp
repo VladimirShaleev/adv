@@ -1,40 +1,23 @@
 #include "global-manager.hpp"
 #include "module-manager.hpp"
+#include "operations.hpp"
 #include "script.hpp"
+
+using namespace std::literals;
 
 struct _vm : public utils::Object {};
 
 namespace vm {
 
-struct Mul {
-    [[nodiscard]] static bool allowed(vm_value_type_t type) noexcept {
-        return type == VM_VALUE_TYPE_INT || type == VM_VALUE_TYPE_FLOAT;
-    }
-    [[nodiscard]] static vm_sint32_t op(vm_sint32_t a, vm_sint32_t b) noexcept { return a * b; }
-    [[nodiscard]] static vm_sint32_t op(vm_float32_t a, vm_float32_t b) noexcept { return a * b; }
-    template <typename T>
-    [[nodiscard]] static T op(T a, T b) noexcept {
-        return {};
-    }
-};
-
-struct Div {
-    [[nodiscard]] static bool allowed(vm_value_type_t type) noexcept {
-        return type == VM_VALUE_TYPE_INT || type == VM_VALUE_TYPE_FLOAT;
-    }
-    [[nodiscard]] static vm_sint32_t op(vm_sint32_t a, vm_sint32_t b) noexcept { return a / b; }
-    [[nodiscard]] static vm_sint32_t op(vm_float32_t a, vm_float32_t b) noexcept { return a / b; }
-    template <typename T>
-    [[nodiscard]] static T op(T a, T b) noexcept {
-        return {};
-    }
-};
-
 class VM final : public _vm {
 public:
-    VM()
-    /* _threads(64), { _modules.emplace_back(); } */
-    {}
+    VM() {
+        _strTrue = _stringPool.insert("true");
+        _strFalse = _stringPool.insert("false");
+        for (size_t i = 0; i < _strInts.size(); ++i) {
+            _strInts[i] = _stringPool.insert(std::to_string(i));
+        }
+    }
 
     vm_script_h loadScript(vm_script_h handle, bool forceLoad) noexcept {
         auto module = _moduleManager.getModule(handle);
@@ -147,82 +130,136 @@ private:
                 break;
             case VM_OPCODE_POP:
                 break;
-            case VM_OPCODE_BOOL_TO_INT:
+            case VM_OPCODE_BOOL_TO_INT: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromInt32(value.b ? 1 : 0);
                 break;
-            case VM_OPCODE_BOOL_TO_FLOAT:
+            }
+            case VM_OPCODE_BOOL_TO_FLOAT: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromFloat(value.b ? 1.0f : 0.0f);
                 break;
-            case VM_OPCODE_BOOL_TO_STRING:
+            }
+            case VM_OPCODE_BOOL_TO_STRING: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromString(value.b ? _strTrue : _strFalse);
                 break;
-            case VM_OPCODE_INT_TO_BOOL:
+            }
+            case VM_OPCODE_INT_TO_BOOL: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromBool(value.i32 != 0);
                 break;
+            }
             case VM_OPCODE_INT_TO_FLOAT: {
                 auto value = thread->stack[--thread->stackPos];
                 thread->stack[thread->stackPos++] = valueFromFloat(value.i32);
                 break;
             }
-            case VM_OPCODE_INT_TO_STRING:
+            case VM_OPCODE_INT_TO_STRING: {
+                auto value = thread->stack[--thread->stackPos];
+                if (value.i32 < _strInts.size()) {
+                    thread->stack[thread->stackPos++] = valueFromString(_strInts[value.i32]);
+                } else {
+                    thread->stack[thread->stackPos++] = valueFromString(_stringPool.insert(std::to_string(value.i32)));
+                }
                 break;
-            case VM_OPCODE_FLOAT_TO_BOOL:
+            }
+            case VM_OPCODE_FLOAT_TO_BOOL: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromBool(value.f32 != 0.0f);
                 break;
-            case VM_OPCODE_FLOAT_TO_INT:
+            }
+            case VM_OPCODE_FLOAT_TO_INT: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromInt32(static_cast<vm_sint32_t>(value.f32));
                 break;
-            case VM_OPCODE_FLOAT_TO_STRING:
+            }
+            case VM_OPCODE_FLOAT_TO_STRING: {
+                auto value = thread->stack[--thread->stackPos];
+                auto str = fmt::format("{:g}", value.f32);
+                if (str.find_last_of('.') == std::string::npos) {
+                    str += ".0"s;
+                }
+                thread->stack[thread->stackPos++] = valueFromString(_stringPool.insert(str));
                 break;
-            case VM_OPCODE_STRING_TO_BOOL:
+            }
+            case VM_OPCODE_STRING_TO_BOOL: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromBool(value.str.handle != 0);
                 break;
-            case VM_OPCODE_STRING_TO_INT:
+            }
+            case VM_OPCODE_STRING_TO_INT: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromInt32(parseString<vm_sint32_t>(value.str));
                 break;
-            case VM_OPCODE_STRING_TO_FLOAT:
+            }
+            case VM_OPCODE_STRING_TO_FLOAT: {
+                auto value = thread->stack[--thread->stackPos];
+                thread->stack[thread->stackPos++] = valueFromInt32(parseString<vm_float32_t>(value.str));
                 break;
+            }
             case VM_OPCODE_BITWISE_NOT:
+                operation<BitwiseNot>(thread);
                 break;
             case VM_OPCODE_LOGICAL_NOT:
+                operation<LogicalNot>(thread);
                 break;
             case VM_OPCODE_NUMERIC_NEGATION:
+                operation<NumericNegation>(thread);
                 break;
             case VM_OPCODE_BITWISE_AND:
+                operation<And>(thread);
                 break;
             case VM_OPCODE_BITWISE_OR:
+                operation<Or>(thread);
                 break;
             case VM_OPCODE_BITWISE_XOR:
+                operation<Xor>(thread);
                 break;
             case VM_OPCODE_LOGIC_SHIFT_LEFT:
+                operation<LogicShiftLeft>(thread);
                 break;
             case VM_OPCODE_LOGIC_SHIFT_RIGHT:
+                operation<LogicShiftRight>(thread);
                 break;
             case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
+                operation<ArithmeticShiftLeft>(thread);
                 break;
             case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
+                operation<ArithmeticShiftRight>(thread);
                 break;
             case VM_OPCODE_ADD:
+                operation<Add>(thread);
                 break;
             case VM_OPCODE_SUBTRACT:
+                operation<Sub>(thread);
                 break;
-            case VM_OPCODE_MULTIPLY: {
-                auto b = thread->stack[--thread->stackPos];
-                auto a = thread->stack[--thread->stackPos];
-                thread->stack[thread->stackPos++] = valueOperation<Mul>(a, b);
+            case VM_OPCODE_MULTIPLY:
+                operation<Mul>(thread);
                 break;
-            }
-            case VM_OPCODE_DIVISION: {
-                auto b = thread->stack[--thread->stackPos];
-                auto a = thread->stack[--thread->stackPos];
-                thread->stack[thread->stackPos++] = valueOperation<Div>(a, b);
+            case VM_OPCODE_DIVISION:
+                operation<Div>(thread);
                 break;
-            }
             case VM_OPCODE_MOD:
+                operation<Mod>(thread);
                 break;
             case VM_OPCODE_EQUAL:
+                operation<Equal>(thread);
                 break;
             case VM_OPCODE_NOT_EQUAL:
+                operation<NotEqual>(thread);
                 break;
             case VM_OPCODE_LESS:
+                operation<Less>(thread);
                 break;
             case VM_OPCODE_LESS_EQUAL:
+                operation<LessEqual>(thread);
                 break;
             case VM_OPCODE_GREAT:
+                operation<Great>(thread);
                 break;
             case VM_OPCODE_GREAT_EQUAL:
+                operation<GreatEqual>(thread);
                 break;
             case VM_OPCODE_CALL_NATIVE:
                 break;
@@ -252,17 +289,37 @@ private:
     }
 
     template <typename Op>
-    [[nodiscard]] vm_value_t valueOperation(const vm_value_t& a, const vm_value_t& b) noexcept {
+    void operation(ScriptThread* thread) noexcept {
+        if constexpr (Op::isUnary) {
+            const auto a = thread->stack[--thread->stackPos];
+            if constexpr (Op::isLogic) {
+                thread->stack[thread->stackPos++] = logicOperation<Op>(a, a);
+            } else {
+                thread->stack[thread->stackPos++] = arithmeticOperation<Op>(a, a);
+            }
+        } else {
+            const auto b = thread->stack[--thread->stackPos];
+            const auto a = thread->stack[--thread->stackPos];
+            if constexpr (Op::isLogic) {
+                thread->stack[thread->stackPos++] = logicOperation<Op>(a, b);
+            } else {
+                thread->stack[thread->stackPos++] = arithmeticOperation<Op>(a, b);
+            }
+        }
+    }
+
+    template <typename Op>
+    [[nodiscard]] vm_value_t logicOperation(const vm_value_t& a, const vm_value_t& b) noexcept {
         if (a.type == b.type && Op::allowed(a.type)) {
             switch (a.type) {
             case VM_VALUE_TYPE_BOOL:
-                return valueFromBool(Op::op(a.b, a.b));
+                return valueFromBool(Op::op(a.b, a.b, _stringPool));
             case VM_VALUE_TYPE_INT:
-                return valueFromInt32(Op::op(a.i32, b.i32));
+                return valueFromBool(Op::op(a.i32, b.i32, _stringPool));
             case VM_VALUE_TYPE_FLOAT:
-                return valueFromFloat(Op::op(a.f32, b.f32));
+                return valueFromBool(Op::op(a.f32, b.f32, _stringPool));
             case VM_VALUE_TYPE_STRING:
-                return valueFromString(Op::op(a.str, b.str));
+                return valueFromBool(Op::op(a.str, b.str, _stringPool));
             default:
                 assert(!"unreachable code");
                 break;
@@ -270,6 +327,42 @@ private:
         }
         // TODO: log
         return {};
+    }
+
+    template <typename Op>
+    [[nodiscard]] vm_value_t arithmeticOperation(const vm_value_t& a, const vm_value_t& b) noexcept {
+        if (a.type == b.type && Op::allowed(a.type)) {
+            switch (a.type) {
+            case VM_VALUE_TYPE_BOOL:
+                return valueFromBool(Op::op(a.b, a.b, _stringPool));
+            case VM_VALUE_TYPE_INT:
+                return valueFromInt32(Op::op(a.i32, b.i32, _stringPool));
+            case VM_VALUE_TYPE_FLOAT:
+                return valueFromFloat(Op::op(a.f32, b.f32, _stringPool));
+            case VM_VALUE_TYPE_STRING:
+                return valueFromString(Op::op(a.str, b.str, _stringPool));
+            default:
+                assert(!"unreachable code");
+                break;
+            }
+        }
+        // TODO: log
+        return {};
+    }
+
+    template <typename T>
+    [[nodiscard]] T parseString(vm_string_h str) const noexcept {
+        auto view = _stringPool[str];
+        T val{};
+        const auto [_, ec] = std::from_chars(view.data(), view.data() + view.length(), val);
+        if (ec == std::errc()) {
+            return val;
+        } else if (ec == std::errc::result_out_of_range) {
+            // TODO: log
+        } else {
+            // TODO: log
+        }
+        return T{};
     }
 
     [[nodiscard]] static vm_value_t valueFromBool(bool value) noexcept {
@@ -290,6 +383,10 @@ private:
 
     ModuleManager _moduleManager;
     GlobalManager _globalManager;
+    utils::StringPool _stringPool;
+    vm_string_h _strTrue;
+    vm_string_h _strFalse;
+    std::array<vm_string_h, 50> _strInts;
     utils::Pool<ScriptThread> _threads;
     std::vector<ScriptThreadHandle> _threadHandles;
 };
