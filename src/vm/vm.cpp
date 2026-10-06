@@ -45,8 +45,9 @@ public:
         for (size_t i = 0; i < _threadHandles.size();) {
             auto thread = _threads.access(_threadHandles[i++]);
             if (thread->state == ThreadState::Dead) {
+                _threads.release(_threadHandles[--i]);
                 if (_threadHandles.size() > 1) {
-                    _threadHandles[--i] = _threadHandles.back();
+                    _threadHandles[i] = _threadHandles.back();
                 }
                 _threadHandles.pop_back();
                 continue;
@@ -73,6 +74,7 @@ private:
         _threadHandles.push_back(handle);
         thread->state = ThreadState::Running;
         thread->script = script;
+        thread->frameCount = 1;
     }
 
     void stepThread(ScriptThread* thread) {
@@ -84,8 +86,10 @@ private:
             case VM_OPCODE_NO_OPERATION:
                 break;
             case VM_OPCODE_PUSH_TRUE:
+                thread->stack[thread->stackPos++] = valueFromBool(true);
                 break;
             case VM_OPCODE_PUSH_FALSE:
+                thread->stack[thread->stackPos++] = valueFromBool(false);
                 break;
             case VM_OPCODE_PUSH_INT: {
                 const auto value = utils::readInt32(text, thread->instructionPos);
@@ -110,10 +114,18 @@ private:
                 }
                 break;
             }
-            case VM_OPCODE_PUSH_GLOBAL:
+            case VM_OPCODE_PUSH_GLOBAL: {
+                const auto slot = utils::readUint32(text, thread->instructionPos);
+                thread->stack[thread->stackPos++] = _globalManager.global(slot);
                 break;
-            case VM_OPCODE_PUSH_LOCAL:
+            }
+            case VM_OPCODE_PUSH_LOCAL: {
+                const auto slot = utils::readUint16(text, thread->instructionPos);
+                const auto& currentFrame = thread->frames[thread->frameCount - 1];
+                const auto localSlot = currentFrame.baseStackPos + slot;
+                thread->stack[thread->stackPos++] = thread->stack[localSlot];
                 break;
+            }
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveOffset(name)) {
@@ -125,11 +137,21 @@ private:
                 }
                 break;
             }
-            case VM_OPCODE_POP_GLOBAL:
+            case VM_OPCODE_POP_GLOBAL: {
+                const auto slot = utils::readUint32(text, thread->instructionPos);
+                _globalManager.global(slot) = thread->stack[--thread->stackPos];
                 break;
-            case VM_OPCODE_POP_LOCAL:
+            }
+            case VM_OPCODE_POP_LOCAL: {
+                const auto slot = utils::readUint16(text, thread->instructionPos);
+                const auto& currentFrame = thread->frames[thread->frameCount - 1];
+                const auto val = thread->stack[--thread->stackPos];
+                const auto localSlot = currentFrame.baseStackPos + slot;
+                thread->stack[localSlot] = val;
                 break;
+            }
             case VM_OPCODE_POP:
+                // TODO: It is unlikely that this opcode is needed at all.
                 break;
             case VM_OPCODE_BOOL_TO_INT:
                 cast<bool, vm_sint32_t>(thread);
@@ -239,9 +261,20 @@ private:
             case VM_OPCODE_RETURN:
                 break;
             case VM_OPCODE_JUMP:
+                thread->instructionPos = utils::readUint32(text, thread->instructionPos);
                 break;
-            case VM_OPCODE_JUMP_IF_FALSE:
+            case VM_OPCODE_JUMP_IF_FALSE: {
+                const auto target = utils::readUint32(text, thread->instructionPos);
+                const auto value = thread->stack[--thread->stackPos];
+                if (value.type == VM_VALUE_TYPE_BOOL) {
+                    if (!value.b) {
+                        thread->instructionPos = target;
+                    }
+                } else {
+                    // TODO: log
+                }
                 break;
+            }
             case VM_OPCODE_YIELD:
                 break;
             case VM_OPCODE_WAIT:

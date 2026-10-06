@@ -18,7 +18,7 @@ struct CallFrame {
     vm_uint32_t returnIp;
     vm_uint32_t prevScriptId;
     vm_uint32_t argCount;
-    vm_uint32_t baseSp;
+    vm_uint32_t baseStackPos;
 };
 
 struct ScriptThreadHandle {

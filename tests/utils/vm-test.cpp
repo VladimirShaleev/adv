@@ -31,4 +31,8 @@ TEST(VM, Test) {
     EXPECT_NE(script, Undefined);
 
     vm_tick(vm);
+    vm_tick(vm);
+
+    vm_load_script(vm, script);
+    vm_tick(vm);
 }
