@@ -30,6 +30,7 @@ public:
     [[nodiscard]] vm_string_h rootModule() const noexcept;
 
     [[nodiscard]] const std::vector<adv_uint8_t>& bytecode() const noexcept { return _bytecode; }
+    [[nodiscard]] adv_uint16_t rootFrameSlots() const noexcept { return _rootFrameSlots; }
 
     [[nodiscard]] utils::Format codeFormat() const noexcept { return _codeFormat; }
 
@@ -47,6 +48,8 @@ public:
         _bytecode = std::move(bytecode);
         _codeFormat = format;
     }
+
+    void setRootFrameSlots(adv_uint16_t slots) noexcept { _rootFrameSlots = slots; }
 
     template <adv_status_t Status, typename... Args>
     void log(const Options& options, const adv_location_t& loc, Args&&... args) {
@@ -102,6 +105,7 @@ private:
     bool _hasErrors{};
     std::vector<adv_uint8_t> _bytecode{};
     utils::Format _codeFormat{};
+    adv_uint16_t _rootFrameSlots{};
     utils::StringPool _strPool{};
     std::vector<std::vector<adv_node_t>> _nodes{};
     size_t _nodeCount{};

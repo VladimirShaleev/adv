@@ -16,6 +16,7 @@ Analyzer::Analyzer(const Options& options, Context& ctx) noexcept : _options(opt
     for (int i = 1; i < VM_VALUE_TYPE_COUNT_ENUMS; ++i) {
         addBaseType((vm_value_type_t)i);
     }
+    pushFrame();
 }
 
 adv_result_t Analyzer::build() {
@@ -32,6 +33,7 @@ adv_result_t Analyzer::build() {
     }
     resolveTypes();
 
+    _ctx.setRootFrameSlots(currFrame().maxSlots);
     return _ctx.hasErrors() ? ADV_RESULT_COMPILATION_FAILED : ADV_RESULT_SUCCESS;
 }
 
@@ -140,15 +142,11 @@ void Analyzer::resolveSymbols() {
             const auto isNonFunctionBlock = parent->type != ADV_NODE_FUNCTION_DECL;
             if (isNonFunctionBlock) {
                 symbolTable.beginScope();
-                if (analyzer.hasFrame()) {
-                    slotsBeforeBlock = analyzer.currFrame().currentSlot;
-                }
+                slotsBeforeBlock = analyzer.currFrame().currentSlot;
             }
             visitChildrens(node);
             if (isNonFunctionBlock) {
-                if (analyzer.hasFrame()) {
-                    analyzer.currFrame().currentSlot = slotsBeforeBlock;
-                }
+                analyzer.currFrame().currentSlot = slotsBeforeBlock;
                 symbolTable.endScope();
             }
         }
@@ -618,14 +616,12 @@ void Analyzer::pushFrame() { _frameStack.emplace(); }
 void Analyzer::popFrame() noexcept { _frameStack.pop(); }
 
 void Analyzer::saveFrameSlot(Symbol* sym) noexcept {
-    if (hasFrame()) {
+    if (!sym->is_global) {
         auto& frame = currFrame();
         sym->slot_index = frame.currentSlot++;
         frame.maxSlots = std::max(frame.maxSlots, frame.currentSlot);
     }
 }
-
-bool Analyzer::hasFrame() const noexcept { return !_frameStack.empty(); }
 
 Analyzer::FunctionFrameState& Analyzer::currFrame() noexcept { return _frameStack.top(); }
 

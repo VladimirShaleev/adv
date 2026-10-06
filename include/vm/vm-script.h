@@ -54,6 +54,7 @@ typedef struct
     vm_uint32_t data_size; /**< Size in bytes of the string data block. */
     vm_uint32_t text_offset; /**< Byte offset of the bytecode block. */
     vm_uint32_t text_size; /**< Size in bytes of the bytecode block. */
+    vm_uint16_t root_frame_slots; /**< Frame slot count for the top-level script scope */
 } VM_PACKED_ATTR vm_script_table_t;
 
 /**

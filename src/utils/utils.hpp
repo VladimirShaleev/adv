@@ -89,6 +89,7 @@ template <typename AliasedType, typename Type>
     result.data_size = swapBytes(result.data_size);
     result.text_offset = swapBytes(result.text_offset);
     result.text_size = swapBytes(result.text_size);
+    result.root_frame_slots = swapBytes(result.root_frame_slots);
     return result;
 }
 

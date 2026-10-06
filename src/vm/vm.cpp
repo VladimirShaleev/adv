@@ -74,6 +74,7 @@ private:
         _threadHandles.push_back(handle);
         thread->state = ThreadState::Running;
         thread->script = script;
+        thread->stackPos = utils::read<vm_script_table_t>(_moduleManager.getModule(script)).root_frame_slots;
         thread->frameCount = 1;
     }
 
@@ -101,12 +102,23 @@ private:
                 thread->stack[thread->stackPos++] = valueFromFloat(value);
                 break;
             }
-            case VM_OPCODE_PUSH_STRING:
+            case VM_OPCODE_PUSH_STRING_FROM_DATA: {
+                const auto view = utils::readString(text, thread->instructionPos, data);
+                const auto str = _cache.pool.insert(view);
+                _moduleManager.modifyOpcode(
+                    thread->script, thread->instructionPos - 5, VM_OPCODE_PUSH_STRING, str.handle);
+                thread->stack[thread->stackPos++] = valueFromString({str});
                 break;
+            }
+            case VM_OPCODE_PUSH_STRING: {
+                const auto str = utils::readUint32(text, thread->instructionPos);
+                thread->stack[thread->stackPos++] = valueFromString({str});
+                break;
+            }
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveOffset(name)) {
-                    _moduleManager.changeNameToSlot(
+                    _moduleManager.modifyOpcode(
                         thread->script, thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.value());
                     thread->stack[thread->stackPos++] = _globalManager.global(slot.value());
                 } else {
@@ -129,7 +141,7 @@ private:
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveOffset(name)) {
-                    _moduleManager.changeNameToSlot(
+                    _moduleManager.modifyOpcode(
                         thread->script, thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.value());
                     _globalManager.global(slot.value()) = thread->stack[--thread->stackPos];
                 } else {

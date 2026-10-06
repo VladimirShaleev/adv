@@ -15,7 +15,7 @@ public:
     [[nodiscard]] std::pair<vm_script_h, bool>
     loadScript(std::span<const vm_char_t> code, bool forceLoad, std::string_view moduleName = {});
 
-    void changeNameToSlot(vm_script_h script, vm_uint32_t instructionPos, vm_opcode_t newOpcode, vm_uint32_t slot) noexcept;
+    void modifyOpcode(vm_script_h script, vm_uint32_t instructionPos, vm_opcode_t newOpcode, vm_uint32_t slot) noexcept;
 
 private:
     [[nodiscard]] static std::string_view getModuleName(std::span<const vm_uint8_t> bytecode) noexcept;

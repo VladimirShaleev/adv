@@ -375,7 +375,7 @@ struct CodeGenVisitor {
         code.emitFloat(node->float_val);
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) {
-        code.emitByte(VM_OPCODE_PUSH_STRING);
+        code.emitByte(VM_OPCODE_PUSH_STRING_FROM_DATA);
         code.emitString(node->str_val);
     }
     void acceptNode(adv_node_t* node) {
@@ -466,6 +466,7 @@ adv_result_t Generator::text() {
         std::cout << tab << "module: "sv << moduleName << std::endl;
     }
     std::cout << tab << "version: "sv << VM_VERSION_STRING << std::endl;
+    std::cout << tab << "root_slots: "sv << _ctx.rootFrameSlots() << std::endl;
 
     std::set<std::string> identifiers;
     identifiers.insert("true");
@@ -578,7 +579,7 @@ adv_result_t Generator::text() {
                 val = utils::readFloat(text, ip);
                 break;
             }
-            case VM_OPCODE_PUSH_STRING: {
+            case VM_OPCODE_PUSH_STRING_FROM_DATA: {
                 op = "push"sv;
                 const auto str = utils::readString(text, ip, data);
                 val = str;
@@ -838,6 +839,7 @@ void Generator::saveBinary(
     table->data_size = static_cast<adv_uint32_t>(data.size());
     table->text_offset = table->data_offset + table->data_size;
     table->text_size = static_cast<adv_uint32_t>(code.size());
+    table->root_frame_slots = _ctx.rootFrameSlots();
     *header = utils::swapBytes(*header);
     *table = utils::swapBytes(*table);
     memcpy(binary.data() + table->export_offset, exportTable.data(), table->export_size);

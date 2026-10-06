@@ -35,7 +35,6 @@ private:
     void pushFrame();
     void popFrame() noexcept;
     void saveFrameSlot(class Symbol* sym) noexcept;
-    [[nodiscard]] bool hasFrame() const noexcept;
     [[nodiscard]] FunctionFrameState& currFrame() noexcept;
 
     [[nodiscard]] adv_node_t* promoteCastNode(adv_node_t* node, vm_value_type_t targetType);

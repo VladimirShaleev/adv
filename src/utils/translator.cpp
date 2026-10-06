@@ -363,7 +363,7 @@ private:
         case VM_OPCODE_PUSH_FLOAT:
             pushFloat(parseValue<vm_float32_t>(operand), result.textSection);
             break;
-        case VM_OPCODE_PUSH_STRING:
+        case VM_OPCODE_PUSH_STRING_FROM_DATA:
         case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
         case VM_OPCODE_POP_GLOBAL_BY_NAME:
             if (!operand.empty() && operand[0] == '"') {
@@ -431,6 +431,7 @@ private:
         table->data_size = swapBytes(static_cast<vm_uint32_t>(offsetText) - Advt::offsetData);
         table->text_offset = swapBytes(static_cast<vm_uint32_t>(offsetText));
         table->text_size = swapBytes(static_cast<vm_uint32_t>(result.textSection.size()));
+        table->root_frame_slots = 0; // TODO
         std::memcpy(text, result.textSection.data(), result.textSection.size());
         auto view = std::views::all(bytecode);
         header->checksum = swapBytes(adler32(std::move(view)));

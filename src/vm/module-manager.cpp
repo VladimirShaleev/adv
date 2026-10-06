@@ -73,7 +73,7 @@ ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::
     return {script, true};
 }
 
-void ModuleManager::changeNameToSlot(
+void ModuleManager::modifyOpcode(
     vm_script_h script, vm_uint32_t instructionPos, vm_opcode_t newOpcode, vm_uint32_t slot) noexcept {
     assert(script.handle < _modules.size());
     const auto& bytecode = getModule(script);
@@ -82,6 +82,9 @@ void ModuleManager::changeNameToSlot(
     auto ptr = const_cast<uint8_t*>(text.data()) + instructionPos;
     const auto prevOpcode = static_cast<vm_opcode_t>(*ptr);
     switch (prevOpcode) {
+    case VM_OPCODE_PUSH_STRING_FROM_DATA:
+        assert(newOpcode == VM_OPCODE_PUSH_STRING);
+        break;
     case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
         assert(newOpcode == VM_OPCODE_PUSH_GLOBAL);
         break;
