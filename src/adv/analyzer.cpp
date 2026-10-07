@@ -53,7 +53,12 @@ void Analyzer::resolveSymbols() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {
             node->parent = parent;
-            acceptNode(node->import_stmt.root, node);
+            if (node->import_stmt.root) {
+                acceptNode(node->import_stmt.root, node);
+            } else {
+                const auto importModule = utils::getModuleName(ctx.getString(node->import_stmt.path));
+                loadSymbolsFromBinary(ctx.bytecode(importModule));
+            }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
             node->parent = parent;
@@ -156,6 +161,27 @@ void Analyzer::resolveSymbols() {
         void acceptNode(adv_node_t* node, adv_node_t* parent) {
             accept<SymbolVisitor>(
                 node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable), parent);
+        }
+        void loadSymbolsFromBinary(std::span<const uint8_t> bytecode) noexcept {
+            const auto data = utils::read<utils::SectionData>(bytecode).data;
+            const auto exports = utils::read<vm_script_export_t>(bytecode);
+            const auto moduleName = ctx.intern(utils::readString(exports.module_name, data));
+            for (adv_uint32_t i = 0; i < exports.var_count; ++i) {
+                const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
+                const auto loc = adv_location_t{moduleName, 0, 0};
+                adv_node_t node{
+                    ADV_NODE_VAR_DECL,
+                    loc,
+                    static_cast<vm_value_type_t>(var.type),
+                };
+                node.var_decl.name = ctx.intern(utils::readString(var.name, data));
+                node.var_decl.type_hint = static_cast<vm_string_h>(node.resolved_type);
+                node.var_decl.is_global = 1;
+                symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
+            }
+            for (adv_uint32_t i = 0; i < exports.func_count; ++i) {
+                // TODO
+            }
         }
 
         const Options& options;

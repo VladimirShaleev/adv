@@ -82,7 +82,7 @@ public:
             }
             return false;
         }
-        _ctx.setBytecode(std::move(bytecode), result.format);
+        _ctx.setBytecode(utils::getModuleName(*filename()), std::move(bytecode), result.format);
         return true;
     }
 
@@ -108,20 +108,23 @@ private:
         _source = source;
         _needRelease = needRelease;
 
-        if (depth == 0 && readBytecode(source, path)) {
-            std::span bytecode{(const char*)_ctx.bytecode().data(), _ctx.bytecode().size()};
+        if (readBytecode(source, path)) {
+            const auto moduleName = utils::getModuleName(path);
+            const auto moduleBytecode = _ctx.bytecode(moduleName);
+            std::span bytecode{(const char*)moduleBytecode.data(), moduleBytecode.size()};
             adv_uint32_t actual = 0;
             adv_uint32_t expected = 0;
             adv_uint32_t version = 0;
             if (!utils::validateChecksum(bytecode, &actual, &expected)) {
-                _ctx.setBytecode({}, utils::Format::Unknown);
+                _ctx.setBytecode(moduleName, {}, utils::Format::Unknown);
                 _ctx.log<ADV_STATUS_E3043>(_options, loc, actual, expected);
             }
             if (!utils::validateVersion(bytecode, ADV_VERSION, &version)) {
-                _ctx.setBytecode({}, utils::Format::Unknown);
+                _ctx.setBytecode(moduleName, {}, utils::Format::Unknown);
                 auto verStr = fmt::format("{}.{}.{}", (version >> 16) & 0xFF, (version >> 8) & 0xFF, version & 0xFF);
                 _ctx.log<ADV_STATUS_E3044>(_options, loc, verStr, ADV_VERSION_STRING);
             }
+            _filename = path.string();
             return;
         }
 
@@ -157,6 +160,8 @@ private:
         const std::filesystem::path& basePath,
         adv_uint32_t depth,
         const Options& options) {
+        using namespace std::literals;
+
         if (file.empty() && !sources.empty()) {
             auto& source = sources.front();
             return {source.name, &source, false};
@@ -204,16 +209,41 @@ private:
             if (std::filesystem::exists(fullpath) && std::filesystem::is_regular_file(fullpath)) {
                 return {fullpath, nullptr, false};
             }
+            auto searchDir = fullpath.parent_path();
+            try {
+                if (std::filesystem::exists(searchDir) && std::filesystem::is_directory(searchDir)) {
+                    const auto targetModule = utils::getModuleName(file);
+                    for (const auto& entry : std::filesystem::directory_iterator(searchDir)) {
+                        if (entry.is_regular_file()) {
+                            auto entryModule = utils::getModuleName(entry.path());
+                            if (entryModule == targetModule) {
+                                auto entryFile = entry.path();
+                                auto firstExt = entry.path().extension().string();
+                                std::string_view extView = firstExt;
+                                for (const auto ext : {extView, ""sv, "adb"sv, "advb"sv, "adt"sv, "advt"sv, "adv"sv}) {
+                                    entryFile.replace_extension(ext);
+                                    if (std::filesystem::exists(entryFile) &&
+                                        std::filesystem::is_regular_file(entryFile)) {
+                                        return {entryFile, nullptr, false};
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (const std::filesystem::filesystem_error&) {
+            }
         }
         return {{}, nullptr, false};
     }
 
     [[nodiscard]] bool readBytecode(const adv_source_t* source, const std::filesystem::path& filename) noexcept {
+        const auto moduleName = utils::getModuleName(filename);
         if (source) {
             if (utils::isBinaryCode({source->data, source->size})) {
                 std::vector<adv_uint8_t> bytecode(
                     (adv_uint8_t*)source->data, (adv_uint8_t*)source->data + source->size);
-                _ctx.setBytecode(std::move(bytecode), utils::Format::Advb);
+                _ctx.setBytecode(moduleName, std::move(bytecode), utils::Format::Advb);
                 return true;
             }
         }
@@ -238,7 +268,8 @@ private:
             if (stream.read((char*)bytecode.data(), size) &&
                 utils::isBinaryCode({(const char*)bytecode.data(), bytecode.size()})) {
                 stream.close();
-                _ctx.setBytecode(std::move(bytecode), utils::Format::Advb);
+                _ctx.addImport(filename);
+                _ctx.setBytecode(moduleName, std::move(bytecode), utils::Format::Advb);
                 return true;
             }
         }

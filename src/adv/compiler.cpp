@@ -15,9 +15,8 @@ public:
     compile(adv_utf8_t file, std::span<const adv_source_t> sources, const Options& options, Context& context) noexcept {
         Analyzer analyzer(options, context);
         Generator generator(options, context);
-        std::pair<adv_result_t, std::string> parseResult{};
-        if (parseResult = parse(file, sources, options, context); parseResult.first != ADV_RESULT_SUCCESS) {
-            return parseResult.first;
+        if (auto result = parse(file, sources, options, context); result != ADV_RESULT_SUCCESS) {
+            return result;
         }
         if (auto result = analyzer.build(); result != ADV_RESULT_SUCCESS) {
             return result;
@@ -28,15 +27,16 @@ public:
         if (auto result = generator.text(); result != ADV_RESULT_SUCCESS) {
             return result;
         }
-        return write(options, context, parseResult.second);
+        return write(options, context);
     }
 
 private:
-    adv_result_t write(const Options& options, Context& context, const std::string& module) {
+    adv_result_t write(const Options& options, Context& context) {
+        const auto module = context.getString(context.rootModule());
         const auto& code = context.bytecode();
         adv_data_t data{};
         if (auto writer = options.getWriter(&data)) {
-            adv_source_t source{module.c_str(), (const adv_char_t*)code.data(), static_cast<adv_uint32_t>(code.size())};
+            adv_source_t source{module.data(), (const adv_char_t*)code.data(), static_cast<adv_uint32_t>(code.size())};
             writer(&source, data);
         } else {
             auto cPath = options.getOutputPath();
@@ -79,17 +79,18 @@ private:
         return ADV_RESULT_SUCCESS;
     }
 
-    [[nodiscard]] std::pair<adv_result_t, std::string>
+    [[nodiscard]] adv_result_t
     parse(adv_utf8_t file, std::span<const adv_source_t> sources, const Options& options, Context& context) {
         adv_result_t result = ADV_RESULT_SUCCESS;
-        std::string mainModule;
         std::stack<std::tuple<std::string, adv_node_t*, std::filesystem::path, adv_uint32_t>> stack;
         stack.emplace(""s, nullptr, file ? file : "", 0);
 
         while (!stack.empty()) {
             const auto [parentModule, parentImport, currFile, depth] = stack.top();
             stack.pop();
-
+            if (context.hasImport(currFile)) {
+                continue;
+            }
             const auto parentLoc = parentImport ? parentImport->location : adv_location_t{};
             const auto [status, module] =
                 generateNodeTree(parentModule, parentLoc, currFile, sources, depth, options, context);
@@ -97,11 +98,8 @@ private:
                 result = status;
             }
             if (status == ADV_RESULT_SUCCESS) {
-                if (mainModule.empty()) {
-                    mainModule = module;
-                }
-                if (!context.bytecode().empty()) {
-                    return {ADV_RESULT_SUCCESS, mainModule};
+                if (!context.bytecode(module).empty()) {
+                    return ADV_RESULT_SUCCESS;
                 }
                 auto moduleRoot = context.root(module);
                 if (parentImport) {
@@ -121,7 +119,7 @@ private:
                 }
             }
         }
-        return {result, mainModule};
+        return result;
     }
 
     [[nodiscard]] std::pair<adv_result_t, std::string> generateNodeTree(
@@ -140,24 +138,22 @@ private:
             return {ADV_RESULT_ERROR_SOURCE_NOT_FOUND, ""};
         }
 
-        if (depth == 0 && !context.bytecode().empty()) {
-            return {ADV_RESULT_SUCCESS, ""};
+        const auto moduleName = utils::getModuleName(*scanner.filename());
+        if (!context.bytecode(moduleName).empty()) {
+            return {ADV_RESULT_SUCCESS, moduleName};
         }
 
-        const auto module = std::filesystem::path(*scanner.filename()).filename().replace_extension().string();
-
         const auto code = parser.parse();
-
         if (context.hasErrors() || code != 0) {
-            if (depth == 0 && scanner.parseAdvt() && !context.bytecode().empty()) {
-                return {ADV_RESULT_SUCCESS, ""};
+            if (scanner.parseAdvt() && !context.bytecode(moduleName).empty()) {
+                return {ADV_RESULT_SUCCESS, moduleName};
             }
             if (!context.hasErrors()) {
                 context.log<ADV_STATUS_E3002>(options, {});
             }
-            return {ADV_RESULT_COMPILATION_FAILED, module};
+            return {ADV_RESULT_COMPILATION_FAILED, moduleName};
         }
-        return {ADV_RESULT_SUCCESS, module};
+        return {ADV_RESULT_SUCCESS, moduleName};
     }
 };
 

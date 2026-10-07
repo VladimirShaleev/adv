@@ -25,7 +25,7 @@ std::pair<vm_script_h, bool> ModuleManager::loadScript(vm_utf8_t file, bool forc
     stream.read(bytes.data(), size);
     stream.close();
 
-    const auto name = std::filesystem::path(file).filename().replace_extension().string();
+    const auto name = utils::getModuleName(file);
     return loadScript({bytes.data(), bytes.size()}, forceLoad, name);
 }
 

@@ -31,15 +31,29 @@ adv_node_t* Context::root(const std::string& module) noexcept {
 
 vm_string_h Context::rootModule() const noexcept { return _mainModule; }
 
-vm_string_h Context::findFilenameByPath(const std::filesystem::path& path) const noexcept {
-    for (const auto& [module, import] : _imports) {
-        try {
-            if (std::filesystem::equivalent(import.filename, path)) {
-                const auto str = path.string();
-                return this->findString({str.c_str(), str.length()}).value_or(vm_string_h{0});
-            }
-        } catch (const std::filesystem::filesystem_error&) {
-        }
+const std::vector<adv_uint8_t>& Context::bytecode(const std::string& module) const noexcept {
+    if (auto it = _imports.find(module); it != _imports.end()) {
+        return it->second.bytecode;
+    }
+    auto mainModuleView = getString(_mainModule);
+    std::string mainModule{mainModuleView.data(), mainModuleView.length()};
+    return _imports.at(mainModule).bytecode;
+}
+
+utils::Format Context::codeFormat(const std::string& module) const noexcept {
+    if (auto it = _imports.find(module); it != _imports.end()) {
+        return it->second.format;
+    }
+    auto mainModuleView = getString(_mainModule);
+    std::string mainModule{mainModuleView.data(), mainModuleView.length()};
+    return _imports.at(mainModule).format;
+}
+
+vm_string_h Context::findFilenameByPath(const std::filesystem::path& path) noexcept {
+    const auto moduleName = utils::getModuleName(path);
+    if (auto it = _imports.find(moduleName); it != _imports.end()) {
+        const auto filename = it->second.filename.string();
+        return intern(filename);
     }
     return {0};
 }
@@ -52,17 +66,21 @@ std::filesystem::path Context::getBasePath(const std::string& module) const noex
 }
 
 bool Context::hasImport(const std::filesystem::path& path) const noexcept {
-    return _imports.contains(getModuleName(path));
+    return _imports.contains(utils::getModuleName(path));
 }
 
 void Context::addImport(const std::filesystem::path& path) {
-    auto& import = _imports[getModuleName(path)];
+    const auto moduleName = utils::getModuleName(path);
+    auto& import = _imports[moduleName];
     import.filename = path;
     import.basePath = path.parent_path();
+    if (_mainModule == vm_string_h{0}) {
+        _mainModule = intern(moduleName);
+    }
 }
 
 void Context::setNodeTree(const std::filesystem::path& path, adv_node_t* root) {
-    const auto moduleName = getModuleName(path);
+    const auto moduleName = utils::getModuleName(path);
     if (auto it = _imports.find(moduleName); it != _imports.end()) {
         it->second.root = root;
     } else {
@@ -70,7 +88,17 @@ void Context::setNodeTree(const std::filesystem::path& path, adv_node_t* root) {
     }
     if (!_main) {
         _main = root;
-        _mainModule = intern(moduleName);
+    }
+}
+
+void Context::setBytecode(
+    const std::filesystem::path& path, std::vector<adv_uint8_t>&& bytecode, utils::Format format) noexcept {
+    const auto moduleName = utils::getModuleName(path);
+    if (auto it = _imports.find(moduleName); it != _imports.end()) {
+        it->second.bytecode = std::move(bytecode);
+        it->second.format = format;
+    } else {
+        assert(!"unreachable code");
     }
 }
 

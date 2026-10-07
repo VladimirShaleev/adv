@@ -199,7 +199,11 @@ struct CodeGenVisitor {
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
-    void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {
+        const auto module = ctx.intern(utils::getModuleName(ctx.getString(node->import_stmt.path)));
+        code.emitByte(VM_OPCODE_IMPORT);
+        code.emitString(module);
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
         acceptNode(node->if_stmt.cond);
 
@@ -557,6 +561,10 @@ adv_result_t Generator::text() {
             index = static_cast<size_t>(ip);
             const auto opcode = (vm_opcode_t)text.data()[ip++];
             switch (opcode) {
+            case VM_OPCODE_IMPORT:
+                op = "import"sv;
+                val = Id{utils::readString(text, ip, data)};
+                break;
             case VM_OPCODE_PUSH_TRUE:
                 op = "push"sv;
                 val = Id{"true"};
@@ -841,7 +849,9 @@ void Generator::saveBinary(
     memcpy(binary.data() + table->text_offset, code.data(), table->text_size);
     auto view = std::views::all(binary);
     header->checksum = utils::swapBytes(utils::adler32(std::move(view)));
-    _ctx.setBytecode(std::move(binary), utils::Format::Advb);
+    const auto moduleNameView = _ctx.getString(_ctx.rootModule());
+    const std::string moduleName{moduleNameView.data(), moduleNameView.length()};
+    _ctx.setBytecode(moduleName, std::move(binary), utils::Format::Advb);
 }
 
 } // namespace adv

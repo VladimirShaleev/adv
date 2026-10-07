@@ -29,12 +29,12 @@ public:
     [[nodiscard]] adv_node_t* root(const std::string& module = {}) noexcept;
     [[nodiscard]] vm_string_h rootModule() const noexcept;
 
-    [[nodiscard]] const std::vector<adv_uint8_t>& bytecode() const noexcept { return _bytecode; }
+    [[nodiscard]] const std::vector<adv_uint8_t>& bytecode(const std::string& module = {}) const noexcept;
     [[nodiscard]] adv_uint16_t rootFrameSlots() const noexcept { return _rootFrameSlots; }
 
-    [[nodiscard]] utils::Format codeFormat() const noexcept { return _codeFormat; }
+    [[nodiscard]] utils::Format codeFormat(const std::string& module = {}) const noexcept;
 
-    [[nodiscard]] vm_string_h findFilenameByPath(const std::filesystem::path& path) const noexcept;
+    [[nodiscard]] vm_string_h findFilenameByPath(const std::filesystem::path& path) noexcept;
 
     [[nodiscard]] std::filesystem::path getBasePath(const std::string& module) const noexcept;
 
@@ -44,10 +44,8 @@ public:
 
     void setNodeTree(const std::filesystem::path& path, adv_node_t* root);
 
-    void setBytecode(std::vector<adv_uint8_t>&& bytecode, utils::Format format) noexcept {
-        _bytecode = std::move(bytecode);
-        _codeFormat = format;
-    }
+    void
+    setBytecode(const std::filesystem::path& path, std::vector<adv_uint8_t>&& bytecode, utils::Format format) noexcept;
 
     void setRootFrameSlots(adv_uint16_t slots) noexcept { _rootFrameSlots = slots; }
 
@@ -90,21 +88,17 @@ private:
         return std::format("{}:{}:{}", getString(loc.filename), loc.line, loc.column);
     }
 
-    [[nodiscard]] static std::string getModuleName(const std::filesystem::path& path) {
-        return path.filename().replace_extension().string();
-    }
-
     struct Import {
         adv_node_t* root{};
         std::filesystem::path filename{};
         std::filesystem::path basePath{};
+        std::vector<adv_uint8_t> bytecode{};
+        utils::Format format{};
     };
 
     bool _hasNotes{};
     bool _hasWarnings{};
     bool _hasErrors{};
-    std::vector<adv_uint8_t> _bytecode{};
-    utils::Format _codeFormat{};
     adv_uint16_t _rootFrameSlots{};
     utils::StringPool _strPool{};
     std::vector<std::vector<adv_node_t>> _nodes{};

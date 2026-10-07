@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <new>
@@ -34,6 +35,36 @@
 #include <vm/vm-types.h>
 
 namespace utils {
+
+UTILS_FORCE_INLINE void trim(std::string& s, char ch) {
+    auto start = s.find_first_not_of(ch);
+    if (start == std::string::npos) {
+        s.clear();
+        return;
+    }
+    auto end = s.find_last_not_of(ch);
+    s = s.substr(start, end - start + 1);
+}
+
+[[nodiscard]] UTILS_FORCE_INLINE std::string getModuleName(const std::filesystem::path& filename) {
+    const auto filenameStr = filename.filename().replace_extension().string();
+    if (filenameStr.empty()) {
+        return filenameStr;
+    }
+    std::string name;
+    name.reserve(filenameStr.length());
+    char prevCh = '\0';
+    for (const char ch : filenameStr) {
+        if (std::isalnum(ch)) {
+            name.push_back(std::tolower(ch));
+        } else if (prevCh != '_') {
+            name.push_back('_');
+        }
+        prevCh = name.back();
+    }
+    trim(name, '_');
+    return name;
+}
 
 template <typename AliasedType, typename Type>
 [[nodiscard]] UTILS_FORCE_INLINE AliasedType aliasCast(Type ptr) noexcept {
