@@ -74,7 +74,7 @@ private:
         _threadHandles.push_back(handle);
         thread->state = ThreadState::Running;
         thread->script = script;
-        thread->stackPos = utils::read<vm_script_table_t>(_moduleManager.getModule(script)).root_frame_slots;
+        thread->stackPos = utils::read<vm_script_export_t>(_moduleManager.getModule(script)).root_frame_slots;
         thread->frameCount = 1;
     }
 

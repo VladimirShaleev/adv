@@ -89,7 +89,6 @@ template <typename AliasedType, typename Type>
     result.data_size = swapBytes(result.data_size);
     result.text_offset = swapBytes(result.text_offset);
     result.text_size = swapBytes(result.text_size);
-    result.root_frame_slots = swapBytes(result.root_frame_slots);
     return result;
 }
 
@@ -98,6 +97,8 @@ template <typename AliasedType, typename Type>
         return exportTable;
     }
     auto result = exportTable;
+    result.module_name = swapBytes(result.module_name);
+    result.root_frame_slots = swapBytes(result.root_frame_slots);
     result.var_count = swapBytes(result.var_count);
     result.var_size = swapBytes(result.var_size);
     result.func_count = swapBytes(result.func_count);

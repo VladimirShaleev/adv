@@ -54,7 +54,6 @@ typedef struct
     vm_uint32_t data_size; /**< Size in bytes of the string data block. */
     vm_uint32_t text_offset; /**< Byte offset of the bytecode block. */
     vm_uint32_t text_size; /**< Size in bytes of the bytecode block. */
-    vm_uint16_t root_frame_slots; /**< Frame slot count for the top-level script scope */
 } VM_PACKED_ATTR vm_script_table_t;
 
 /**
@@ -66,6 +65,8 @@ typedef struct
  */
 typedef struct
 {
+    vm_uint32_t module_name;
+    vm_uint16_t root_frame_slots;
     vm_uint16_t var_count; /**< Number of exported variables. */
     vm_uint16_t var_size; /**< Size in bytes of the variable export block. */
     vm_uint16_t func_count; /**< Number of exported functions. */
@@ -106,7 +107,7 @@ typedef struct
     vm_uint16_t frame_slot_count; /**< Number of slots reserved for the function frame. */
     vm_uint8_t  return_type; /**< Type code returned by the function. */
     vm_uint8_t  param_count; /**< Number of parameters expected by the function. */
-    /* vm_script_export_var_t params[param_count]; */
+    /* vm_script_export_param_t params[param_count]; */
 } VM_PACKED_ATTR vm_script_export_func_t;
 
 VM_PACKED_END

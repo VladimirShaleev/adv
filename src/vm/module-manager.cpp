@@ -107,8 +107,9 @@ void ModuleManager::modifyOpcode(
 }
 
 std::string_view ModuleManager::getModuleName(std::span<const vm_uint8_t> bytecode) noexcept {
+    auto name = utils::read<vm_script_export_t>(bytecode).module_name;
     auto data = utils::read<utils::SectionData>(bytecode).data;
-    return utils::readString(0, data);
+    return utils::readString(name, data);
 }
 
 std::span<const vm_char_t>

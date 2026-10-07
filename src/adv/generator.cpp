@@ -397,13 +397,11 @@ adv_result_t Generator::gen() {
     if (_ctx.bytecode().empty()) {
         std::unordered_map<vm_string_h, adv_uint32_t> strings;
         std::map<adv_symbol_h, adv_uint32_t> functions;
-        std::vector<uint8_t> stub;
         std::vector<uint8_t> exportTable;
         std::vector<uint8_t> exportVar;
         std::vector<uint8_t> exportFunc;
         std::vector<uint8_t> data;
         std::vector<uint8_t> code;
-        Emitter(_ctx, strings, data, stub).emitString(_ctx.rootModule());
         Emitter emitterCode(_ctx, strings, data, code);
         Emitter emitterExportVar(_ctx, strings, data, exportVar);
         Emitter emitterExportFunc(_ctx, strings, data, exportFunc, &functions);
@@ -415,6 +413,8 @@ adv_result_t Generator::gen() {
             std::ref(emitterExportVar),
             std::ref(emitterExportFunc));
         Emitter emitterExport(_ctx, strings, data, exportTable);
+        emitterExport.emitString(_ctx.rootModule());
+        emitterExport.emitUint16(_ctx.rootFrameSlots());
         emitterExport.emitUint16(emitterExportVar.count);
         emitterExport.emitUint16(static_cast<adv_uint16_t>(exportVar.size()));
         emitterExport.emitUint16(emitterExportFunc.count);
@@ -458,15 +458,10 @@ adv_result_t Generator::text() {
         return ""sv;
     };
 
-    auto moduleName = utils::readString(0, data);
     constexpr std::string_view tab = "    "sv;
     std::cout << ".header"sv << std::endl;
     std::cout << tab << "format: ADVT"sv << std::endl;
-    if (!moduleName.empty()) {
-        std::cout << tab << "module: "sv << moduleName << std::endl;
-    }
     std::cout << tab << "version: "sv << VM_VERSION_STRING << std::endl;
-    std::cout << tab << "root_slots: "sv << _ctx.rootFrameSlots() << std::endl;
 
     std::set<std::string> identifiers;
     identifiers.insert("true");
@@ -499,47 +494,47 @@ adv_result_t Generator::text() {
 
     std::unordered_map<std::string_view, adv_uint32_t> functions;
     const auto exports = utils::read<vm_script_export_t>(bytecode);
-    if (exports.var_count > 0 || exports.func_count > 0) {
-        std::cout << std::endl << ".export"sv << std::endl;
-        for (size_t i = 0; i < exports.var_count; ++i) {
-            const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
+    const auto moduleName = utils::readString(exports.module_name, data);
+    std::cout << std::endl << ".export"sv << std::endl;
+    std::cout << tab << "module "sv << moduleName << " "sv << exports.root_frame_slots << std::endl;
+    for (size_t i = 0; i < exports.var_count; ++i) {
+        const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
+        const auto name = utils::readString(var.name, data);
+        const auto type = readType(var.type);
+        if (type.empty()) {
+            return ADV_RESULT_ERROR_INVALID_ARG;
+        }
+        std::cout << tab << "var "sv << name << ": "sv << type << std::endl;
+        if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+            return ADV_RESULT_ERROR_INVALID_ARG;
+        }
+    }
+    for (size_t i = 0; i < exports.func_count; ++i) {
+        const auto fun = utils::read<vm_script_export_func_t>(bytecode, i);
+        const auto name = utils::readString(fun.name, data);
+        const auto ret = readType(fun.return_type);
+        std::cout << tab << "function "sv << name << '(';
+        for (size_t p = 0; p < fun.param_count; ++p) {
+            const auto var = utils::read<vm_script_export_param_t>(bytecode, i, p);
             const auto name = utils::readString(var.name, data);
             const auto type = readType(var.type);
             if (type.empty()) {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
-            std::cout << tab << "var "sv << name << ": "sv << type << std::endl;
-            if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
-                return ADV_RESULT_ERROR_INVALID_ARG;
+            if (p > 0) {
+                std::cout << ", "sv;
             }
+            std::cout << name << ": "sv << type;
         }
-        for (size_t i = 0; i < exports.func_count; ++i) {
-            const auto fun = utils::read<vm_script_export_func_t>(bytecode, i);
-            const auto name = utils::readString(fun.name, data);
-            const auto ret = readType(fun.return_type);
-            std::cout << tab << "function "sv << name << '(';
-            for (size_t p = 0; p < fun.param_count; ++p) {
-                const auto var = utils::read<vm_script_export_param_t>(bytecode, i, p);
-                const auto name = utils::readString(var.name, data);
-                const auto type = readType(var.type);
-                if (type.empty()) {
-                    return ADV_RESULT_ERROR_INVALID_ARG;
-                }
-                if (p > 0) {
-                    std::cout << ", "sv;
-                }
-                std::cout << name << ": "sv << type;
-            }
-            std::cout << ')';
-            if (!ret.empty()) {
-                std::cout << ": "sv << ret;
-            }
-            std::cout << ' ' << fun.frame_slot_count << std::endl;
-            if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
-                return ADV_RESULT_ERROR_INVALID_ARG;
-            }
-            functions[name] = fun.text_offset;
+        std::cout << ')';
+        if (!ret.empty()) {
+            std::cout << ": "sv << ret;
         }
+        std::cout << ' ' << fun.frame_slot_count << std::endl;
+        if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+            return ADV_RESULT_ERROR_INVALID_ARG;
+        }
+        functions[name] = fun.text_offset;
     }
 
     struct Id {
@@ -839,7 +834,6 @@ void Generator::saveBinary(
     table->data_size = static_cast<adv_uint32_t>(data.size());
     table->text_offset = table->data_offset + table->data_size;
     table->text_size = static_cast<adv_uint32_t>(code.size());
-    table->root_frame_slots = _ctx.rootFrameSlots();
     *header = utils::swapBytes(*header);
     *table = utils::swapBytes(*table);
     memcpy(binary.data() + table->export_offset, exportTable.data(), table->export_size);
