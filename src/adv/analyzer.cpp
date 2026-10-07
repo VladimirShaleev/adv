@@ -166,12 +166,12 @@ void Analyzer::resolveSymbols() {
             const auto data = utils::read<utils::SectionData>(bytecode).data;
             const auto exports = utils::read<vm_script_export_t>(bytecode);
             const auto moduleName = ctx.intern(utils::readString(exports.module_name, data));
+            const auto location = adv_location_t{moduleName, 0, 0};
             for (adv_uint32_t i = 0; i < exports.var_count; ++i) {
                 const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
-                const auto loc = adv_location_t{moduleName, 0, 0};
                 adv_node_t node{
                     ADV_NODE_VAR_DECL,
-                    loc,
+                    location,
                     static_cast<vm_value_type_t>(var.type),
                 };
                 node.var_decl.name = ctx.intern(utils::readString(var.name, data));
@@ -179,8 +179,40 @@ void Analyzer::resolveSymbols() {
                 node.var_decl.is_global = 1;
                 symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
             }
+            std::vector<adv_node_t> params;
+            params.reserve(16);
             for (adv_uint32_t i = 0; i < exports.func_count; ++i) {
-                // TODO
+                params.clear();
+                const auto func = utils::read<vm_script_export_func_t>(bytecode, i);
+                adv_node_t node{
+                    ADV_NODE_FUNCTION_DECL,
+                    location,
+                    static_cast<vm_value_type_t>(func.return_type),
+                };
+                for (adv_uint32_t j = 0; j < func.param_count; ++j) {
+                    const auto param = utils::read<vm_script_export_param_t>(bytecode, i, j);
+                    auto& nodeParam = params.emplace_back(
+                        ADV_NODE_PARAM_DECL, location, static_cast<vm_value_type_t>(param.type), &node);
+                    nodeParam.param_decl.name = ctx.intern(utils::readString(param.name, data));
+                    nodeParam.var_decl.type_hint = static_cast<vm_string_h>(nodeParam.resolved_type);
+                }
+                node.func_decl.name = ctx.intern(utils::readString(func.name, data));
+                node.func_decl.return_type_hint = static_cast<vm_string_h>(node.resolved_type);
+                node.func_decl.param_count = static_cast<adv_uint32_t>(params.size());
+                if (!params.empty()) {
+                    node.func_decl.first_param = &params.front();
+                    auto prevIt = params.begin();
+                    for (auto it = params.begin() + 1; it != params.end(); ++it) {
+                        prevIt->next_sibling = &(*it);
+                        prevIt = it;
+                    }
+                }
+                symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
+                symbolTable.beginScope();
+                for (auto& param : params) {
+                    symbolTable.addSymbol(options, ctx, &param)->type = param.resolved_type;
+                }
+                symbolTable.endScope();
             }
         }
 
