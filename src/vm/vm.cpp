@@ -23,7 +23,7 @@ public:
     vm_script_h loadScript(vm_script_h handle, bool forceLoad) noexcept {
         auto module = _moduleManager.getModule(handle);
         if (forceLoad) {
-            _globalManager.addGlobals(module);
+            _globalManager.addGlobals(handle, module);
         }
         createThread(handle);
         return handle;
@@ -86,6 +86,11 @@ private:
             switch (opcode) {
             case VM_OPCODE_NO_OPERATION:
                 break;
+            case VM_OPCODE_IMPORT: {
+                const auto view = utils::readString(text, thread->instructionPos, data);
+                // TODO: implement
+                break;
+            }
             case VM_OPCODE_PUSH_TRUE:
                 thread->stack[thread->stackPos++] = valueFromBool(true);
                 break;
@@ -117,10 +122,10 @@ private:
             }
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
-                if (auto slot = _globalManager.resolveOffset(name)) {
+                if (auto slot = _globalManager.resolveVarSlot(name)) {
                     _moduleManager.modifyOpcode(
                         thread->script, thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.value());
-                    thread->stack[thread->stackPos++] = _globalManager.global(slot.value());
+                    thread->stack[thread->stackPos++] = _globalManager.globalVar(slot.value());
                 } else {
                     // TODO: log
                 }
@@ -128,7 +133,7 @@ private:
             }
             case VM_OPCODE_PUSH_GLOBAL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
-                thread->stack[thread->stackPos++] = _globalManager.global(slot);
+                thread->stack[thread->stackPos++] = _globalManager.globalVar(slot);
                 break;
             }
             case VM_OPCODE_PUSH_LOCAL: {
@@ -140,10 +145,10 @@ private:
             }
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
-                if (auto slot = _globalManager.resolveOffset(name)) {
+                if (auto slot = _globalManager.resolveVarSlot(name)) {
                     _moduleManager.modifyOpcode(
                         thread->script, thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.value());
-                    _globalManager.global(slot.value()) = thread->stack[--thread->stackPos];
+                    _globalManager.globalVar(slot.value()) = thread->stack[--thread->stackPos];
                 } else {
                     // TODO: log
                 }
@@ -151,7 +156,7 @@ private:
             }
             case VM_OPCODE_POP_GLOBAL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
-                _globalManager.global(slot) = thread->stack[--thread->stackPos];
+                _globalManager.globalVar(slot) = thread->stack[--thread->stackPos];
                 break;
             }
             case VM_OPCODE_POP_LOCAL: {
@@ -163,7 +168,7 @@ private:
                 break;
             }
             case VM_OPCODE_POP:
-                // TODO: It is unlikely that this opcode is needed at all.
+                thread->stack[--thread->stackPos];
                 break;
             case VM_OPCODE_BOOL_TO_INT:
                 cast<bool, vm_sint32_t>(thread);
@@ -266,12 +271,42 @@ private:
                 break;
             case VM_OPCODE_CALL_NATIVE:
                 break;
-            case VM_OPCODE_CALL_BY_NAME:
+            case VM_OPCODE_CALL_BY_NAME: {
+                const auto name = utils::readString(text, thread->instructionPos, data);
+                if (auto funcOffset = _globalManager.resolveFunc(name)) {
+                    _moduleManager.modifyOpcode(
+                        thread->script, thread->instructionPos - 5, VM_OPCODE_CALL, funcOffset.value());
+                    const auto& func = _globalManager.globalFun(funcOffset.value());
+                    call(thread, func);
+                } else {
+                    // TODO: log
+                }
                 break;
-            case VM_OPCODE_CALL:
+            }
+            case VM_OPCODE_CALL: {
+                const auto funcOffest = utils::readUint32(text, thread->instructionPos);
+                const auto& func = _globalManager.globalFun(funcOffest);
+                call(thread, func);
                 break;
-            case VM_OPCODE_RETURN:
+            }
+            case VM_OPCODE_RETURN: {
+                if (thread->frameCount == 0) {
+                    // log
+                    thread->state = ThreadState::Dead;
+                    return;
+                }
+                vm_value_t retVal;
+                const auto& frame = thread->frames[--thread->frameCount];
+                if (frame.hasReturnValue) {
+                    retVal = thread->stack[--thread->stackPos];
+                }
+                thread->stackPos = frame.baseStackPos;
+                if (frame.hasReturnValue) {
+                    thread->stack[thread->stackPos++] = retVal;
+                }
+                thread->instructionPos = frame.returnInstructionPos;
                 break;
+            }
             case VM_OPCODE_JUMP:
                 thread->instructionPos = utils::readUint32(text, thread->instructionPos);
                 break;
@@ -300,6 +335,22 @@ private:
                 return;
             }
         }
+    }
+
+    void call(ScriptThread* thread, const GlobalManager::Func& func) {
+        if (thread->frameCount >= MaxFrames) {
+            // TODO: add log printf("[VM Error] Call Stack Overflow in thread %d\n", thread->id);
+            thread->state = ThreadState::Dead;
+            return;
+        }
+        auto& frame = thread->frames[thread->frameCount++];
+        frame.returnInstructionPos = thread->instructionPos;
+        frame.argCount = func.paramCount;
+        frame.baseStackPos = thread->stackPos - func.paramCount;
+        frame.hasReturnValue = func.returnType.has_value();
+
+        thread->stackPos = frame.baseStackPos + func.frameSlotCount;
+        thread->instructionPos = func.offset;
     }
 
     template <typename From, typename To>

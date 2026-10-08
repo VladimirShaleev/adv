@@ -15,10 +15,11 @@ enum class ThreadState {
 };
 
 struct CallFrame {
-    vm_uint32_t returnIp;
+    vm_uint32_t returnInstructionPos;
     vm_uint32_t prevScriptId;
     vm_uint32_t argCount;
     vm_uint32_t baseStackPos;
+    bool hasReturnValue;
 };
 
 struct ScriptThreadHandle {

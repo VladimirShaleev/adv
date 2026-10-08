@@ -71,7 +71,6 @@ add_flex_bison_dependency(scanner parser)
 file(GLOB ADV_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.cpp")
-list(FILTER ADV_SOURCES EXCLUDE REGEX "main.cpp")
 add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS})
 add_library(${PROJECT_NAME}::adv ALIAS adv)
 set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
@@ -89,7 +88,7 @@ target_include_directories(adv PUBLIC
     $<INSTALL_INTERFACE:include>)
 
 if(ADV_BUILD_TOOL)
-    add_executable(advc "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/main.cpp")
+    add_executable(advc "${CMAKE_CURRENT_SOURCE_DIR}/src/advc/main.cpp")
     add_executable(${PROJECT_NAME}::advc ALIAS advc)
     set_default_properties(TARGET advc)
     target_link_libraries(advc PRIVATE adv)

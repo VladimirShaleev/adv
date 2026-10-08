@@ -499,6 +499,7 @@ adv_result_t Generator::text() {
     std::unordered_map<std::string_view, adv_uint32_t> functions;
     const auto exports = utils::read<vm_script_export_t>(bytecode);
     const auto moduleName = utils::readString(exports.module_name, data);
+    std::map<adv_uint32_t, std::pair<std::string, bool>> labels;
     std::cout << std::endl << ".export"sv << std::endl;
     std::cout << tab << "module "sv << moduleName << " "sv << exports.root_frame_slots << std::endl;
     for (size_t i = 0; i < exports.var_count; ++i) {
@@ -539,6 +540,7 @@ adv_result_t Generator::text() {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
         functions[name] = fun.text_offset;
+        labels.try_emplace(fun.text_offset, name, true);
     }
 
     struct Id {
@@ -550,7 +552,6 @@ adv_result_t Generator::text() {
         std::variant<std::monostate, adv_sint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id> val;
     };
     std::map<std::string_view, std::pair<size_t, std::string>> strings;
-    std::map<adv_uint32_t, std::pair<std::string, bool>> labels;
     std::vector<Line> codeLines;
     codeLines.reserve(text.size());
     if (!text.empty()) {
@@ -716,8 +717,8 @@ adv_result_t Generator::text() {
             case VM_OPCODE_CALL_BY_NAME: {
                 op = "call"sv;
                 const auto name = utils::readString(text, ip, data);
-                const auto address = functions[name];
-                labels.try_emplace(address, name, true);
+                // const auto address = functions[name];
+                // labels.try_emplace(address, name, true);
                 val = Id{name};
                 break;
             }
