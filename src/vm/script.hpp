@@ -16,7 +16,7 @@ enum class ThreadState {
 
 struct CallFrame {
     vm_uint32_t returnInstructionPos;
-    vm_uint32_t prevScriptId;
+    vm_script_h prevScript;
     vm_uint32_t argCount;
     vm_uint32_t baseStackPos;
     bool hasReturnValue;
@@ -24,6 +24,9 @@ struct CallFrame {
 
 struct ScriptThreadHandle {
     vm_uint16_t handle;
+    [[nodiscard]] bool operator==(ScriptThreadHandle rhs) const noexcept { return handle == rhs.handle; }
+    [[nodiscard]] bool operator!=(ScriptThreadHandle rhs) const noexcept { return handle != rhs.handle; }
+    [[nodiscard]] std::strong_ordering operator<=>(ScriptThreadHandle rhs) const noexcept { return handle <=> rhs.handle; }
 };
 
 struct ScriptThread {
@@ -33,11 +36,14 @@ struct ScriptThread {
     vm_script_h script;
     vm_uint32_t instructionPos;
     vm_uint32_t waitTicks;
+    ScriptThreadHandle waitThread;
     vm_uint32_t stackPos;
     vm_uint32_t frameCount;
     vm_value_t stack[StackSize];
     CallFrame frames[MaxFrames];
 };
+
+using ScriptThreadPool = utils::Pool<ScriptThread>;
 
 } // namespace vm
 

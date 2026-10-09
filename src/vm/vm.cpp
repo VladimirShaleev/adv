@@ -20,31 +20,104 @@ public:
         }
     }
 
-    vm_script_h loadScript(vm_script_h handle, bool forceLoad) noexcept {
-        auto module = _moduleManager.getModule(handle);
-        if (forceLoad) {
-            _globalManager.addGlobals(handle, module);
+    std::pair<vm_script_h, ScriptThreadHandle> loadScript(vm_script_h handle, bool forceLoad) noexcept {
+        auto thread = ScriptThreadPool::Undefined;
+        if (handle != UndefinedScript) {
+            auto module = _moduleManager.getModule(handle);
+            if (forceLoad) {
+                _globalManager.addGlobals(handle, module.bytecode());
+            }
+            thread = createThread(handle);
         }
-        createThread(handle);
-        return handle;
+        return {handle, thread};
     }
 
-    [[nodiscard]] vm_script_h loadScriptFromMemory(std::span<const vm_char_t> code, bool forceLoad) noexcept {
+    [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle>
+    loadScriptFromMemory(std::span<const vm_char_t> code, bool forceLoad) noexcept {
         auto [script, loaded] = _moduleManager.loadScript(code, forceLoad);
-        loadScript(script, loaded);
-        return script;
+        return loadScript(script, loaded);
     }
 
-    [[nodiscard]] vm_script_h loadScriptFromFile(vm_utf8_t file, bool forceLoad) noexcept {
-        auto [script, loaded] = _moduleManager.loadScript(file, forceLoad);
-        loadScript(script, loaded);
-        return script;
+    [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle>
+    loadScriptFromFile(vm_utf8_t file, bool forceLoad) noexcept {
+        auto [script, loaded] = _moduleManager.loadScript(file, _importDirs, forceLoad);
+        return loadScript(script, loaded);
+    }
+
+    void getImportDirs(vm_uint32_t& dirCount, vm_utf8_t* dirs) {
+        if (dirs) {
+            dirCount = std::min(dirCount, static_cast<vm_uint32_t>(_importStrDirs.size()));
+            for (vm_uint32_t i = 0; i < dirCount; ++i) {
+                dirs[i] = _importStrDirs[i].c_str();
+            }
+        } else {
+            dirCount = (vm_uint32_t)_importStrDirs.size();
+        }
+    }
+
+    void setImportDirs(std::span<const vm_utf8_t> dirs) {
+        _importDirs.clear();
+        _importDirs.reserve(dirs.size());
+        std::copy(dirs.begin(), dirs.end(), std::back_inserter(_importDirs));
+        for (auto& dir : _importDirs) {
+            dir.make_preferred();
+        }
+
+        _importStrDirs.clear();
+        _importStrDirs.reserve(_importDirs.size());
+        for (const auto& dir : _importDirs) {
+            _importStrDirs.emplace_back(dir.string());
+        }
+    }
+
+    [[nodiscard]] vm_import_callback_t getImporter(vm_data_t* data) {
+        if (data) {
+            *data = _importerData;
+        }
+        return _importer;
+    }
+
+    void setImporter(vm_import_callback_t callback, vm_data_t data) {
+        if (callback) {
+            _importer = callback;
+            _importerData = data;
+        } else {
+            _importer = nullptr;
+            _importerData = nullptr;
+        }
+    }
+
+    [[nodiscard]] vm_release_import_callback_t getReleaseImport(vm_data_t* data) {
+        if (data) {
+            *data = _releaseImportData;
+        }
+        return _releaseImport;
+    }
+
+    void setReleaseImport(vm_release_import_callback_t callback, vm_data_t data) {
+        if (callback) {
+            _releaseImport = callback;
+            _releaseImportData = data;
+        } else {
+            _releaseImport = nullptr;
+            _releaseImportData = nullptr;
+        }
     }
 
     void tick() {
         for (size_t i = 0; i < _threadHandles.size();) {
-            auto thread = _threads.access(_threadHandles[i++]);
+            auto handle = _threadHandles[i++];
+            auto thread = _threads.access(handle);
             if (thread->state == ThreadState::Dead) {
+                for (size_t j = 0; j < _threadHandles.size(); ++j) {
+                    if (j != i) {
+                        auto otherThread = _threads.access(_threadHandles[j]);
+                        if (otherThread->waitThread == handle) {
+                            otherThread->waitThread = ScriptThreadPool::Undefined;
+                            otherThread->state = ThreadState::Running;
+                        }
+                    }
+                }
                 _threads.release(_threadHandles[--i]);
                 if (_threadHandles.size() > 1) {
                     _threadHandles[i] = _threadHandles.back();
@@ -56,7 +129,12 @@ public:
                 if (thread->waitTicks > 0) {
                     thread->waitTicks--; // TODO use elapsed, thread->waitTicks -= std::min(thread->waitTicks, elapsed);
                 }
-                if (thread->waitTicks == 0) {
+                if (thread->waitTicks == 0 && thread->waitThread == ScriptThreadPool::Undefined) {
+                    thread->state = ThreadState::Running;
+                } else if (
+                    thread->waitThread != ScriptThreadPool::Undefined &&
+                    _threads.access(thread->waitThread)->state == ThreadState::Dead) {
+                    thread->waitThread = ScriptThreadPool::Undefined;
                     thread->state = ThreadState::Running;
                 } else {
                     continue;
@@ -69,18 +147,21 @@ public:
     }
 
 private:
-    void createThread(vm_script_h script) {
+    ScriptThreadHandle createThread(vm_script_h script) {
         auto [handle, thread] = _threads.obtainAndAccess();
         _threadHandles.push_back(handle);
+        auto bytecode = _moduleManager.getModule(script).bytecode();
         thread->state = ThreadState::Running;
         thread->script = script;
-        thread->stackPos = utils::read<vm_script_export_t>(_moduleManager.getModule(script)).root_frame_slots;
+        thread->stackPos = utils::read<vm_script_export_t>(bytecode).root_frame_slots;
         thread->frameCount = 1;
+        return handle;
     }
 
     void stepThread(ScriptThread* thread) {
-        auto text = utils::read<utils::SectionText>(_moduleManager.getModule(thread->script)).text;
-        auto data = utils::read<utils::SectionData>(_moduleManager.getModule(thread->script)).data;
+        auto* module = &_moduleManager.getModule(thread->script);
+        auto text = module->text();
+        auto data = module->data();
         while (thread->state == ThreadState::Running && thread->instructionPos < text.size()) {
             const auto opcode = static_cast<vm_opcode_t>(text[thread->instructionPos++]);
             switch (opcode) {
@@ -88,7 +169,16 @@ private:
                 break;
             case VM_OPCODE_IMPORT: {
                 const auto view = utils::readString(text, thread->instructionPos, data);
-                // TODO: implement
+                if (!_moduleManager.hasModule(view)) {
+                    const auto waitThread = import(view);
+                    module = &_moduleManager.getModule(thread->script);
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_NO_OPERATION, 0);
+                    if (waitThread != ScriptThreadPool::Undefined) {
+                        thread->state = ThreadState::Waiting;
+                        thread->waitThread = waitThread;
+                        return;
+                    }
+                }
                 break;
             }
             case VM_OPCODE_PUSH_TRUE:
@@ -110,8 +200,7 @@ private:
             case VM_OPCODE_PUSH_STRING_FROM_DATA: {
                 const auto view = utils::readString(text, thread->instructionPos, data);
                 const auto str = _cache.pool.insert(view);
-                _moduleManager.modifyOpcode(
-                    thread->script, thread->instructionPos - 5, VM_OPCODE_PUSH_STRING, str.handle);
+                module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_PUSH_STRING, str.handle);
                 thread->stack[thread->stackPos++] = valueFromString({str});
                 break;
             }
@@ -123,8 +212,7 @@ private:
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveVarSlot(name)) {
-                    _moduleManager.modifyOpcode(
-                        thread->script, thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.value());
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.value());
                     thread->stack[thread->stackPos++] = _globalManager.globalVar(slot.value());
                 } else {
                     // TODO: log
@@ -146,8 +234,7 @@ private:
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveVarSlot(name)) {
-                    _moduleManager.modifyOpcode(
-                        thread->script, thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.value());
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.value());
                     _globalManager.globalVar(slot.value()) = thread->stack[--thread->stackPos];
                 } else {
                     // TODO: log
@@ -274,10 +361,11 @@ private:
             case VM_OPCODE_CALL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto funcOffset = _globalManager.resolveFunc(name)) {
-                    _moduleManager.modifyOpcode(
-                        thread->script, thread->instructionPos - 5, VM_OPCODE_CALL, funcOffset.value());
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL, funcOffset.value());
                     const auto& func = _globalManager.globalFun(funcOffset.value());
-                    call(thread, func);
+                    call(thread, func, module);
+                    text = module->text();
+                    data = module->data();
                 } else {
                     // TODO: log
                 }
@@ -286,7 +374,9 @@ private:
             case VM_OPCODE_CALL: {
                 const auto funcOffest = utils::readUint32(text, thread->instructionPos);
                 const auto& func = _globalManager.globalFun(funcOffest);
-                call(thread, func);
+                call(thread, func, module);
+                text = module->text();
+                data = module->data();
                 break;
             }
             case VM_OPCODE_RETURN: {
@@ -300,11 +390,14 @@ private:
                 if (frame.hasReturnValue) {
                     retVal = thread->stack[--thread->stackPos];
                 }
+                swapScript(thread, frame.prevScript, module);
                 thread->stackPos = frame.baseStackPos;
                 if (frame.hasReturnValue) {
                     thread->stack[thread->stackPos++] = retVal;
                 }
                 thread->instructionPos = frame.returnInstructionPos;
+                text = module->text();
+                data = module->data();
                 break;
             }
             case VM_OPCODE_JUMP:
@@ -337,7 +430,26 @@ private:
         }
     }
 
-    void call(ScriptThread* thread, const GlobalManager::Func& func) {
+    ScriptThreadHandle import(std::string_view moduleName) {
+        std::pair<vm_script_h, ScriptThreadHandle> result{};
+        if (_importer) {
+            if (auto bytecode = _importer(moduleName.data(), _importerData)) {
+                result = loadScriptFromMemory({bytecode->data, bytecode->size}, false);
+                if (_releaseImport) {
+                    _releaseImport(bytecode, _releaseImportData);
+                }
+            }
+        }
+        if (result.first.handle == 0) {
+            result = loadScriptFromFile(moduleName.data(), false);
+        }
+        if (result.first.handle == 0) {
+            // TODO: log
+        }
+        return result.second;
+    }
+
+    void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module) {
         if (thread->frameCount >= MaxFrames) {
             // TODO: add log printf("[VM Error] Call Stack Overflow in thread %d\n", thread->id);
             thread->state = ThreadState::Dead;
@@ -345,12 +457,21 @@ private:
         }
         auto& frame = thread->frames[thread->frameCount++];
         frame.returnInstructionPos = thread->instructionPos;
+        frame.prevScript = thread->script;
         frame.argCount = func.paramCount;
         frame.baseStackPos = thread->stackPos - func.paramCount;
         frame.hasReturnValue = func.returnType.has_value();
 
+        swapScript(thread, func.script, module);
         thread->stackPos = frame.baseStackPos + func.frameSlotCount;
         thread->instructionPos = func.offset;
+    }
+
+    void swapScript(ScriptThread* thread, vm_script_h script, Module*& module) noexcept {
+        if (thread->script != script) {
+            module = &_moduleManager.getModule(script);
+            thread->script = script;
+        }
     }
 
     template <typename From, typename To>
@@ -421,10 +542,17 @@ private:
         return {};
     }
 
+    std::vector<std::string> _importStrDirs{};
+    std::vector<std::filesystem::path> _importDirs{};
+    vm_import_callback_t _importer{};
+    vm_release_import_callback_t _releaseImport{};
+    vm_data_t _importerData{};
+    vm_data_t _releaseImportData{};
+
     ModuleManager _moduleManager;
     GlobalManager _globalManager;
     Cache _cache;
-    utils::Pool<ScriptThread> _threads;
+    ScriptThreadPool _threads;
     std::vector<ScriptThreadHandle> _threadHandles;
 };
 
@@ -574,15 +702,51 @@ void vm_destroy(vm_t vm) {
 }
 
 vm_script_h vm_load_script(vm_t vm, vm_script_h handle) {
-    return vm ? vm->as<vm::VM>()->loadScript(handle, false) : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScript(handle, false).first : vm_script_h{};
 }
 
 vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
-    return vm ? vm->as<vm::VM>()->loadScriptFromFile(file, true) : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScriptFromFile(file, true).first : vm_script_h{};
 }
 
 vm_script_h vm_load_script_from_memory(vm_t vm, const vm_char_t* code, vm_uint32_t code_size) {
-    return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}, true) : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}, true).first : vm_script_h{};
+}
+
+void vm_get_import_dirs(vm_t vm, vm_uint32_t* dir_count, vm_utf8_t* dirs) {
+    if (dir_count) {
+        if (vm) {
+            vm->as<vm::VM>()->getImportDirs(*dir_count, dirs);
+        } else {
+            *dir_count = 0;
+        }
+    }
+}
+
+void vm_set_import_dirs(vm_t vm, vm_uint32_t dir_count, const vm_utf8_t* dirs) {
+    if (vm) {
+        vm->as<vm::VM>()->setImportDirs({dirs, dir_count});
+    }
+}
+
+vm_import_callback_t vm_get_importer(vm_t vm, vm_data_t* data) {
+    return vm ? vm->as<vm::VM>()->getImporter(data) : nullptr;
+}
+
+void vm_set_importer(vm_t vm, vm_import_callback_t callback, vm_data_t data) {
+    if (vm) {
+        vm->as<vm::VM>()->setImporter(callback, data);
+    }
+}
+
+vm_release_import_callback_t vm_get_release_import(vm_t vm, vm_data_t* data) {
+    return vm ? vm->as<vm::VM>()->getReleaseImport(data) : nullptr;
+}
+
+void vm_set_release_import(vm_t vm, vm_release_import_callback_t callback, vm_data_t data) {
+    if (vm) {
+        vm->as<vm::VM>()->setReleaseImport(callback, data);
+    }
 }
 
 void vm_tick(vm_t vm) {

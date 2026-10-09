@@ -66,6 +66,62 @@ UTILS_FORCE_INLINE void trim(std::string& s, char ch) {
     return name;
 }
 
+[[nodiscard]] UTILS_FORCE_INLINE std::filesystem::path matchFile(const std::filesystem::path& file) {
+    using namespace std::literals;
+    const auto isRegularFile = [](const std::filesystem::path& path) {
+        std::error_code error{};
+        return std::filesystem::is_regular_file(path, error);
+    };
+    const auto isDirectory = [](const std::filesystem::path& path) {
+        std::error_code error{};
+        return std::filesystem::is_directory(path, error);
+    };
+    auto fullpath = file;
+    fullpath.make_preferred();
+    if (isRegularFile(fullpath)) {
+        return fullpath;
+    }
+    auto actualDir = fullpath.parent_path();
+    if (isDirectory(actualDir)) {
+        const auto expectedModule = utils::getModuleName(fullpath);
+        std::error_code error{};
+        for (const auto& entry : std::filesystem::directory_iterator(actualDir, error)) {
+            if (isRegularFile(entry)) {
+                auto actualModule = utils::getModuleName(entry.path());
+                if (actualModule == expectedModule) {
+                    auto actualPath = entry.path();
+                    auto actualExt = entry.path().extension().string();
+                    std::string_view extView = actualExt;
+                    for (const auto ext : {extView, ""sv, "adb"sv, "advb"sv, "adt"sv, "advt"sv, "adv"sv}) {
+                        actualPath.replace_extension(ext);
+                        if (isRegularFile(actualPath)) {
+                            return actualPath;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return {};
+}
+
+[[nodiscard]] UTILS_FORCE_INLINE std::filesystem::path findFile(
+    const std::filesystem::path& file,
+    const std::span<const std::filesystem::path> dirs) {
+    if (file.empty()) {
+        return {};
+    }
+    if (file.is_absolute()) {
+        return matchFile(file);
+    }
+    for (const auto& dir : dirs) {
+        if (auto result = matchFile(dir / file); !result.empty()) {
+            return result;
+        }
+    }
+    return {};
+}
+
 template <typename AliasedType, typename Type>
 [[nodiscard]] UTILS_FORCE_INLINE AliasedType aliasCast(Type ptr) noexcept {
     static_assert(std::is_pointer_v<AliasedType>, "AliasedType must be a pointer");

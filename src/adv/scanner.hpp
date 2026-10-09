@@ -160,35 +160,21 @@ private:
         const std::filesystem::path& basePath,
         adv_uint32_t depth,
         const Options& options) {
-        using namespace std::literals;
-
-        if (file.empty() && !sources.empty()) {
-            auto& source = sources.front();
-            return {source.name, &source, false};
-        }
-
         auto filename = normalize(file, basePath);
-        auto name = filename.string();
+        auto moduelName = utils::getModuleName(filename);
 
         adv_data_t data{};
         if (auto importer = options.getImporter(&data)) {
-            if (auto source = importer(name.c_str(), depth, data)) {
+            if (auto source = importer(moduelName.c_str(), depth, data)) {
                 return {filename, source, true};
             }
         }
 
         for (const auto& source : sources) {
             auto sourceName = normalize(source.name, basePath);
-            if (filename == sourceName) {
-                return {name, &source, false};
+            if (moduelName == utils::getModuleName(sourceName)) {
+                return {moduelName, &source, false};
             }
-        }
-
-        if (file.is_absolute()) {
-            if (!std::filesystem::exists(file) || !std::filesystem::is_regular_file(file)) {
-                return {{}, nullptr, false};
-            }
-            return {file, nullptr, false};
         }
 
         std::vector<std::filesystem::path> importDirs{};
@@ -202,39 +188,7 @@ private:
         for (const auto dir : dirs) {
             importDirs.push_back(dir);
         }
-
-        for (const auto base : importDirs) {
-            auto fullpath = base / file;
-            fullpath.make_preferred();
-            if (std::filesystem::exists(fullpath) && std::filesystem::is_regular_file(fullpath)) {
-                return {fullpath, nullptr, false};
-            }
-            auto searchDir = fullpath.parent_path();
-            try {
-                if (std::filesystem::exists(searchDir) && std::filesystem::is_directory(searchDir)) {
-                    const auto targetModule = utils::getModuleName(file);
-                    for (const auto& entry : std::filesystem::directory_iterator(searchDir)) {
-                        if (entry.is_regular_file()) {
-                            auto entryModule = utils::getModuleName(entry.path());
-                            if (entryModule == targetModule) {
-                                auto entryFile = entry.path();
-                                auto firstExt = entry.path().extension().string();
-                                std::string_view extView = firstExt;
-                                for (const auto ext : {extView, ""sv, "adb"sv, "advb"sv, "adt"sv, "advt"sv, "adv"sv}) {
-                                    entryFile.replace_extension(ext);
-                                    if (std::filesystem::exists(entryFile) &&
-                                        std::filesystem::is_regular_file(entryFile)) {
-                                        return {entryFile, nullptr, false};
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (const std::filesystem::filesystem_error&) {
-            }
-        }
-        return {{}, nullptr, false};
+        return {utils::findFile(file, importDirs), nullptr, false};
     }
 
     [[nodiscard]] bool readBytecode(const adv_source_t* source, const std::filesystem::path& filename) noexcept {

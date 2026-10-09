@@ -57,6 +57,20 @@ typedef enum
     VM_RESULT_MAX_ENUM            = 0x7FFFFFFF /**< Max value of enum (not used) */
 } vm_result_t;
 
+typedef struct
+{
+    const vm_char_t* data;
+    vm_uint32_t      size;
+} vm_bytecode_t;
+
+typedef vm_bytecode_t*
+(*vm_import_callback_t)(vm_utf8_t module,
+                        vm_data_t data);
+
+typedef void
+(*vm_release_import_callback_t)(vm_bytecode_t* bytecode,
+                                vm_data_t data);
+
 /**
  * @brief     Converts error code to descriptive string.
  * @details   Provides a text description for the result code.
@@ -146,6 +160,34 @@ VM_API vm_script_h
 vm_load_script_from_memory(vm_t vm,
                            const vm_char_t* code,
                            vm_uint32_t code_size);
+
+VM_API void
+vm_get_import_dirs(vm_t vm,
+                   vm_uint32_t* dir_count,
+                   vm_utf8_t* dirs);
+
+VM_API void
+vm_set_import_dirs(vm_t vm,
+                   vm_uint32_t dir_count,
+                   const vm_utf8_t* dirs);
+
+VM_API vm_import_callback_t
+vm_get_importer(vm_t vm,
+                vm_data_t* data);
+
+VM_API void
+vm_set_importer(vm_t vm,
+                vm_import_callback_t callback,
+                vm_data_t data);
+
+VM_API vm_release_import_callback_t
+vm_get_release_import(vm_t vm,
+                      vm_data_t* data);
+
+VM_API void
+vm_set_release_import(vm_t vm,
+                      vm_release_import_callback_t callback,
+                      vm_data_t data);
 
 VM_API void
 vm_tick(vm_t vm);
