@@ -24,9 +24,6 @@ struct CallFrame {
 
 struct ScriptThreadHandle {
     vm_uint16_t handle;
-    [[nodiscard]] bool operator==(ScriptThreadHandle rhs) const noexcept { return handle == rhs.handle; }
-    [[nodiscard]] bool operator!=(ScriptThreadHandle rhs) const noexcept { return handle != rhs.handle; }
-    [[nodiscard]] std::strong_ordering operator<=>(ScriptThreadHandle rhs) const noexcept { return handle <=> rhs.handle; }
 };
 
 struct ScriptThread {

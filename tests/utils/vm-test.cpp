@@ -1,24 +1,9 @@
-#include <compare>
 #include <gtest/gtest.h>
-#include <limits>
+#include <utils/utils.hpp>
 
 #include <vm/vm.h>
 
 #include "finally.hpp"
-
-[[nodiscard]] static inline bool operator==(vm_script_h lhs, vm_script_h rhs) noexcept {
-    return lhs.handle == rhs.handle;
-}
-
-[[nodiscard]] static inline bool operator!=(vm_script_h lhs, vm_script_h rhs) noexcept {
-    return lhs.handle != rhs.handle;
-}
-
-[[nodiscard]] static inline std::strong_ordering operator<=>(vm_script_h lhs, vm_script_h rhs) noexcept {
-    return lhs.handle <=> rhs.handle;
-}
-
-static constexpr vm_script_h Undefined = vm_script_h{};
 
 // TODO: temporary test
 TEST(VM, Test) {

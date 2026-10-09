@@ -72,7 +72,7 @@ ModuleManager::loadScript(vm_utf8_t file, std::span<const std::filesystem::path>
     const auto fullpath = utils::findFile(file, dirs);
     std::ifstream stream(fullpath, std::ios::binary);
     if (!stream.is_open()) {
-        return {UndefinedScript, false};
+        return {Undefined, false};
     }
     auto size = stream.tellg();
     stream.seekg(0, std::ios::end);
@@ -97,13 +97,13 @@ ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::
         needValidateChecksum = false;
     }
     if (code.empty()) {
-        return {UndefinedScript, false};
+        return {Undefined, false};
     }
     if (!utils::validateVersion(code, VM_VERSION)) {
-        return {UndefinedScript, false};
+        return {Undefined, false};
     }
     if (needValidateChecksum && !utils::validateChecksum(code)) {
-        return {UndefinedScript, false};
+        return {Undefined, false};
     }
     if (moduleName.empty()) {
         auto name = utils::read<vm_script_export_t>({(const vm_uint8_t*)code.data(), code.size()}).module_name;
@@ -111,7 +111,7 @@ ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::
         moduleName = utils::readString(name, data);
     }
     if (moduleName.empty()) {
-        return {UndefinedScript, false};
+        return {Undefined, false};
     }
     if (auto loadedModule = _mapModules.find(moduleName)) {
         const auto script = vm_script_h{loadedModule.value().handle};

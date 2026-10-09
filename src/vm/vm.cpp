@@ -22,7 +22,7 @@ public:
 
     std::pair<vm_script_h, ScriptThreadHandle> loadScript(vm_script_h handle, bool forceLoad) noexcept {
         auto thread = ScriptThreadPool::Undefined;
-        if (handle != UndefinedScript) {
+        if (handle != Undefined) {
             auto module = _moduleManager.getModule(handle);
             if (forceLoad) {
                 _globalManager.addGlobals(handle, module.bytecode());

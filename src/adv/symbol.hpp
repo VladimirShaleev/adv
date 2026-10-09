@@ -3,18 +3,6 @@
 
 #include "compiler.hpp"
 
-[[nodiscard]] inline bool operator==(adv_symbol_h lhs, adv_symbol_h rhs) noexcept { return lhs.handle == rhs.handle; }
-[[nodiscard]] inline bool operator!=(adv_symbol_h lhs, adv_symbol_h rhs) noexcept { return lhs.handle != rhs.handle; }
-[[nodiscard]] inline std::strong_ordering operator<=>(adv_symbol_h lhs, adv_symbol_h rhs) noexcept {
-    return lhs.handle <=> rhs.handle;
-}
-
-[[nodiscard]] inline bool operator==(adv_scope_h lhs, adv_scope_h rhs) noexcept { return lhs.handle == rhs.handle; }
-[[nodiscard]] inline bool operator!=(adv_scope_h lhs, adv_scope_h rhs) noexcept { return lhs.handle != rhs.handle; }
-[[nodiscard]] inline std::strong_ordering operator<=>(adv_scope_h lhs, adv_scope_h rhs) noexcept {
-    return lhs.handle <=> rhs.handle;
-}
-
 namespace adv {
 
 struct Symbol : adv_symbol_t {

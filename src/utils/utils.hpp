@@ -14,6 +14,7 @@
 #include <cassert>
 #include <charconv>
 #include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -33,6 +34,50 @@
 
 #include <vm/vm-script.h>
 #include <vm/vm-types.h>
+
+template <typename H>
+concept IsHandle = requires(std::decay_t<H> handle) {
+    handle.handle;
+    requires std::integral<std::remove_cvref_t<decltype(handle.handle)>>;
+};
+
+struct UndefinedType {
+    template <IsHandle H>
+    [[nodiscard]] UTILS_FORCE_INLINE constexpr operator H() const noexcept {
+        return H{};
+    }
+};
+
+inline constexpr UndefinedType Undefined{};
+
+template <IsHandle H>
+[[nodiscard]] UTILS_FORCE_INLINE bool operator==(H lhs, H rhs) noexcept {
+    return lhs.handle == rhs.handle;
+}
+
+template <IsHandle H>
+[[nodiscard]] UTILS_FORCE_INLINE std::strong_ordering operator<=>(H lhs, H rhs) noexcept {
+    return lhs.handle <=> rhs.handle;
+}
+
+template <IsHandle H>
+[[nodiscard]] UTILS_FORCE_INLINE bool operator==(H lhs, UndefinedType /* rhs */) noexcept {
+    return lhs.handle == 0;
+}
+
+template <IsHandle H>
+[[nodiscard]] UTILS_FORCE_INLINE std::strong_ordering operator<=>(H lhs, UndefinedType /* rhs */) noexcept {
+    return lhs.handle <=> 0;
+}
+
+namespace std {
+template <IsHandle H>
+struct hash<H> {
+    [[nodiscard]] UTILS_FORCE_INLINE constexpr size_t operator()(H handle) const noexcept {
+        return std::hash<decltype(handle.handle)>{}(handle.handle);
+    }
+};
+} // namespace std
 
 namespace utils {
 
@@ -105,9 +150,8 @@ UTILS_FORCE_INLINE void trim(std::string& s, char ch) {
     return {};
 }
 
-[[nodiscard]] UTILS_FORCE_INLINE std::filesystem::path findFile(
-    const std::filesystem::path& file,
-    const std::span<const std::filesystem::path> dirs) {
+[[nodiscard]] UTILS_FORCE_INLINE std::filesystem::path
+findFile(const std::filesystem::path& file, const std::span<const std::filesystem::path> dirs) {
     if (file.empty()) {
         return {};
     }

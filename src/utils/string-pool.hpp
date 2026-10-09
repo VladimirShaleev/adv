@@ -3,14 +3,6 @@
 
 #include "utils.hpp"
 
-[[nodiscard]] inline bool operator==(vm_string_h lhs, vm_string_h rhs) noexcept { return lhs.handle == rhs.handle; }
-
-[[nodiscard]] inline bool operator!=(vm_string_h lhs, vm_string_h rhs) noexcept { return lhs.handle != rhs.handle; }
-
-[[nodiscard]] inline std::strong_ordering operator<=>(vm_string_h lhs, vm_string_h rhs) noexcept {
-    return lhs.handle <=> rhs.handle;
-}
-
 namespace utils {
 
 class StringPool final {
@@ -29,17 +21,5 @@ private:
 };
 
 } // namespace utils
-
-namespace std {
-
-template <>
-struct hash<vm_string_h> {
-    [[nodiscard]] size_t operator()(vm_string_h str) const noexcept {
-        hash<uint32_t> handleHash;
-        return handleHash(str.handle);
-    }
-};
-
-} // namespace std
 
 #endif // UTILS_STRING_POOL_HPP
