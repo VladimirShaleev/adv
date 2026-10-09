@@ -255,7 +255,7 @@ private:
                 break;
             }
             case VM_OPCODE_POP:
-                thread->stack[--thread->stackPos];
+                --thread->stackPos;
                 break;
             case VM_OPCODE_BOOL_TO_INT:
                 cast<bool, vm_sint32_t>(thread);
