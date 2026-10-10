@@ -89,6 +89,9 @@ private:
             const auto [parentModule, parentImport, currFile, depth] = stack.top();
             stack.pop();
             if (context.hasImport(currFile)) {
+                if (parentImport) {
+                    parentImport->import_stmt.root = context.root(utils::getModuleName(currFile));
+                }
                 continue;
             }
             const auto parentLoc = parentImport ? parentImport->location : adv_location_t{};

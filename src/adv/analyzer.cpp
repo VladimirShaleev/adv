@@ -43,9 +43,11 @@ void Analyzer::resolveSymbols() {
             const Options& options,
             Context& ctx,
             Analyzer& analyzer,
+            std::set<std::string>& modules,
             SymbolTable& symbolTable,
             adv_node_t* parent) noexcept
-            : options(options), ctx(ctx), analyzer(analyzer), symbolTable(symbolTable), parent(parent) {}
+            : options(options), ctx(ctx), analyzer(analyzer), modules(modules), symbolTable(symbolTable),
+              parent(parent) {}
 
         void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) {
             node->parent = parent;
@@ -53,11 +55,14 @@ void Analyzer::resolveSymbols() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {
             node->parent = parent;
-            if (node->import_stmt.root) {
-                acceptNode(node->import_stmt.root, node);
-            } else {
-                const auto importModule = utils::getModuleName(ctx.getString(node->import_stmt.path));
-                loadSymbolsFromBinary(ctx.bytecode(importModule));
+            auto importModule = utils::getModuleName(ctx.getString(node->import_stmt.path));
+            if (!modules.contains(importModule)) {
+                modules.insert(importModule);
+                if (node->import_stmt.root) {
+                    acceptNode(node->import_stmt.root, node);
+                } else {
+                    loadSymbolsFromBinary(ctx.bytecode(importModule));
+                }
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
@@ -160,7 +165,13 @@ void Analyzer::resolveSymbols() {
         }
         void acceptNode(adv_node_t* node, adv_node_t* parent) {
             accept<SymbolVisitor>(
-                node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable), parent);
+                node,
+                std::cref(options),
+                std::ref(ctx),
+                std::ref(analyzer),
+                std::ref(modules),
+                std::ref(symbolTable),
+                parent);
         }
         void loadSymbolsFromBinary(std::span<const uint8_t> bytecode) noexcept {
             const auto data = utils::read<utils::SectionData>(bytecode).data;
@@ -219,11 +230,19 @@ void Analyzer::resolveSymbols() {
         const Options& options;
         Context& ctx;
         Analyzer& analyzer;
+        std::set<std::string>& modules;
         SymbolTable& symbolTable;
         adv_node_t* parent;
     };
+    std::set<std::string> modules;
     accept<SymbolVisitor>(
-        _ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(*this), std::ref(_ctx.symbolTable()), nullptr);
+        _ctx.root(),
+        std::cref(_options),
+        std::ref(_ctx),
+        std::ref(*this),
+        std::ref(modules),
+        std::ref(_ctx.symbolTable()),
+        nullptr);
 }
 
 void Analyzer::resolveTypes() {

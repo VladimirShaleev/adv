@@ -121,8 +121,13 @@ private:
 
 struct CodeGenVisitor {
     CodeGenVisitor(
-        const Options& options, Context& ctx, Emitter& code, Emitter& exportVar, Emitter& exportFunc) noexcept
-        : options(options), ctx(ctx), code(code), exportVar(exportVar), exportFunc(exportFunc) {}
+        const Options& options,
+        Context& ctx,
+        std::set<vm_string_h>& modules,
+        Emitter& code,
+        Emitter& exportVar,
+        Emitter& exportFunc) noexcept
+        : options(options), ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportFunc(exportFunc) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) {
         auto stmt = node->stmts.first_stmt;
         while (stmt) {
@@ -201,8 +206,11 @@ struct CodeGenVisitor {
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {
         const auto module = ctx.intern(utils::getModuleName(ctx.getString(node->import_stmt.path)));
-        code.emitByte(VM_OPCODE_IMPORT);
-        code.emitString(module);
+        if (!modules.contains(module)) {
+            modules.insert(module);
+            code.emitByte(VM_OPCODE_IMPORT);
+            code.emitString(module);
+        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
         acceptNode(node->if_stmt.cond);
@@ -384,10 +392,17 @@ struct CodeGenVisitor {
     }
     void acceptNode(adv_node_t* node) {
         accept<CodeGenVisitor>(
-            node, std::cref(options), std::ref(ctx), std::ref(code), std::ref(exportVar), std::ref(exportFunc));
+            node,
+            std::cref(options),
+            std::ref(ctx),
+            std::ref(modules),
+            std::ref(code),
+            std::ref(exportVar),
+            std::ref(exportFunc));
     }
     const Options& options;
     Context& ctx;
+    std::set<vm_string_h>& modules;
     Emitter& code;
     Emitter& exportVar;
     Emitter& exportFunc;
@@ -399,6 +414,7 @@ Generator::Generator(const Options& options, Context& ctx) noexcept : _options(o
 
 adv_result_t Generator::gen() {
     if (_ctx.bytecode().empty()) {
+        std::set<vm_string_h> modules;
         std::unordered_map<vm_string_h, adv_uint32_t> strings;
         std::map<adv_symbol_h, adv_uint32_t> functions;
         std::vector<uint8_t> exportTable;
@@ -413,6 +429,7 @@ adv_result_t Generator::gen() {
             _ctx.root(),
             std::cref(_options),
             std::ref(_ctx),
+            std::ref(modules),
             std::ref(emitterCode),
             std::ref(emitterExportVar),
             std::ref(emitterExportFunc));
