@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <new>
@@ -541,6 +542,7 @@ internal::Offset<vm_script_export_func_t>::offset(std::span<const vm_uint8_t> by
 
 } // namespace utils
 
+#include "flat-map.hpp"
 #include "object.hpp"
 #include "pool.hpp"
 #include "string-pool.hpp"
