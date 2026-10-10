@@ -22,18 +22,14 @@ struct CallFrame {
     bool hasReturnValue;
 };
 
-struct ScriptThreadHandle {
-    vm_uint16_t handle;
-};
-
 struct ScriptThread {
-    using Handle = ScriptThreadHandle;
+    using Handle = vm_thread_h;
 
     ThreadState state;
     vm_script_h script;
     vm_uint32_t instructionPos;
     vm_uint32_t waitTicks;
-    ScriptThreadHandle waitThread;
+    Handle waitThread;
     vm_uint32_t stackPos;
     vm_uint32_t frameCount;
     vm_value_t stack[StackSize];

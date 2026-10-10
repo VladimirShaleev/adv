@@ -1,5 +1,6 @@
 #include "global-manager.hpp"
 #include "module-manager.hpp"
+#include "native-manager.hpp"
 #include "operations.hpp"
 #include "script.hpp"
 #include "type-conversion.hpp"
@@ -12,35 +13,60 @@ namespace vm {
 
 class VM final : public _vm {
 public:
-    VM() : _moduleManager(_cache), _globalManager(_cache) {
+    VM() : _moduleManager(_cache), _globalManager(_cache), _nativeManager(_cache) {
         _cache.strTrue = _cache.pool.insert("true");
         _cache.strFalse = _cache.pool.insert("false");
         for (size_t i = 0; i < _cache.strInts.size(); ++i) {
             _cache.strInts[i] = _cache.pool.insert(std::to_string(i));
         }
+        auto _ = _threads.obtain();
     }
 
-    std::pair<vm_script_h, ScriptThreadHandle> loadScript(vm_script_h handle, bool forceLoad) noexcept {
-        auto thread = ScriptThreadPool::Undefined;
-        if (auto module = _moduleManager.getModule(handle)) {
+    [[nodiscard]] vm_script_h loadScript(vm_script_h script, bool forceLoad) noexcept {
+        if (auto module = _moduleManager.getModule(script)) {
             if (forceLoad) {
-                _globalManager.addGlobals(handle, module->bytecode());
+                _globalManager.addGlobals(script, module->bytecode());
             }
-            thread = createThread(handle);
         }
-        return {handle, thread};
+        return script;
     }
 
-    [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle>
-    loadScriptFromMemory(std::span<const vm_char_t> code) noexcept {
-        auto [script, loaded] = _moduleManager.loadScript(code);
-        return loadScript(script, loaded);
+    [[nodiscard]] vm_script_h loadScriptFromMemory(std::span<const vm_char_t> code) noexcept {
+        try {
+            auto [script, loaded] = _moduleManager.loadScript(code);
+            return loadScript(script, loaded);
+        } catch (const std::bad_alloc&) {
+            return Undefined;
+        }
     }
 
-    [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle> loadScriptFromFile(vm_utf8_t file) noexcept {
-        auto [script, loaded] = _moduleManager.loadScript(file, _importDirs);
-        return loadScript(script, loaded);
+    [[nodiscard]] vm_script_h loadScriptFromFile(vm_utf8_t file) noexcept {
+        try {
+            auto [script, loaded] = _moduleManager.loadScript(file, _importDirs);
+            return loadScript(script, loaded);
+        } catch (const std::bad_alloc&) {
+            return Undefined;
+        }
     }
+
+    [[nodiscard]] vm_thread_h createThread(vm_script_h script) noexcept {
+        try {
+            if (auto scriptPtr = _moduleManager.getModule(script)) {
+                auto [handle, thread] = _threads.obtainAndAccess();
+                _threadHandles.push_back(handle);
+                auto bytecode = scriptPtr->bytecode();
+                thread->state = ThreadState::Running;
+                thread->script = script;
+                thread->stackPos = utils::read<vm_script_export_t>(bytecode).root_frame_slots;
+                thread->frameCount = 1;
+                return handle;
+            }
+        } catch (const std::bad_alloc&) {
+        }
+        return Undefined;
+    }
+
+    void destroyThread(vm_thread_h thread) noexcept {}
 
     void getImportDirs(vm_uint32_t& dirCount, vm_utf8_t* dirs) {
         if (dirs) {
@@ -111,7 +137,7 @@ public:
                     if (j != i) {
                         auto otherThread = _threads.access(_threadHandles[j]);
                         if (otherThread->waitThread == handle) {
-                            otherThread->waitThread = ScriptThreadPool::Undefined;
+                            otherThread->waitThread = Undefined;
                             otherThread->state = ThreadState::Running;
                         }
                     }
@@ -127,12 +153,12 @@ public:
                 if (thread->waitTicks > 0) {
                     thread->waitTicks--; // TODO use elapsed, thread->waitTicks -= std::min(thread->waitTicks, elapsed);
                 }
-                if (thread->waitTicks == 0 && thread->waitThread == ScriptThreadPool::Undefined) {
+                if (thread->waitTicks == 0 && thread->waitThread == Undefined) {
                     thread->state = ThreadState::Running;
                 } else if (
-                    thread->waitThread != ScriptThreadPool::Undefined &&
+                    thread->waitThread != Undefined &&
                     _threads.access(thread->waitThread)->state == ThreadState::Dead) {
-                    thread->waitThread = ScriptThreadPool::Undefined;
+                    thread->waitThread = Undefined;
                     thread->state = ThreadState::Running;
                 } else {
                     continue;
@@ -145,17 +171,6 @@ public:
     }
 
 private:
-    ScriptThreadHandle createThread(vm_script_h script) {
-        auto [handle, thread] = _threads.obtainAndAccess();
-        _threadHandles.push_back(handle);
-        auto bytecode = _moduleManager.getModule(script)->bytecode();
-        thread->state = ThreadState::Running;
-        thread->script = script;
-        thread->stackPos = utils::read<vm_script_export_t>(bytecode).root_frame_slots;
-        thread->frameCount = 1;
-        return handle;
-    }
-
     void stepThread(ScriptThread* thread) {
         auto module = _moduleManager.getModule(thread->script);
         auto text = module->text();
@@ -171,7 +186,7 @@ private:
                     const auto waitThread = import(view);
                     module = _moduleManager.getModule(thread->script);
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_NO_OPERATION, 0);
-                    if (waitThread != ScriptThreadPool::Undefined) {
+                    if (waitThread != Undefined) {
                         thread->state = ThreadState::Waiting;
                         thread->waitThread = waitThread;
                         return;
@@ -428,23 +443,24 @@ private:
         }
     }
 
-    ScriptThreadHandle import(std::string_view moduleName) {
-        std::pair<vm_script_h, ScriptThreadHandle> result{};
+    vm_thread_h import(std::string_view moduleName) {
+        vm_thread_h result = Undefined;
+        vm_script_h script = Undefined;
         if (_importer) {
-            if (auto bytecode = _importer(moduleName.data(), _importerData)) {
-                result = loadScriptFromMemory({bytecode->data, bytecode->size});
+            if (auto bytecode = _importer(this, moduleName.data(), _importerData)) {
+                script = loadScriptFromMemory({bytecode->data, bytecode->size});
                 if (_releaseImport) {
-                    _releaseImport(bytecode, _releaseImportData);
+                    _releaseImport(this, bytecode, _releaseImportData);
                 }
             }
         }
-        if (result.first.handle == 0) {
-            result = loadScriptFromFile(moduleName.data());
+        if (script == Undefined) {
+            script = loadScriptFromFile(moduleName.data());
         }
-        if (result.first.handle == 0) {
+        if (script == Undefined) {
             // TODO: log
         }
-        return result.second;
+        return createThread(script);
     }
 
     void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module) {
@@ -543,8 +559,9 @@ private:
     Cache _cache;
     ModuleManager _moduleManager;
     GlobalManager _globalManager;
+    NativeManager _nativeManager;
     ScriptThreadPool _threads;
-    std::vector<ScriptThreadHandle> _threadHandles;
+    std::vector<vm_thread_h> _threadHandles;
 
     std::vector<std::string> _importStrDirs{};
     std::vector<std::filesystem::path> _importDirs{};
@@ -699,17 +716,29 @@ void vm_destroy(vm_t vm) {
     }
 }
 
-vm_script_h vm_load_script(vm_t vm, vm_script_h handle) {
-    return vm ? vm->as<vm::VM>()->loadScript(handle, false).first : vm_script_h{};
-}
-
 vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
-    return vm ? vm->as<vm::VM>()->loadScriptFromFile(file).first : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScriptFromFile(file) : Undefined;
 }
 
 vm_script_h vm_load_script_from_memory(vm_t vm, const vm_char_t* code, vm_uint32_t code_size) {
-    return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}).first : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}) : Undefined;
 }
+
+vm_thread_h vm_run_script(vm_t vm, vm_script_h script) {
+    return vm ? vm->as<vm::VM>()->createThread(script) : Undefined;
+}
+
+void vm_shutdown_thread(vm_t vm, vm_thread_h thread) {
+    if (vm) {
+        vm->as<vm::VM>()->destroyThread(thread);
+    }
+}
+
+vm_native_callback_t vm_get_native(vm_t vm, vm_native_h native, vm_data_t* data) { return nullptr; }
+
+vm_native_h vm_register_native(vm_t vm, vm_utf8_t name, vm_native_callback_t func, vm_data_t data) { return Undefined; }
+
+vm_native_h vm_unregister_native(vm_t vm, vm_utf8_t name) { return Undefined; }
 
 void vm_get_import_dirs(vm_t vm, vm_uint32_t* dir_count, vm_utf8_t* dirs) {
     if (dir_count) {

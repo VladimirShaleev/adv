@@ -63,12 +63,20 @@ typedef struct
     vm_uint32_t      size;
 } vm_bytecode_t;
 
+typedef void
+(*vm_native_callback_t)(vm_t vm,
+                        vm_thread_h thread,
+                        vm_uint16_t arg_count,
+                        vm_data_t data);
+
 typedef vm_bytecode_t*
-(*vm_import_callback_t)(vm_utf8_t module,
+(*vm_import_callback_t)(vm_t vm,
+                        vm_utf8_t module,
                         vm_data_t data);
 
 typedef void
-(*vm_release_import_callback_t)(vm_bytecode_t* bytecode,
+(*vm_release_import_callback_t)(vm_t vm,
+                                vm_bytecode_t* bytecode,
                                 vm_data_t data);
 
 /**
@@ -122,18 +130,6 @@ VM_API void
 vm_destroy(vm_t vm);
 
 /**
- * @brief     Runs a previously loaded script.
- * @details   Starts execution of the previously loaded script again, from the
- *            beginning.
- * @param[in] vm VM instance that will execute the script.
- * @param[in] handle Handle of the previously loaded script.
- * @return    The supplied script handle.
- * @ingroup   functions
- */
-VM_API vm_script_h
-vm_load_script(vm_t vm, vm_script_h handle);
-
-/**
  * @brief      Loads a script from a file and starts its execution.
  * @details    The input may contain compiled binary data or supported text
  *             script data.
@@ -160,6 +156,29 @@ VM_API vm_script_h
 vm_load_script_from_memory(vm_t vm,
                            const vm_char_t* code,
                            vm_uint32_t code_size);
+
+VM_API vm_thread_h
+vm_run_script(vm_t vm,
+              vm_script_h script);
+
+VM_API void
+vm_shutdown_thread(vm_t vm,
+                   vm_thread_h thread);
+
+VM_API vm_native_callback_t
+vm_get_native(vm_t vm,
+              vm_native_h native,
+              vm_data_t* data);
+
+VM_API vm_native_h
+vm_register_native(vm_t vm,
+                   vm_utf8_t name,
+                   vm_native_callback_t func,
+                   vm_data_t data);
+
+VM_API vm_native_h
+vm_unregister_native(vm_t vm,
+                     vm_utf8_t name);
 
 VM_API void
 vm_get_import_dirs(vm_t vm,

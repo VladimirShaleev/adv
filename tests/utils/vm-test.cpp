@@ -18,9 +18,13 @@ TEST(VM, Test) {
     auto script = vm_load_script_from_file(vm, "D:\\Development\\Projects\\adv\\build\\test.adb");
     EXPECT_NE(script, Undefined);
 
+    auto thread = vm_run_script(vm, script);
+    EXPECT_NE(thread, Undefined);
+
     vm_tick(vm);
     vm_tick(vm);
 
-    vm_load_script(vm, script);
+    auto thread2 = vm_run_script(vm, script);
+    EXPECT_NE(thread2, Undefined);
     vm_tick(vm);
 }
