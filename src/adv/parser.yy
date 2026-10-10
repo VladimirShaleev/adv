@@ -63,7 +63,7 @@ using namespace std::literals;
 }
 
 /* Keywords */
-%token IMPORT FUNCTION VAR AS IF ELSE WHILE YIELD WAIT RETURN
+%token IMPORT NATIVE FUNCTION VAR AS IF ELSE WHILE YIELD WAIT RETURN
 
 /* Operators */
 %token EQ NE LE GE AND OR NOT ASHL ASHR LSHL LSHR UNARY
@@ -86,6 +86,7 @@ using namespace std::literals;
 %type <adv_node_t*>  while_stmt
 %type <adv_node_t*>  import_stmt
 %type <adv_node_t*>  return_stmt
+%type <adv_node_t*>  native_decl
 %type <adv_node_t*>  function_decl
 %type <adv_node_t*>  param
 %type <NodeList>     param_list
@@ -179,6 +180,25 @@ var_decl
     }
     ;
 
+native_decl
+    : NATIVE IDENTIFIER '(' param_list ')' ':' IDENTIFIER {
+        auto fn = alloc_node(@$, NATIVE_DECL);
+        fn->func_decl.name = intern($2);
+        fn->func_decl.first_param = $4.first;
+        fn->func_decl.param_count = $4.count;
+        fn->func_decl.return_type_hint = intern($7);
+        $$ = fn;
+    }
+    | NATIVE IDENTIFIER '(' param_list ')' {
+        auto fn = alloc_node(@$, NATIVE_DECL);
+        fn->func_decl.name = intern($2);
+        fn->func_decl.first_param = $4.first;
+        fn->func_decl.param_count = $4.count;
+        fn->func_decl.return_type_hint = {0};
+        $$ = fn;
+    }
+    ;
+
 function_decl
     : FUNCTION IDENTIFIER '(' param_list ')' ':' IDENTIFIER block {
         auto fn = alloc_node(@$, FUNCTION_DECL);
@@ -218,6 +238,7 @@ block
 statement
     : var_decl ';'                 { $$ = $1; }
     | block                        { $$ = $1; }
+    | native_decl ';'              { $$ = $1; }
     | function_decl                { $$ = $1; }
     | assign_expr ';'              { $$ = $1; }
     | if_stmt                      { $$ = $1; }

@@ -235,6 +235,8 @@ template <typename AliasedType, typename Type>
     result.var_size = swapBytes(result.var_size);
     result.func_count = swapBytes(result.func_count);
     result.func_size = swapBytes(result.func_size);
+    result.native_count = swapBytes(result.native_count);
+    result.native_size = swapBytes(result.native_size);
     return result;
 }
 
@@ -264,6 +266,16 @@ template <typename AliasedType, typename Type>
     result.name = swapBytes(result.name);
     result.text_offset = swapBytes(result.text_offset);
     result.frame_slot_count = swapBytes(result.frame_slot_count);
+    return result;
+}
+
+[[nodiscard]] UTILS_FORCE_INLINE vm_script_export_native_t
+swapBytes(const vm_script_export_native_t& exportNative) noexcept {
+    if (std::endian::native == std::endian::little) {
+        return exportNative;
+    }
+    auto result = exportNative;
+    result.name = swapBytes(result.name);
     return result;
 }
 
@@ -326,6 +338,10 @@ struct SectionText {
     std::span<const uint8_t> text;
 };
 
+struct NativeParam {
+    vm_script_export_param_t param;
+};
+
 namespace internal {
 
 template <typename T>
@@ -346,6 +362,13 @@ template <>
 struct Result<SectionText> {
     static SectionText get(std::span<const vm_uint8_t> bytecode, size_t offset, size_t size) {
         return SectionText{.text = {bytecode.data() + offset, size}};
+    }
+};
+
+template <>
+struct Result<NativeParam> {
+    static NativeParam get(std::span<const vm_uint8_t> bytecode, size_t offset, size_t size) {
+        return {swapBytes(*aliasCast<const vm_script_export_param_t*>(bytecode.data() + offset))};
     }
 };
 
@@ -408,6 +431,18 @@ struct Offset<vm_script_export_func_t> {
     offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
 };
 
+template <>
+struct Offset<vm_script_export_native_t> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
+template <>
+struct Offset<NativeParam> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
 } // namespace internal
 
 template <typename Section>
@@ -451,7 +486,8 @@ UTILS_FORCE_INLINE std::pair<size_t, size_t>
 internal::Offset<vm_script_export_param_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     const auto [offset, _] = Offset<vm_script_export_func_t>::offset(bytecode, i, 0);
     return {
-        offset + sizeof(vm_script_export_func_t) + sizeof(vm_script_export_var_t) * j, sizeof(vm_script_export_var_t)};
+        offset + sizeof(vm_script_export_func_t) + sizeof(vm_script_export_param_t) * j,
+        sizeof(vm_script_export_param_t)};
 }
 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
@@ -462,9 +498,31 @@ internal::Offset<vm_script_export_func_t>::offset(std::span<const vm_uint8_t> by
     for (size_t f = 0; f < i; ++f) {
         const auto params =
             Result<vm_script_export_func_t>::get(bytecode, funcOffset, sizeof(vm_script_export_func_t)).param_count;
-        funcOffset += sizeof(vm_script_export_func_t) + params * sizeof(vm_script_export_var_t);
+        funcOffset += sizeof(vm_script_export_func_t) + params * sizeof(vm_script_export_param_t);
     }
     return {funcOffset, sizeof(vm_script_export_func_t)};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<vm_script_export_native_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    const auto [offset, _] = Offset<vm_script_export_t>::offset(bytecode, 0, 0);
+    const auto exports = read<vm_script_export_t>(bytecode);
+    auto nativeOffset = offset + sizeof(vm_script_export_t) + exports.var_size + exports.func_size;
+    for (size_t n = 0; n < i; ++n) {
+        const auto params =
+            Result<vm_script_export_native_t>::get(bytecode, nativeOffset, sizeof(vm_script_export_native_t))
+                .param_count;
+        nativeOffset += sizeof(vm_script_export_native_t) + params * sizeof(vm_script_export_param_t);
+    }
+    return {nativeOffset, sizeof(vm_script_export_native_t)};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<NativeParam>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    const auto [offset, _] = Offset<vm_script_export_native_t>::offset(bytecode, i, 0);
+    return {
+        offset + sizeof(vm_script_export_native_t) + sizeof(vm_script_export_param_t) * j,
+        sizeof(vm_script_export_param_t)};
 }
 
 [[nodiscard]] inline std::string escape(std::string_view input) {

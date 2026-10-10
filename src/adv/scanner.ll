@@ -37,6 +37,7 @@ ID    [a-zA-Z_][a-zA-Z0-9_]*
 %}
 
 "import"         { return token::IMPORT; }
+"native"         { return token::NATIVE; }
 "function"       { return token::FUNCTION; }
 "var"            { return token::VAR; }
 "as"             { return token::AS; }

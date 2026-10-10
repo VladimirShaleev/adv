@@ -93,7 +93,8 @@ typedef enum
     ADV_STATUS_E3042       = 3042, /**< Translate Advt (text assembler) failed. */
     ADV_STATUS_E3043       = 3043, /**< The checksum did not match. */
     ADV_STATUS_E3044       = 3044, /**< Unsupported version. */
-    ADV_STATUS_COUNT_ENUMS = 51, /**< Count of constants in the enumeration. */
+    ADV_STATUS_E3045       = 3045, /**< Unknown return type in declaration of native function. */
+    ADV_STATUS_COUNT_ENUMS = 52, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
 

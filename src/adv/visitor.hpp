@@ -24,6 +24,9 @@ Visitor accept(adv_node_t* node, Args&&... args) {
         case ADV_NODE_VAR_DECL:
             visitor.visit(node, Tag<ADV_NODE_VAR_DECL>{});
             break;
+        case ADV_NODE_NATIVE_DECL:
+            visitor.visit(node, Tag<ADV_NODE_NATIVE_DECL>{});
+            break;
         case ADV_NODE_FUNCTION_DECL:
             visitor.visit(node, Tag<ADV_NODE_FUNCTION_DECL>{});
             break;

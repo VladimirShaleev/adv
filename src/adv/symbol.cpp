@@ -124,6 +124,9 @@ adv_symbol_h SymbolTable::allocSymbol(adv_node_t* node) {
         void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) noexcept {
             set(ADV_SYMBOL_KIND_VARIABLE, node->var_decl.name, node->var_decl.symbol);
         }
+        void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) noexcept {
+            set(ADV_SYMBOL_KIND_NATIVE, node->func_decl.name, node->func_decl.symbol);
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) noexcept {
             set(ADV_SYMBOL_KIND_FUNCTION, node->func_decl.name, node->func_decl.symbol);
         }

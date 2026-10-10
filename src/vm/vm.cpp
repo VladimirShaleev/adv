@@ -720,6 +720,40 @@ vm_script_export_param_t* vm_read_script_export_func_param(
     return param;
 }
 
+vm_script_export_native_t* vm_read_script_export_native(
+    const vm_char_t* buffer, vm_uint32_t size, vm_uint32_t native_index, vm_script_export_native_t* export_native) {
+    if (buffer && export_native) {
+        const auto maxNatives =
+            utils::read<vm_script_export_t>(std::span{(const vm_uint8_t*)buffer, size}).native_count;
+        if (native_index < maxNatives) {
+            *export_native = utils::read<vm_script_export_native_t>(std::span{(const vm_uint8_t*)buffer, size});
+        }
+    }
+    return export_native;
+}
+
+vm_script_export_param_t* vm_read_script_export_native_param(
+    const vm_char_t* buffer,
+    vm_uint32_t size,
+    vm_uint32_t native_index,
+    vm_uint32_t param_index,
+    vm_script_export_param_t* param) {
+    if (buffer && param) {
+        const auto maxNatives =
+            utils::read<vm_script_export_t>(std::span{(const vm_uint8_t*)buffer, size}).native_count;
+        if (native_index < maxNatives) {
+            const auto maxParams =
+                utils::read<vm_script_export_native_t>(std::span{(const vm_uint8_t*)buffer, size}).param_count;
+            if (param_index < maxParams) {
+                *param = utils::read<utils::NativeParam>(
+                             std::span{(const vm_uint8_t*)buffer, size}, native_index, param_index)
+                             .param;
+            }
+        }
+    }
+    return param;
+}
+
 vm_result_t vm_create(vm_t* vm) {
     return vm ? utils::Object::create<vm_result_t, vm::VM>(*vm) : VM_RESULT_ERROR_INVALID_ARG;
 }

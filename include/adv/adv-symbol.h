@@ -19,9 +19,10 @@ typedef enum
 {
     ADV_SYMBOL_KIND_VARIABLE    = 0, /**< Variable symbol. */
     ADV_SYMBOL_KIND_PARAMETER   = 1, /**< Function parameter symbol. */
-    ADV_SYMBOL_KIND_FUNCTION    = 2, /**< Function symbol. */
-    ADV_SYMBOL_KIND_STRUCT      = 3, /**< Struct symbol. */
-    ADV_SYMBOL_KIND_COUNT_ENUMS = 4, /**< Count of constants in the enumeration. */
+    ADV_SYMBOL_KIND_NATIVE      = 2, /**< Native symbol. */
+    ADV_SYMBOL_KIND_FUNCTION    = 3, /**< Function symbol. */
+    ADV_SYMBOL_KIND_STRUCT      = 4, /**< Struct symbol. */
+    ADV_SYMBOL_KIND_COUNT_ENUMS = 5, /**< Count of constants in the enumeration. */
     ADV_SYMBOL_KIND_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used). */
 } adv_symbol_kind_t;
 

@@ -125,6 +125,8 @@ inline std::string err(Args&&... args) {
         str = fmt::format("The checksum did not match, actual {}, expected {}", args...);
     } else if constexpr (Status == ADV_STATUS_E3044) {
         str = fmt::format("Unsupported version, script version {}, compiler version {}", args...);
+    } else if constexpr (Status == ADV_STATUS_E3045) {
+        str = fmt::format("Unknown return type '{}' in declaration of native function '{}'", args...);
     } else {
         assert(!"Unknown status code");
     }

@@ -71,6 +71,19 @@ void Analyzer::resolveSymbols() {
             acceptNode(node->var_decl.init_expr, node);
             analyzer.saveFrameSlot(sym);
         }
+        void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
+            node->parent = parent;
+            symbolTable.addSymbol(options, ctx, node);
+            auto param = node->func_decl.first_param;
+            if (param) {
+                symbolTable.beginScope();
+                while (param) {
+                    acceptNode(param, node);
+                    param = param->next_sibling;
+                }
+                symbolTable.endScope();
+            }
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
             node->parent = parent;
             symbolTable.addSymbol(options, ctx, node);
@@ -78,7 +91,9 @@ void Analyzer::resolveSymbols() {
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             node->parent = parent;
             auto sym = symbolTable.addSymbol(options, ctx, node);
-            analyzer.saveFrameSlot(sym);
+            if (parent->type == ADV_NODE_FUNCTION_DECL) {
+                analyzer.saveFrameSlot(sym);
+            }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
             auto [handle, _] = symbolTable.lookup(options, ctx, node->location, node->id_expr.name);
@@ -255,6 +270,25 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_FLOAT_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_FLOAT; }
         void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_STRING; }
         void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_BOOL; }
+        void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
+            auto returnType = VM_VALUE_TYPE_VOID;
+            if (node->func_decl.return_type_hint.handle != 0) {
+                returnType = analyzer.findBaseType(node->func_decl.return_type_hint);
+                if (returnType == VM_VALUE_TYPE_UNKNOWN) {
+                    ctx.log<ADV_STATUS_E3045>(
+                        options, node->location, node->func_decl.return_type_hint, node->func_decl.name);
+                    return;
+                }
+            }
+            symbolTable.getSymbol(node->func_decl.symbol)->type = returnType;
+            node->resolved_type = returnType;
+
+            auto param = node->func_decl.first_param;
+            while (param) {
+                acceptNode(param);
+                param = param->next_sibling;
+            }
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
             auto returnType = VM_VALUE_TYPE_VOID;
             if (node->func_decl.return_type_hint.handle != 0) {
@@ -407,7 +441,7 @@ void Analyzer::resolveTypes() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
             auto sym = symbolTable.getSymbol(node->call_expr.symbol);
-            if (sym->kind != ADV_SYMBOL_KIND_FUNCTION) {
+            if (sym->kind != ADV_SYMBOL_KIND_FUNCTION && sym->kind != ADV_SYMBOL_KIND_NATIVE) {
                 ctx.log<ADV_STATUS_E3021>(options, node->location, node->call_expr.name);
                 return;
             }

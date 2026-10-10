@@ -71,6 +71,8 @@ typedef struct
     vm_uint16_t var_size; /**< Size in bytes of the variable export block. */
     vm_uint16_t func_count; /**< Number of exported functions. */
     vm_uint16_t func_size; /**< Size in bytes of the function export block. */
+    vm_uint16_t native_count; /**< Number of exported native functions. */
+    vm_uint16_t native_size; /**< Size in bytes of the native function export block. */
 } VM_PACKED_ATTR vm_script_export_t;
 
 /**
@@ -109,6 +111,14 @@ typedef struct
     vm_uint8_t  param_count; /**< Number of parameters expected by the function. */
     /* vm_script_export_param_t params[param_count]; */
 } VM_PACKED_ATTR vm_script_export_func_t;
+
+typedef struct
+{
+    vm_uint32_t name; /**< Offset or index of the native function name in the data block. */
+    vm_uint8_t  return_type; /**< Type code returned by the native function. */
+    vm_uint8_t  param_count; /**< Number of parameters expected by the native function. */
+    /* vm_script_export_param_t params[param_count]; */
+} VM_PACKED_ATTR vm_script_export_native_t;
 
 VM_PACKED_END
 
@@ -204,6 +214,19 @@ vm_read_script_export_func_param(const vm_char_t* buffer,
                                  vm_uint32_t func_index,
                                  vm_uint32_t param_index,
                                  vm_script_export_param_t* param);
+
+VM_API vm_script_export_native_t*
+vm_read_script_export_native(const vm_char_t* buffer,
+                           vm_uint32_t size,
+                           vm_uint32_t native_index,
+                           vm_script_export_native_t* export_native);
+
+VM_API vm_script_export_param_t*
+vm_read_script_export_native_param(const vm_char_t* buffer,
+                                   vm_uint32_t size,
+                                   vm_uint32_t native_index,
+                                   vm_uint32_t param_index,
+                                   vm_script_export_param_t* param);
 
 /** @} */
 

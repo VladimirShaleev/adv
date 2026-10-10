@@ -126,8 +126,10 @@ struct CodeGenVisitor {
         std::set<vm_string_h>& modules,
         Emitter& code,
         Emitter& exportVar,
-        Emitter& exportFunc) noexcept
-        : options(options), ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportFunc(exportFunc) {}
+        Emitter& exportFunc,
+        Emitter& exportNative) noexcept
+        : options(options), ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportFunc(exportFunc),
+          exportNative(exportNative) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) {
         auto stmt = node->stmts.first_stmt;
         while (stmt) {
@@ -174,6 +176,20 @@ struct CodeGenVisitor {
         } else {
             code.emitByte(VM_OPCODE_POP_LOCAL);
             code.emitUint16(sym->slot_index);
+        }
+    }
+    void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
+        const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
+        if (sym->is_global) {
+            exportNative.emitString(sym->name);
+            exportNative.emitByte(static_cast<adv_uint8_t>(sym->type));
+            exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
+            for (const auto paramHandle : sym->linearParams) {
+                const auto param = ctx.symbolTable().getSymbol(paramHandle);
+                exportNative.emitString(param->name);
+                exportNative.emitByte(static_cast<adv_uint8_t>(param->type));
+            }
+            ++exportNative.count;
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
@@ -366,12 +382,17 @@ struct CodeGenVisitor {
         }
 
         const auto sym = ctx.symbolTable().getSymbol(node->call_expr.symbol);
-        if (sym->is_global) {
-            code.emitByte(VM_OPCODE_CALL_BY_NAME);
-            code.emitString(sym->name);
+        if (sym->kind == ADV_SYMBOL_KIND_FUNCTION) {
+            if (sym->is_global) {
+                code.emitByte(VM_OPCODE_CALL_BY_NAME);
+                code.emitString(sym->name);
+            } else {
+                code.emitByte(VM_OPCODE_CALL);
+                code.emitUint32((*exportFunc.functions)[node->call_expr.symbol]);
+            }
         } else {
-            code.emitByte(VM_OPCODE_CALL);
-            code.emitUint32((*exportFunc.functions)[node->call_expr.symbol]);
+            code.emitByte(VM_OPCODE_CALL_NATIVE_BY_NAME);
+            code.emitString(sym->name);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {}
@@ -398,7 +419,8 @@ struct CodeGenVisitor {
             std::ref(modules),
             std::ref(code),
             std::ref(exportVar),
-            std::ref(exportFunc));
+            std::ref(exportFunc),
+            std::ref(exportNative));
     }
     const Options& options;
     Context& ctx;
@@ -406,6 +428,7 @@ struct CodeGenVisitor {
     Emitter& code;
     Emitter& exportVar;
     Emitter& exportFunc;
+    Emitter& exportNative;
 };
 
 } // namespace
@@ -420,11 +443,13 @@ adv_result_t Generator::gen() {
         std::vector<uint8_t> exportTable;
         std::vector<uint8_t> exportVar;
         std::vector<uint8_t> exportFunc;
+        std::vector<uint8_t> exportNative;
         std::vector<uint8_t> data;
         std::vector<uint8_t> code;
         Emitter emitterCode(_ctx, strings, data, code);
         Emitter emitterExportVar(_ctx, strings, data, exportVar);
         Emitter emitterExportFunc(_ctx, strings, data, exportFunc, &functions);
+        Emitter emitterExportNative(_ctx, strings, data, exportNative);
         accept<CodeGenVisitor>(
             _ctx.root(),
             std::cref(_options),
@@ -432,7 +457,8 @@ adv_result_t Generator::gen() {
             std::ref(modules),
             std::ref(emitterCode),
             std::ref(emitterExportVar),
-            std::ref(emitterExportFunc));
+            std::ref(emitterExportFunc),
+            std::ref(emitterExportNative));
         Emitter emitterExport(_ctx, strings, data, exportTable);
         emitterExport.emitString(_ctx.rootModule());
         emitterExport.emitUint16(_ctx.rootFrameSlots());
@@ -440,8 +466,11 @@ adv_result_t Generator::gen() {
         emitterExport.emitUint16(static_cast<adv_uint16_t>(exportVar.size()));
         emitterExport.emitUint16(emitterExportFunc.count);
         emitterExport.emitUint16(static_cast<adv_uint16_t>(exportFunc.size()));
+        emitterExport.emitUint16(emitterExportNative.count);
+        emitterExport.emitUint16(static_cast<adv_uint16_t>(exportNative.size()));
         exportTable.insert(exportTable.end(), exportVar.begin(), exportVar.end());
         exportTable.insert(exportTable.end(), exportFunc.begin(), exportFunc.end());
+        exportTable.insert(exportTable.end(), exportNative.begin(), exportNative.end());
         saveBinary(exportTable, data, code);
     }
     return ADV_RESULT_SUCCESS;
@@ -527,6 +556,32 @@ adv_result_t Generator::text() {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
         std::cout << tab << "var "sv << name << ": "sv << type << std::endl;
+        if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+            return ADV_RESULT_ERROR_INVALID_ARG;
+        }
+    }
+    for (size_t i = 0; i < exports.native_count; ++i) {
+        const auto native = utils::read<vm_script_export_native_t>(bytecode, i);
+        const auto name = utils::readString(native.name, data);
+        const auto ret = readType(native.return_type);
+        std::cout << tab << "native "sv << name << '(';
+        for (size_t p = 0; p < native.param_count; ++p) {
+            const auto var = utils::read<utils::NativeParam>(bytecode, i, p).param;
+            const auto name = utils::readString(var.name, data);
+            const auto type = readType(var.type);
+            if (type.empty()) {
+                return ADV_RESULT_ERROR_INVALID_ARG;
+            }
+            if (p > 0) {
+                std::cout << ", "sv;
+            }
+            std::cout << name << ": "sv << type;
+        }
+        std::cout << ')';
+        if (!ret.empty()) {
+            std::cout << ": "sv << ret;
+        }
+        std::cout << std::endl;
         if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
@@ -625,7 +680,6 @@ adv_result_t Generator::text() {
             case VM_OPCODE_PUSH_GLOBAL:
             case VM_OPCODE_POP_GLOBAL:
                 return ADV_RESULT_ERROR_INVALID_ARG;
-                break;
             case VM_OPCODE_POP:
                 op = "pop"sv;
                 break;
@@ -729,13 +783,11 @@ adv_result_t Generator::text() {
                 op = "great_equal"sv;
                 break;
             case VM_OPCODE_CALL_NATIVE:
-                assert(!"todo");
-                break;
+                return ADV_RESULT_ERROR_INVALID_ARG;
+            case VM_OPCODE_CALL_NATIVE_BY_NAME:
             case VM_OPCODE_CALL_BY_NAME: {
                 op = "call"sv;
                 const auto name = utils::readString(text, ip, data);
-                // const auto address = functions[name];
-                // labels.try_emplace(address, name, true);
                 val = Id{name};
                 break;
             }
