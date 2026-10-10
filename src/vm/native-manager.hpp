@@ -15,7 +15,13 @@ class NativeManager {
 public:
     explicit NativeManager(Cache& cache) noexcept;
 
-    // [[nodiscard]] vm_native_h registerFunc();
+    [[nodiscard]] const Native* func(vm_native_h native) const noexcept;
+
+    [[nodiscard]] vm_native_h find(std::string_view name) const noexcept;
+
+    [[nodiscard]] vm_native_h registerFunc(std::string_view name, vm_native_callback_t func, vm_data_t data) noexcept;
+
+    void unregisterFunc(vm_native_h native) noexcept;
 
 private:
     Cache& _cache;

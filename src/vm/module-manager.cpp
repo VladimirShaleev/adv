@@ -35,6 +35,9 @@ void Module::modifyOpcode(vm_uint32_t instructionPos, vm_opcode_t newOpcode, vm_
     case VM_OPCODE_POP_GLOBAL_BY_NAME:
         assert(newOpcode == VM_OPCODE_POP_GLOBAL);
         break;
+    case VM_OPCODE_CALL_NATIVE_BY_NAME:
+        assert(newOpcode == VM_OPCODE_CALL_NATIVE);
+        break;
     case VM_OPCODE_CALL_BY_NAME:
         assert(newOpcode == VM_OPCODE_CALL);
         break;

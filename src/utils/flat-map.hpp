@@ -26,7 +26,9 @@ public:
         return nullptr;
     }
 
-    [[nodiscard]] UTILS_FORCE_INLINE std::pair<H, V*> insert(const K& key, const V& value) { return emplace(key, value); }
+    [[nodiscard]] UTILS_FORCE_INLINE std::pair<H, V*> insert(const K& key, const V& value) {
+        return emplace(key, value);
+    }
 
     template <typename... Args>
     [[nodiscard]] std::pair<H, V*> emplace(const K& key, Args&&... args) {
@@ -38,7 +40,7 @@ public:
         const auto offset = _values.size();
         _values.emplace_back(std::forward<Args>(args)...);
         try {
-            _keys.insert(pos, {key, offset});
+            _keys.insert(pos, {key, static_cast<decltype(H::handle)>(offset)});
         } catch (...) {
             _values.pop_back();
             throw;

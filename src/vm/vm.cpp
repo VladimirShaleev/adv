@@ -66,7 +66,11 @@ public:
         return Undefined;
     }
 
-    void destroyThread(vm_thread_h thread) noexcept {}
+    void destroyThread(vm_thread_h thread) noexcept {
+        // TODO: not implemented
+    }
+
+    [[nodiscard]] NativeManager& native() noexcept { return _nativeManager; }
 
     void getImportDirs(vm_uint32_t& dirCount, vm_utf8_t* dirs) {
         if (dirs) {
@@ -369,8 +373,23 @@ private:
             case VM_OPCODE_GREAT_EQUAL:
                 operation<GreatEqual>(thread);
                 break;
-            case VM_OPCODE_CALL_NATIVE:
+            case VM_OPCODE_CALL_NATIVE_BY_NAME: {
+                const auto name = utils::readString(text, thread->instructionPos, data);
+                if (auto native = _nativeManager.find(name); native != Undefined) {
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL_NATIVE, native.handle);
+                    const auto func = _nativeManager.func(native);
+                    callNative(*func);
+                } else {
+                    // TODO: log
+                }
                 break;
+            }
+            case VM_OPCODE_CALL_NATIVE: {
+                const auto native = utils::readUint32(text, thread->instructionPos);
+                const auto func = _nativeManager.func({native});
+                callNative(*func);
+                break;
+            }
             case VM_OPCODE_CALL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveFunc(name); slot != Undefined) {
@@ -462,6 +481,8 @@ private:
         }
         return createThread(script);
     }
+
+    void callNative(const Native& native) {}
 
     void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module) {
         if (thread->frameCount >= MaxFrames) {
@@ -716,6 +737,12 @@ void vm_destroy(vm_t vm) {
     }
 }
 
+void vm_tick(vm_t vm) {
+    if (vm) {
+        vm->as<vm::VM>()->tick();
+    }
+}
+
 vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
     return vm ? vm->as<vm::VM>()->loadScriptFromFile(file) : Undefined;
 }
@@ -734,11 +761,25 @@ void vm_shutdown_thread(vm_t vm, vm_thread_h thread) {
     }
 }
 
-vm_native_callback_t vm_get_native(vm_t vm, vm_native_h native, vm_data_t* data) { return nullptr; }
+vm_native_callback_t vm_get_native(vm_t vm, vm_native_h native, vm_data_t* data) {
+    if (auto nativePtr = vm->as<vm::VM>()->native().func(native)) {
+        if (data) {
+            *data = nativePtr->data;
+        }
+        return nativePtr->func;
+    }
+    return nullptr;
+}
 
-vm_native_h vm_register_native(vm_t vm, vm_utf8_t name, vm_native_callback_t func, vm_data_t data) { return Undefined; }
+vm_native_h vm_register_native(vm_t vm, vm_utf8_t name, vm_native_callback_t func, vm_data_t data) {
+    return vm ? vm->as<vm::VM>()->native().registerFunc(name, func, data) : Undefined;
+}
 
-vm_native_h vm_unregister_native(vm_t vm, vm_utf8_t name) { return Undefined; }
+void vm_unregister_native(vm_t vm, vm_native_h native) {
+    if (vm) {
+        vm->as<vm::VM>()->native().unregisterFunc(native);
+    }
+}
 
 void vm_get_import_dirs(vm_t vm, vm_uint32_t* dir_count, vm_utf8_t* dirs) {
     if (dir_count) {
@@ -773,11 +814,5 @@ vm_release_import_callback_t vm_get_release_import(vm_t vm, vm_data_t* data) {
 void vm_set_release_import(vm_t vm, vm_release_import_callback_t callback, vm_data_t data) {
     if (vm) {
         vm->as<vm::VM>()->setReleaseImport(callback, data);
-    }
-}
-
-void vm_tick(vm_t vm) {
-    if (vm) {
-        vm->as<vm::VM>()->tick();
     }
 }

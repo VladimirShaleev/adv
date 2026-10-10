@@ -87,21 +87,22 @@ typedef enum
     VM_OPCODE_GREAT_EQUAL            = 47, /**< Tests whether the preceding value is greater than or equal to the top value. */
 
     /* Subroutines & Execution Control */
-    VM_OPCODE_CALL_NATIVE            = 48, /**< Calls a native function. */
-    VM_OPCODE_CALL_BY_NAME           = 49, /**< Calls a subroutine identified by name. */
-    VM_OPCODE_CALL                   = 50, /**< Calls a subroutine identified by its operand. */
-    VM_OPCODE_RETURN                 = 51, /**< Returns from the current subroutine. */
+    VM_OPCODE_CALL_NATIVE_BY_NAME    = 48, /**< Calls a native function by name. */
+    VM_OPCODE_CALL_NATIVE            = 49, /**< Calls a native function by its operand. */
+    VM_OPCODE_CALL_BY_NAME           = 50, /**< Calls a subroutine identified by name. */
+    VM_OPCODE_CALL                   = 51, /**< Calls a subroutine identified by its operand. */
+    VM_OPCODE_RETURN                 = 52, /**< Returns from the current subroutine. */
 
     /* Jumps & Control Flow */
-    VM_OPCODE_JUMP                   = 52, /**< Unconditionally jumps to the target identified by its operand. */
-    VM_OPCODE_JUMP_IF_FALSE          = 53, /**< Jumps to the target if the stack-top condition is false. */
+    VM_OPCODE_JUMP                   = 53, /**< Unconditionally jumps to the target identified by its operand. */
+    VM_OPCODE_JUMP_IF_FALSE          = 54, /**< Jumps to the target if the stack-top condition is false. */
 
     /* Concurrency & VM Lifecycle */
-    VM_OPCODE_YIELD                  = 54, /**< Yields execution so another VM thread can run. */
-    VM_OPCODE_WAIT                   = 55, /**< Suspends the current execution until its wait condition is met. */
-    VM_OPCODE_HALT                   = 56, /**< Halts the current VM execution. */
+    VM_OPCODE_YIELD                  = 55, /**< Yields execution so another VM thread can run. */
+    VM_OPCODE_WAIT                   = 56, /**< Suspends the current execution until its wait condition is met. */
+    VM_OPCODE_HALT                   = 57, /**< Halts the current VM execution. */
 
-    VM_OPCODE_COUNT_ENUMS            = 57, /**< Count of constants in the enumeration. */
+    VM_OPCODE_COUNT_ENUMS            = 58, /**< Count of constants in the enumeration. */
     VM_OPCODE_MAX_ENUM               = 0x7FFFFFFF /**< Max value of enum (not used). */
 } vm_opcode_t;
 

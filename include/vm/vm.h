@@ -129,6 +129,9 @@ vm_reference(vm_t vm);
 VM_API void
 vm_destroy(vm_t vm);
 
+VM_API void
+vm_tick(vm_t vm);
+
 /**
  * @brief      Loads a script from a file and starts its execution.
  * @details    The input may contain compiled binary data or supported text
@@ -176,9 +179,9 @@ vm_register_native(vm_t vm,
                    vm_native_callback_t func,
                    vm_data_t data);
 
-VM_API vm_native_h
+VM_API void
 vm_unregister_native(vm_t vm,
-                     vm_utf8_t name);
+                     vm_native_h native);
 
 VM_API void
 vm_get_import_dirs(vm_t vm,
@@ -207,9 +210,6 @@ VM_API void
 vm_set_release_import(vm_t vm,
                       vm_release_import_callback_t callback,
                       vm_data_t data);
-
-VM_API void
-vm_tick(vm_t vm);
 
 /** @} */
 
