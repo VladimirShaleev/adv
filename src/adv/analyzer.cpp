@@ -240,6 +240,39 @@ void Analyzer::resolveSymbols() {
                 }
                 symbolTable.endScope();
             }
+            for (adv_uint32_t i = 0; i < exports.native_count; ++i) {
+                params.clear();
+                const auto native = utils::read<vm_script_export_native_t>(bytecode, i);
+                adv_node_t node{
+                    ADV_NODE_NATIVE_DECL,
+                    location,
+                    static_cast<vm_value_type_t>(native.return_type),
+                };
+                for (adv_uint32_t j = 0; j < native.param_count; ++j) {
+                    const auto param = utils::read<utils::NativeParam>(bytecode, i, j).param;
+                    auto& nodeParam = params.emplace_back(
+                        ADV_NODE_PARAM_DECL, location, static_cast<vm_value_type_t>(param.type), &node);
+                    nodeParam.param_decl.name = ctx.intern(utils::readString(param.name, data));
+                    nodeParam.var_decl.type_hint = static_cast<vm_string_h>(nodeParam.resolved_type);
+                }
+                node.func_decl.name = ctx.intern(utils::readString(native.name, data));
+                node.func_decl.return_type_hint = static_cast<vm_string_h>(node.resolved_type);
+                node.func_decl.param_count = static_cast<adv_uint32_t>(params.size());
+                if (!params.empty()) {
+                    node.func_decl.first_param = &params.front();
+                    auto prevIt = params.begin();
+                    for (auto it = params.begin() + 1; it != params.end(); ++it) {
+                        prevIt->next_sibling = &(*it);
+                        prevIt = it;
+                    }
+                }
+                symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
+                symbolTable.beginScope();
+                for (auto& param : params) {
+                    symbolTable.addSymbol(options, ctx, &param)->type = param.resolved_type;
+                }
+                symbolTable.endScope();
+            }
         }
 
         const Options& options;
