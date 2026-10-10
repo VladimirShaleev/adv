@@ -2,7 +2,7 @@
 
 namespace vm {
 
-GlobalManager::GlobalManager() : _varNames(256, 2048, 1024), _funNames(256, 2048, 1024) {}
+GlobalManager::GlobalManager(Cache& cache) noexcept : _cache(cache) {}
 
 void GlobalManager::addGlobals(vm_script_h script, std::span<const uint8_t> bytecode) {
     const auto data = utils::read<utils::SectionData>(bytecode).data;
@@ -27,36 +27,36 @@ void GlobalManager::addGlobals(vm_script_h script, std::span<const uint8_t> byte
     }
 }
 
-std::optional<vm_uint32_t> GlobalManager::resolveVarSlot(std::string_view name) const noexcept {
-    if (auto str = _varNames.find(name)) {
-        return _varOffsets[str.value().handle - 1];
+GlobalManager::VarSlot GlobalManager::resolveVar(std::string_view name) const noexcept {
+    if (auto str = _cache.pool.find(name)) {
+        const auto [slot, _] = _vars.find(str.value());
+        return slot;
     }
-    return std::nullopt;
+    return Undefined;
 }
 
-std::optional<vm_uint32_t> GlobalManager::resolveFunc(std::string_view name) const noexcept {
-    if (auto str = _funNames.find(name)) {
-        return str.value().handle - 1;
+GlobalManager::FuncSlot GlobalManager::resolveFunc(std::string_view name) const noexcept {
+    if (auto str = _cache.pool.find(name)) {
+        const auto [slot, _] = _funcs.find(str.value());
+        return slot;
     }
-    return std::nullopt;
+    return Undefined;
 }
 
-vm_value_t& GlobalManager::globalVar(vm_uint32_t offset, size_t i) noexcept { return _vars[offset + i]; }
+void GlobalManager::setVar(VarSlot slot, const vm_value_t& value) noexcept { *_vars.get(slot) = value; }
 
-const GlobalManager::Func& GlobalManager::globalFun(vm_uint32_t offset) const noexcept { return _funcs[offset]; }
+const vm_value_t& GlobalManager::getVar(VarSlot slot) const noexcept { return *_vars.get(slot); }
+
+const GlobalManager::Func& GlobalManager::getFunc(FuncSlot slot) const noexcept { return *_funcs.get(slot); }
 
 void GlobalManager::addGlobalVar(std::string_view name, vm_value_type_t type) {
-    if (auto slot = resolveVarSlot(name)) {
-        if (_vars[slot.value()].type != type) {
+    if (auto slot = resolveVar(name); slot != Undefined) {
+        if (getVar(slot).type != type) {
             // TODO: add log
         }
-        return;
     }
-    const auto str = _varNames.insert(name);
-    const auto offset = static_cast<vm_uint32_t>(_vars.size());
-    _varOffsets.emplace_back(offset);
-    _vars.emplace_back(type);
-    assert(_varOffsets.size() == str.handle);
+    const auto str = _cache.pool.insert(name);
+    const auto _ = _vars.emplace(str, type);
 }
 
 void GlobalManager::addGlobalFun(
@@ -66,17 +66,8 @@ void GlobalManager::addGlobalFun(
     vm_script_h script,
     vm_uint32_t offset,
     std::optional<vm_value_type_t> returnType) {
-    const auto str = _funNames.insert(name);
-    const auto index = static_cast<size_t>(str.handle - 1);
-    if (index >= _funcs.size()) {
-        _funcs.emplace_back(script, offset, paramCount, frameSlotCount, returnType);
-    } else {
-        _funcs[index].script = script;
-        _funcs[index].offset = offset;
-        _funcs[index].paramCount = paramCount;
-        _funcs[index].frameSlotCount = frameSlotCount;
-        _funcs[index].returnType = returnType;
-    }
+    const auto str = _cache.pool.insert(name);
+    const auto _ = _funcs.emplace(str, script, offset, paramCount, frameSlotCount, returnType);
 }
 
 } // namespace vm

@@ -1,7 +1,7 @@
 #ifndef VM_MODULE_MANAGER_HPP
 #define VM_MODULE_MANAGER_HPP
 
-#include "vm.hpp"
+#include "cache.hpp"
 
 namespace vm {
 
@@ -33,24 +33,23 @@ private:
 
 class ModuleManager {
 public:
-    ModuleManager();
+    explicit ModuleManager(Cache& cache) noexcept;
 
     [[nodiscard]] bool hasModule(std::string_view moduleName) const noexcept;
-    [[nodiscard]] Module& getModule(vm_script_h script) noexcept;
-    [[nodiscard]] const Module& getModule(vm_script_h script) const noexcept;
+    [[nodiscard]] Module* getModule(vm_script_h script) noexcept;
+    [[nodiscard]] const Module* getModule(vm_script_h script) const noexcept;
 
+    [[nodiscard]] std::pair<vm_script_h, bool> loadScript(vm_utf8_t file, std::span<const std::filesystem::path> dirs);
     [[nodiscard]] std::pair<vm_script_h, bool>
-    loadScript(vm_utf8_t file, std::span<const std::filesystem::path> dirs, bool forceLoad);
-    [[nodiscard]] std::pair<vm_script_h, bool>
-    loadScript(std::span<const vm_char_t> code, bool forceLoad, std::string_view moduleName = {});
+    loadScript(std::span<const vm_char_t> code, std::string_view moduleName = {});
 
 private:
     [[nodiscard]] static std::string_view getModuleName(std::span<const vm_uint8_t> bytecode) noexcept;
     [[nodiscard]] static std::span<const vm_char_t>
     tryTranslate(std::span<const vm_char_t> code, std::vector<vm_uint8_t>& buffer) noexcept;
 
-    utils::StringPool _mapModules;
-    std::vector<Module> _modules;
+    Cache& _cache;
+    utils::FlatMap<vm_string_h, vm_script_h, Module> _modules;
 };
 
 } // namespace vm

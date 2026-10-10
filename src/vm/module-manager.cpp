@@ -51,24 +51,20 @@ void Module::modifyOpcode(vm_uint32_t instructionPos, vm_opcode_t newOpcode, vm_
     _changes.emplace_back(instructionPos, newOpcode, slot);
 }
 
-ModuleManager::ModuleManager() { _modules.emplace_back(std::span<const uint8_t>{}); }
+ModuleManager::ModuleManager(Cache& cache) noexcept : _cache(cache) {}
 
 bool ModuleManager::hasModule(std::string_view moduleName) const noexcept {
-    return _mapModules.find(moduleName).has_value();
+    if (auto str = _cache.pool.find(moduleName)) {
+        return _modules.contains(str.value());
+    }
+    return false;
 }
 
-Module& ModuleManager::getModule(vm_script_h script) noexcept {
-    assert(script.handle < _modules.size());
-    return _modules[script.handle];
-}
+Module* ModuleManager::getModule(vm_script_h script) noexcept { return _modules.get(script); }
 
-const Module& ModuleManager::getModule(vm_script_h script) const noexcept {
-    assert(script.handle < _modules.size());
-    return _modules[script.handle];
-}
+const Module* ModuleManager::getModule(vm_script_h script) const noexcept { return _modules.get(script); }
 
-std::pair<vm_script_h, bool>
-ModuleManager::loadScript(vm_utf8_t file, std::span<const std::filesystem::path> dirs, bool forceLoad) {
+std::pair<vm_script_h, bool> ModuleManager::loadScript(vm_utf8_t file, std::span<const std::filesystem::path> dirs) {
     const auto fullpath = utils::findFile(file, dirs);
     std::ifstream stream(fullpath, std::ios::binary);
     if (!stream.is_open()) {
@@ -85,11 +81,10 @@ ModuleManager::loadScript(vm_utf8_t file, std::span<const std::filesystem::path>
     stream.close();
 
     const auto name = utils::getModuleName(fullpath);
-    return loadScript({bytes.data(), bytes.size()}, forceLoad, name);
+    return loadScript({bytes.data(), bytes.size()}, name);
 }
 
-std::pair<vm_script_h, bool>
-ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::string_view moduleName) {
+std::pair<vm_script_h, bool> ModuleManager::loadScript(std::span<const vm_char_t> code, std::string_view moduleName) {
     auto needValidateChecksum = true;
     std::vector<vm_uint8_t> tmpBuffer;
     if (!utils::isBinaryCode(code)) {
@@ -105,32 +100,24 @@ ModuleManager::loadScript(std::span<const vm_char_t> code, bool forceLoad, std::
     if (needValidateChecksum && !utils::validateChecksum(code)) {
         return {Undefined, false};
     }
+    std::span bytecode{(const vm_uint8_t*)code.data(), code.size()};
     if (moduleName.empty()) {
-        auto name = utils::read<vm_script_export_t>({(const vm_uint8_t*)code.data(), code.size()}).module_name;
-        auto data = utils::read<utils::SectionData>({(const vm_uint8_t*)code.data(), code.size()}).data;
+        auto name = utils::read<vm_script_export_t>(bytecode).module_name;
+        auto data = utils::read<utils::SectionData>(bytecode).data;
         moduleName = utils::readString(name, data);
     }
     if (moduleName.empty()) {
         return {Undefined, false};
     }
-    if (auto loadedModule = _mapModules.find(moduleName)) {
-        const auto script = vm_script_h{loadedModule.value().handle};
-        auto reloaded = false;
-        if (forceLoad) {
-            const auto oldChecksum = getModule(script).checksum();
-            const auto newChecksum =
-                utils::read<vm_script_header_t>({(const vm_uint8_t*)code.data(), code.size()}).checksum;
-            if (oldChecksum != newChecksum) {
-                const auto buffer = (const uint8_t*)code.data();
-                _modules[loadedModule.value().handle] = std::move(Module({buffer, buffer + code.size()}));
-                reloaded = true;
-            }
+    const auto key = _cache.pool.insert(moduleName);
+    if (auto [script, loadedModule] = _modules.find(key); loadedModule) {
+        const auto oldChecksum = _modules.get(script)->checksum();
+        const auto newChecksum = utils::read<vm_script_header_t>(bytecode).checksum;
+        if (oldChecksum == newChecksum) {
+            return {script, false};
         }
-        return {script, reloaded};
     }
-    const auto script = vm_script_h{_mapModules.insert(moduleName).handle};
-    const auto buffer = (const uint8_t*)code.data();
-    _modules.emplace_back(std::span{buffer, buffer + code.size()});
+    const auto [script, _] = _modules.emplace(key, bytecode);
     return {script, true};
 }
 

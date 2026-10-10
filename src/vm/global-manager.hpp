@@ -1,12 +1,20 @@
 #ifndef VM_GLOBAL_MANAGER_HPP
 #define VM_GLOBAL_MANAGER_HPP
 
-#include "vm.hpp"
+#include "cache.hpp"
 
 namespace vm {
 
 class GlobalManager {
 public:
+    struct VarSlot {
+        vm_uint32_t handle;
+    };
+
+    struct FuncSlot {
+        vm_uint32_t handle;
+    };
+
     struct Func {
         vm_script_h script;
         vm_uint32_t offset;
@@ -15,15 +23,16 @@ public:
         std::optional<vm_value_type_t> returnType;
     };
 
-    GlobalManager();
+    explicit GlobalManager(Cache& cache) noexcept;
 
     void addGlobals(vm_script_h script, std::span<const uint8_t> bytecode);
 
-    [[nodiscard]] std::optional<vm_uint32_t> resolveVarSlot(std::string_view name) const noexcept;
-    [[nodiscard]] std::optional<vm_uint32_t> resolveFunc(std::string_view name) const noexcept;
+    [[nodiscard]] VarSlot resolveVar(std::string_view name) const noexcept;
+    [[nodiscard]] FuncSlot resolveFunc(std::string_view name) const noexcept;
 
-    [[nodiscard]] vm_value_t& globalVar(vm_uint32_t offset, size_t i = 0) noexcept;
-    [[nodiscard]] const Func& globalFun(vm_uint32_t offset) const noexcept;
+    [[nodiscard]] void setVar(VarSlot slot, const vm_value_t& value) noexcept;
+    [[nodiscard]] const vm_value_t& getVar(VarSlot slot) const noexcept;
+    [[nodiscard]] const Func& getFunc(FuncSlot slot) const noexcept;
 
 private:
     void addGlobalVar(std::string_view name, vm_value_type_t type);
@@ -35,11 +44,9 @@ private:
         vm_uint32_t offset,
         std::optional<vm_value_type_t> returnType);
 
-    utils::StringPool _varNames;
-    utils::StringPool _funNames;
-    std::vector<vm_uint32_t> _varOffsets;
-    std::vector<vm_value_t> _vars;
-    std::vector<Func> _funcs;
+    Cache& _cache;
+    utils::FlatMap<vm_string_h, VarSlot, vm_value_t> _vars;
+    utils::FlatMap<vm_string_h, FuncSlot, Func> _funcs;
 };
 
 } // namespace vm

@@ -12,7 +12,7 @@ namespace vm {
 
 class VM final : public _vm {
 public:
-    VM() {
+    VM() : _moduleManager(_cache), _globalManager(_cache) {
         _cache.strTrue = _cache.pool.insert("true");
         _cache.strFalse = _cache.pool.insert("false");
         for (size_t i = 0; i < _cache.strInts.size(); ++i) {
@@ -22,10 +22,9 @@ public:
 
     std::pair<vm_script_h, ScriptThreadHandle> loadScript(vm_script_h handle, bool forceLoad) noexcept {
         auto thread = ScriptThreadPool::Undefined;
-        if (handle != Undefined) {
-            auto module = _moduleManager.getModule(handle);
+        if (auto module = _moduleManager.getModule(handle)) {
             if (forceLoad) {
-                _globalManager.addGlobals(handle, module.bytecode());
+                _globalManager.addGlobals(handle, module->bytecode());
             }
             thread = createThread(handle);
         }
@@ -33,14 +32,13 @@ public:
     }
 
     [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle>
-    loadScriptFromMemory(std::span<const vm_char_t> code, bool forceLoad) noexcept {
-        auto [script, loaded] = _moduleManager.loadScript(code, forceLoad);
+    loadScriptFromMemory(std::span<const vm_char_t> code) noexcept {
+        auto [script, loaded] = _moduleManager.loadScript(code);
         return loadScript(script, loaded);
     }
 
-    [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle>
-    loadScriptFromFile(vm_utf8_t file, bool forceLoad) noexcept {
-        auto [script, loaded] = _moduleManager.loadScript(file, _importDirs, forceLoad);
+    [[nodiscard]] std::pair<vm_script_h, ScriptThreadHandle> loadScriptFromFile(vm_utf8_t file) noexcept {
+        auto [script, loaded] = _moduleManager.loadScript(file, _importDirs);
         return loadScript(script, loaded);
     }
 
@@ -150,7 +148,7 @@ private:
     ScriptThreadHandle createThread(vm_script_h script) {
         auto [handle, thread] = _threads.obtainAndAccess();
         _threadHandles.push_back(handle);
-        auto bytecode = _moduleManager.getModule(script).bytecode();
+        auto bytecode = _moduleManager.getModule(script)->bytecode();
         thread->state = ThreadState::Running;
         thread->script = script;
         thread->stackPos = utils::read<vm_script_export_t>(bytecode).root_frame_slots;
@@ -159,7 +157,7 @@ private:
     }
 
     void stepThread(ScriptThread* thread) {
-        auto* module = &_moduleManager.getModule(thread->script);
+        auto module = _moduleManager.getModule(thread->script);
         auto text = module->text();
         auto data = module->data();
         while (thread->state == ThreadState::Running && thread->instructionPos < text.size()) {
@@ -171,7 +169,7 @@ private:
                 const auto view = utils::readString(text, thread->instructionPos, data);
                 if (!_moduleManager.hasModule(view)) {
                     const auto waitThread = import(view);
-                    module = &_moduleManager.getModule(thread->script);
+                    module = _moduleManager.getModule(thread->script);
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_NO_OPERATION, 0);
                     if (waitThread != ScriptThreadPool::Undefined) {
                         thread->state = ThreadState::Waiting;
@@ -211,9 +209,9 @@ private:
             }
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
-                if (auto slot = _globalManager.resolveVarSlot(name)) {
-                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.value());
-                    thread->stack[thread->stackPos++] = _globalManager.globalVar(slot.value());
+                if (auto slot = _globalManager.resolveVar(name); slot != Undefined) {
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.handle);
+                    thread->stack[thread->stackPos++] = _globalManager.getVar(slot);
                 } else {
                     // TODO: log
                 }
@@ -221,7 +219,7 @@ private:
             }
             case VM_OPCODE_PUSH_GLOBAL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
-                thread->stack[thread->stackPos++] = _globalManager.globalVar(slot);
+                thread->stack[thread->stackPos++] = _globalManager.getVar({slot});
                 break;
             }
             case VM_OPCODE_PUSH_LOCAL: {
@@ -233,9 +231,9 @@ private:
             }
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
-                if (auto slot = _globalManager.resolveVarSlot(name)) {
-                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.value());
-                    _globalManager.globalVar(slot.value()) = thread->stack[--thread->stackPos];
+                if (auto slot = _globalManager.resolveVar(name); slot != Undefined) {
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.handle);
+                    _globalManager.setVar(slot, thread->stack[--thread->stackPos]);
                 } else {
                     // TODO: log
                 }
@@ -243,7 +241,7 @@ private:
             }
             case VM_OPCODE_POP_GLOBAL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
-                _globalManager.globalVar(slot) = thread->stack[--thread->stackPos];
+                _globalManager.setVar({slot}, thread->stack[--thread->stackPos]);
                 break;
             }
             case VM_OPCODE_POP_LOCAL: {
@@ -360,9 +358,9 @@ private:
                 break;
             case VM_OPCODE_CALL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
-                if (auto funcOffset = _globalManager.resolveFunc(name)) {
-                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL, funcOffset.value());
-                    const auto& func = _globalManager.globalFun(funcOffset.value());
+                if (auto slot = _globalManager.resolveFunc(name); slot != Undefined) {
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL, slot.handle);
+                    const auto& func = _globalManager.getFunc(slot);
                     call(thread, func, module);
                     text = module->text();
                     data = module->data();
@@ -372,8 +370,8 @@ private:
                 break;
             }
             case VM_OPCODE_CALL: {
-                const auto funcOffest = utils::readUint32(text, thread->instructionPos);
-                const auto& func = _globalManager.globalFun(funcOffest);
+                const auto slot = utils::readUint32(text, thread->instructionPos);
+                const auto& func = _globalManager.getFunc({slot});
                 call(thread, func, module);
                 text = module->text();
                 data = module->data();
@@ -434,14 +432,14 @@ private:
         std::pair<vm_script_h, ScriptThreadHandle> result{};
         if (_importer) {
             if (auto bytecode = _importer(moduleName.data(), _importerData)) {
-                result = loadScriptFromMemory({bytecode->data, bytecode->size}, false);
+                result = loadScriptFromMemory({bytecode->data, bytecode->size});
                 if (_releaseImport) {
                     _releaseImport(bytecode, _releaseImportData);
                 }
             }
         }
         if (result.first.handle == 0) {
-            result = loadScriptFromFile(moduleName.data(), false);
+            result = loadScriptFromFile(moduleName.data());
         }
         if (result.first.handle == 0) {
             // TODO: log
@@ -469,7 +467,7 @@ private:
 
     void swapScript(ScriptThread* thread, vm_script_h script, Module*& module) noexcept {
         if (thread->script != script) {
-            module = &_moduleManager.getModule(script);
+            module = _moduleManager.getModule(script);
             thread->script = script;
         }
     }
@@ -542,18 +540,18 @@ private:
         return {};
     }
 
+    Cache _cache;
+    ModuleManager _moduleManager;
+    GlobalManager _globalManager;
+    ScriptThreadPool _threads;
+    std::vector<ScriptThreadHandle> _threadHandles;
+
     std::vector<std::string> _importStrDirs{};
     std::vector<std::filesystem::path> _importDirs{};
     vm_import_callback_t _importer{};
     vm_release_import_callback_t _releaseImport{};
     vm_data_t _importerData{};
     vm_data_t _releaseImportData{};
-
-    ModuleManager _moduleManager;
-    GlobalManager _globalManager;
-    Cache _cache;
-    ScriptThreadPool _threads;
-    std::vector<ScriptThreadHandle> _threadHandles;
 };
 
 } // namespace vm
@@ -706,11 +704,11 @@ vm_script_h vm_load_script(vm_t vm, vm_script_h handle) {
 }
 
 vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
-    return vm ? vm->as<vm::VM>()->loadScriptFromFile(file, true).first : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScriptFromFile(file).first : vm_script_h{};
 }
 
 vm_script_h vm_load_script_from_memory(vm_t vm, const vm_char_t* code, vm_uint32_t code_size) {
-    return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}, true).first : vm_script_h{};
+    return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}).first : vm_script_h{};
 }
 
 void vm_get_import_dirs(vm_t vm, vm_uint32_t* dir_count, vm_utf8_t* dirs) {
