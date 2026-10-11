@@ -32,6 +32,7 @@ struct ScriptThread {
     Handle waitThread;
     vm_uint32_t stackPos;
     vm_uint32_t frameCount;
+    vm_native_h currentNative;
     vm_value_t stack[StackSize];
     CallFrame frames[MaxFrames];
 };

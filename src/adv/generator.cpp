@@ -786,7 +786,7 @@ adv_result_t Generator::text() {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             case VM_OPCODE_CALL_NATIVE_BY_NAME:
             case VM_OPCODE_CALL_BY_NAME: {
-                op = "call"sv;
+                op = opcode == VM_OPCODE_CALL_NATIVE_BY_NAME ? "call_native"sv : "call"sv;
                 const auto name = utils::readString(text, ip, data);
                 val = Id{name};
                 break;

@@ -26,6 +26,7 @@ public:
         if (auto module = _moduleManager.getModule(script)) {
             if (forceLoad) {
                 _globalManager.addGlobals(script, module->bytecode());
+                _nativeManager.addNatives(module->bytecode());
             }
         }
         return script;
@@ -69,6 +70,30 @@ public:
     void destroyThread(vm_thread_h thread) noexcept {
         // TODO: not implemented
     }
+
+    [[nodiscard]] const vm_value_t* getArg(vm_thread_h thread, vm_uint16_t index) const noexcept {
+        if (const auto threadPtr = _threads.access(thread)) {
+            const auto native = _nativeManager.func(threadPtr->currentNative);
+            assert(native);
+            const auto argBase = threadPtr->stackPos - native->paramCount;
+            if (index < native->paramCount) {
+                return &threadPtr->stack[argBase + index];
+            }
+        }
+        return nullptr;
+    }
+
+    void setResult(vm_thread_h thread, vm_uint16_t index, const vm_value_t& value) {
+        if (const auto threadPtr = _threads.access(thread)) {
+            const auto native = _nativeManager.func(threadPtr->currentNative);
+            assert(native);
+            threadPtr->stack[threadPtr->stackPos + index] = value;
+        }
+    }
+
+    [[nodiscard]] std::string_view getString(vm_string_h str) const noexcept { return _cache.pool[str]; }
+
+    [[nodiscard]] vm_string_h internString(vm_utf8_t str) noexcept { return _cache.pool.insert(str); }
 
     [[nodiscard]] NativeManager& native() noexcept { return _nativeManager; }
 
@@ -378,7 +403,7 @@ private:
                 if (auto native = _nativeManager.find(name); native != Undefined) {
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL_NATIVE, native.handle);
                     const auto func = _nativeManager.func(native);
-                    callNative(*func);
+                    callNative(thread, native, *func);
                 } else {
                     // TODO: log
                 }
@@ -387,7 +412,7 @@ private:
             case VM_OPCODE_CALL_NATIVE: {
                 const auto native = utils::readUint32(text, thread->instructionPos);
                 const auto func = _nativeManager.func({native});
-                callNative(*func);
+                callNative(thread, {native}, *func);
                 break;
             }
             case VM_OPCODE_CALL_BY_NAME: {
@@ -482,7 +507,24 @@ private:
         return createThread(script);
     }
 
-    void callNative(const Native& native) {}
+    void callNative(ScriptThread* thread, vm_native_h nativeHandle, const Native& native) {
+        if (thread->stackPos + native.returnCount < StackSize) {
+            thread->currentNative = nativeHandle;
+            native.func(this, _threads.handle(thread), nativeHandle, native.paramCount, native.data);
+            vm_value_t retVal{};
+            if (native.returnCount) {
+                assert(native.returnCount == 1);
+                retVal = thread->stack[thread->stackPos];
+            }
+            thread->stackPos = thread->stackPos - native.paramCount;
+            if (thread->stackPos - native.paramCount) {
+                assert(native.returnCount == 1);
+                thread->stack[thread->stackPos++] = retVal;
+            }
+        } else {
+            // log
+        }
+    }
 
     void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module) {
         if (thread->frameCount >= MaxFrames) {
@@ -785,7 +827,7 @@ vm_script_h vm_load_script_from_memory(vm_t vm, const vm_char_t* code, vm_uint32
     return vm ? vm->as<vm::VM>()->loadScriptFromMemory({code, code_size}) : Undefined;
 }
 
-vm_thread_h vm_run_script(vm_t vm, vm_script_h script) {
+vm_thread_h vm_run_thread(vm_t vm, vm_script_h script) {
     return vm ? vm->as<vm::VM>()->createThread(script) : Undefined;
 }
 
@@ -793,6 +835,39 @@ void vm_shutdown_thread(vm_t vm, vm_thread_h thread) {
     if (vm) {
         vm->as<vm::VM>()->destroyThread(thread);
     }
+}
+
+vm_value_t vm_thread_get_arg(vm_t vm, vm_thread_h thread, vm_uint32_t index) {
+    if (vm) {
+        if (auto result = vm->as<vm::VM>()->getArg(thread, index)) {
+            return *result;
+        }
+    }
+    return {};
+}
+
+void vm_thread_set_result(vm_t vm, vm_thread_h thread, vm_uint32_t index, const vm_value_t* value) {
+    if (vm && value) {
+        vm->as<vm::VM>()->setResult(thread, index, *value);
+    }
+}
+
+vm_utf8_t vm_get_string(vm_t vm, vm_string_h string, vm_uint32_t* length) {
+    if (vm) {
+        auto result = vm->as<vm::VM>()->getString(string);
+        if (length) {
+            *length = static_cast<vm_uint32_t>(result.length());
+        }
+        return result.data();
+    }
+    if (length) {
+        *length = 0;
+    }
+    return "";
+}
+
+vm_string_h vm_intern_string(vm_t vm, vm_utf8_t string) {
+    return vm ? vm->as<vm::VM>()->internString(string) : Undefined;
 }
 
 vm_native_callback_t vm_get_native(vm_t vm, vm_native_h native, vm_data_t* data) {

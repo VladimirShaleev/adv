@@ -66,6 +66,7 @@ typedef struct
 typedef void
 (*vm_native_callback_t)(vm_t vm,
                         vm_thread_h thread,
+                        vm_native_h native,
                         vm_uint16_t arg_count,
                         vm_data_t data);
 
@@ -161,12 +162,32 @@ vm_load_script_from_memory(vm_t vm,
                            vm_uint32_t code_size);
 
 VM_API vm_thread_h
-vm_run_script(vm_t vm,
+vm_run_thread(vm_t vm,
               vm_script_h script);
 
 VM_API void
 vm_shutdown_thread(vm_t vm,
                    vm_thread_h thread);
+
+VM_API vm_value_t
+vm_thread_get_arg(vm_t vm,
+                  vm_thread_h thread,
+                  vm_uint32_t index);
+
+VM_API void
+vm_thread_set_result(vm_t vm,
+                     vm_thread_h thread,
+                     vm_uint32_t index,
+                     const vm_value_t* value);
+
+VM_API vm_utf8_t
+vm_get_string(vm_t vm,
+              vm_string_h string,
+              vm_uint32_t* length);
+
+VM_API vm_string_h
+vm_intern_string(vm_t vm,
+                 vm_utf8_t string);
 
 VM_API vm_native_callback_t
 vm_get_native(vm_t vm,
