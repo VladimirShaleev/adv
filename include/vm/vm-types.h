@@ -32,8 +32,8 @@ VM_TYPE(vm)
  */
 VM_HANDLE(vm_string) /**< Handle identifying an interned string in the VM string pool. */
 VM_HANDLE(vm_script) /**< Handle identifying a compiled script managed by the VM. */
-VM_HANDLE(vm_thread) /**< TODO */
-VM_HANDLE(vm_native) /**< TODO */
+VM_HANDLE(vm_thread) /**< Handle to a running VM thread. */
+VM_HANDLE(vm_native) /**< Handle to a native function entry. */
 /** @} */
 
 #ifdef __cplusplus

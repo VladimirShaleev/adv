@@ -23,8 +23,8 @@ typedef enum
 {
     VM_OPCODE_NO_OPERATION           = 0, /**< Performs no operation. */
 
-    /* TODO */
-    VM_OPCODE_IMPORT                 = 1, /**< TODO. */
+    /* Imports a module */
+    VM_OPCODE_IMPORT                 = 1, /**< Imports an external module. */
 
     /* Literals / Values Push */
     VM_OPCODE_PUSH_TRUE              = 2, /**< Pushes boolean true onto the stack. */

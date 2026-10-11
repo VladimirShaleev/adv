@@ -35,7 +35,32 @@
 # endif
 #endif
 
-/* TODO: add doc for VM_PACKED_BEGIN, VM_PACKED_END, VM_PACKED_ATTR */
+/**
+ * @def     VM_PACKED_BEGIN
+ * @brief   Opens a packed-structure region for compilers that support it.
+ * @details Marks the following declarations as tightly packed to minimize struct
+ *          padding on supported compilers. This is used for binary file headers
+ *          and table layouts that must match a fixed on-disk layout.
+ * @note    This macro is a compatibility helper and is intentionally left empty
+ *          on compilers that do not require explicit packing directives.
+ * @ingroup macros
+ */
+
+/**
+ * @def     VM_PACKED_END
+ * @brief   Closes a packed-structure region.
+ * @details Restores the compiler's previous packing alignment after a
+ *          VM_PACKED_BEGIN block.
+ * @ingroup macros
+ */
+
+/**
+ * @def     VM_PACKED_ATTR
+ * @brief   Attribute applied to packed structs.
+ * @details GCC/Clang use `__attribute__((packed))`, while MSVC and other
+ *          compilers rely on pragma-based packing directives.
+ * @ingroup macros
+ */
 
 #if defined(_MSC_VER)
 # define VM_PACKED_BEGIN _Pragma("pack(push, 1)")
