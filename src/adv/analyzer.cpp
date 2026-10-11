@@ -58,10 +58,11 @@ void Analyzer::resolveSymbols() {
             auto importModule = utils::getModuleName(ctx.getString(node->import_stmt.path));
             if (!modules.contains(importModule)) {
                 modules.insert(importModule);
+                if (ctx.codeFormat(importModule) == utils::Format::Advb) {
+                    loadSymbolsFromBinary(ctx.bytecode(importModule));
+                }
                 if (node->import_stmt.root) {
                     acceptNode(node->import_stmt.root, node);
-                } else {
-                    loadSymbolsFromBinary(ctx.bytecode(importModule));
                 }
             }
         }

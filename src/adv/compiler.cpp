@@ -101,8 +101,8 @@ private:
                 result = status;
             }
             if (status == ADV_RESULT_SUCCESS) {
-                if (!context.bytecode(module).empty()) {
-                    return ADV_RESULT_SUCCESS;
+                if (auto bytecode = context.bytecode(module); !bytecode.empty()) {
+                    getImportsFromBinary(context, bytecode);
                 }
                 auto moduleRoot = context.root(module);
                 if (parentImport) {
@@ -157,6 +157,59 @@ private:
             return {ADV_RESULT_COMPILATION_FAILED, moduleName};
         }
         return {ADV_RESULT_SUCCESS, moduleName};
+    }
+
+    void getImportsFromBinary(Context& ctx, std::span<const uint8_t> bytecode) {
+        auto moduleName = utils::read<vm_script_export_t>(bytecode).module_name;
+        auto data = utils::read<utils::SectionData>(bytecode).data;
+        auto text = utils::read<utils::SectionText>(bytecode).text;
+        adv_location_t loc{ctx.intern(utils::readString(moduleName, data)), 0, 0};
+        auto program = ctx.allocNode(loc, ADV_NODE_PROGRAM);
+        adv_node_t* prevImport = nullptr;
+        ctx.setNodeTree(utils::readString(moduleName, data), program);
+        if (!text.empty()) {
+            vm_uint32_t ip = 0;
+            while (ip < text.size()) {
+                const auto opcode = (vm_opcode_t)text.data()[ip++];
+                switch (opcode) {
+                case VM_OPCODE_IMPORT:
+                    if (auto importName = utils::readString(text, ip, data); !importName.empty()) {
+                        auto import = ctx.allocNode(loc, ADV_NODE_IMPORT_STMT);
+                        import->import_stmt.path = ctx.intern(importName);
+                        if (program->stmts.first_stmt == nullptr) {
+                            program->stmts.first_stmt = import;
+                            prevImport = import;
+                        } else {
+                            prevImport->next_sibling = import;
+                            prevImport = import;
+                        }
+                        ++program->stmts.stmt_count;
+                    }
+                    break;
+                case VM_OPCODE_PUSH_INT:
+                case VM_OPCODE_PUSH_FLOAT:
+                case VM_OPCODE_PUSH_STRING_FROM_DATA:
+                case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
+                case VM_OPCODE_POP_GLOBAL_BY_NAME:
+                case VM_OPCODE_PUSH_GLOBAL:
+                case VM_OPCODE_POP_GLOBAL:
+                case VM_OPCODE_CALL_NATIVE_BY_NAME:
+                case VM_OPCODE_CALL_NATIVE:
+                case VM_OPCODE_CALL_BY_NAME:
+                case VM_OPCODE_CALL:
+                case VM_OPCODE_JUMP:
+                case VM_OPCODE_JUMP_IF_FALSE:
+                    ip += 4;
+                    break;
+                case VM_OPCODE_PUSH_LOCAL:
+                case VM_OPCODE_POP_LOCAL:
+                    ip += 2;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
     }
 };
 
