@@ -129,44 +129,44 @@ VM_PACKED_END
  */
 
 /**
- * @note  Serialized script data is always stored in little-endian byte order
- *        in the binary format. The `vm_read_*` helpers read the raw payload,
- *        convert it to the native byte order of the current host, and return
- *        values in host-endian representation. In other words, callers always
- *        receive `vm_uint16_t`, `vm_uint32_t`, `vm_sint32_t`, and floating-point
- *        values as native CPU-order values, while the on-disk format remains
- *        little-endian for all `int16`, `int32`, and larger fields.
+ * @note Serialized script data is always stored in little-endian byte order
+ *       in the binary format. The `vm_read_*` helpers read the raw payload,
+ *       convert it to the native byte order of the current host, and return
+ *       values in host-endian representation. In other words, callers always
+ *       receive `vm_uint16_t`, `vm_uint32_t`, `vm_sint32_t`, and floating-point
+ *       values as native CPU-order values, while the on-disk format remains
+ *       little-endian for all `int16`, `int32`, and larger fields.
  * @ingroup functions
  */
 
 /**
- * @brief      Calculates an Adler-32 checksum.
- * @param[in]  data Bytes to checksum.
- * @param[in]  size Number of bytes in @p data.
- * @return     Adler-32 checksum value.
- * @ingroup    functions
+ * @brief     Calculates an Adler-32 checksum.
+ * @param[in] data Bytes to checksum.
+ * @param[in] size Number of bytes in @p data.
+ * @return    Adler-32 checksum value.
+ * @ingroup   functions
  */
 VM_API vm_uint32_t
 vm_adler_32(const vm_char_t* buffer, 
             vm_uint32_t size);
 
 /**
- * @brief      Validates the checksum in a script.
- * @param[in]  buffer Script bytes.
- * @param[in]  size Number of bytes in @p data.
- * @return     *TRUE* if the checksum is valid; otherwise *FALSE*.
- * @ingroup    functions
+ * @brief     Validates the checksum in a script.
+ * @param[in] buffer Script bytes.
+ * @param[in] size Number of bytes in @p data.
+ * @return    *TRUE* if the checksum is valid; otherwise *FALSE*.
+ * @ingroup   functions
  */
 VM_API vm_bool_t
 vm_validate_checksum(const vm_char_t* buffer, 
                      vm_uint32_t size);
 
 /**
- * @brief      Validates the version in a script.
- * @param[in]  buffer Script bytes.
- * @param[in]  size Number of bytes in @p data.
- * @return     *TRUE* if the version is supported; otherwise *FALSE*.
- * @ingroup    functions
+ * @brief     Validates the version in a script.
+ * @param[in] buffer Script bytes.
+ * @param[in] size Number of bytes in @p data.
+ * @return    *TRUE* if the version is supported; otherwise *FALSE*.
+ * @ingroup   functions
  */
 VM_API vm_bool_t
 vm_validate_version(const vm_char_t* buffer, 

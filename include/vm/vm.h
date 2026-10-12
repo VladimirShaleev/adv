@@ -110,13 +110,13 @@ typedef vm_bytecode_t*
                         vm_data_t data);
 
 /**
- * @brief              Finalizer for imported bytecode.
- * @details            Releases any memory or resources associated with a bytecode block
- *                     returned by a custom import callback.
- * @param[in] vm       Active VM instance.
+ * @brief     Finalizer for imported bytecode.
+ * @details   Releases any memory or resources associated with a bytecode block
+ *            returned by a custom import callback.
+ * @param[in] vm Active VM instance.
  * @param[in] bytecode Bytecode block to release.
- * @param[in] data     User data passed to the importer.
- * @ingroup            callbacks
+ * @param[in] data User data passed to the importer.
+ * @ingroup   callbacks
  */
 typedef void
 (*vm_release_import_callback_t)(vm_t vm,
@@ -245,7 +245,7 @@ vm_shutdown_thread(vm_t vm,
  * @param[in]  thread Thread to query.
  * @param[in]  index Argument index.
  * @return     Argument value at @p index.
- * @sa        ::vm_register_native
+ * @sa         ::vm_register_native
  * @ingroup    functions
  */
 VM_API vm_value_t
@@ -366,8 +366,8 @@ vm_get_import_dirs(vm_t vm,
                    vm_utf8_t* dirs);
 
 /**
- * @brief      Replaces the VM import directory list.
- * @details    Updates the module search paths used when resolving imports.
+ * @brief     Replaces the VM import directory list.
+ * @details   Updates the module search paths used when resolving imports.
  * @param[in] vm VM instance to update.
  * @param[in] dir_count Number of entries in @p dirs.
  * @param[in] dirs Array of UTF-8 directory paths.
@@ -419,8 +419,8 @@ vm_get_release_import(vm_t vm,
                       vm_data_t* data);
 
 /**
- * @brief    Sets the release callback used for imported bytecode.
- * @details  Specifies how imported VM bytecode is destroyed after use.
+ * @brief     Sets the release callback used for imported bytecode.
+ * @details   Specifies how imported VM bytecode is destroyed after use.
  * @param[in] vm VM instance to update.
  * @param[in] callback Release callback implementation.
  * @param[in] data User data passed to the release callback.

@@ -30,13 +30,15 @@ vm_native_h NativeManager::find(std::string_view name) const noexcept {
 }
 
 vm_native_h NativeManager::registerFunc(std::string_view name, vm_native_callback_t func, vm_data_t data) noexcept {
-    if (auto str = _cache.pool.find(name)) {
-        auto [handle, native] = _natives.find(str.value());
-        if (native) {
-            native->func = func;
-            native->data = data;
-            return handle;
-        }
+    auto str = _cache.pool.insert(name);
+    auto [handle, native] = _natives.find(str);
+    if (native) {
+        native->func = func;
+        native->data = data;
+        return handle;
+    } else {
+        auto [resultHandle, _] = _natives.emplace(str, func, 0, 0, data);
+        return resultHandle;
     }
     return Undefined;
 }
@@ -50,7 +52,12 @@ void NativeManager::unregisterFunc(vm_native_h native) noexcept {
 
 void NativeManager::addNative(std::string_view name, vm_uint16_t paramCount, vm_uint16_t returnCount) {
     auto str = _cache.pool.insert(name);
-    auto _ = _natives.emplace(str, nullptr, paramCount, returnCount);
+    if (auto [_, native] = _natives.find(str); native) {
+        native->paramCount = paramCount;
+        native->returnCount = returnCount;
+    } else {
+        auto __ = _natives.emplace(str, nullptr, paramCount, returnCount);
+    }
 }
 
 } // namespace vm
