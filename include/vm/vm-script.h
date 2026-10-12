@@ -65,8 +65,8 @@ typedef struct
  */
 typedef struct
 {
-    vm_uint32_t module_name;
-    vm_uint16_t root_frame_slots;
+    vm_uint32_t module_name; /**< Offset of the module name string in the data section. */
+    vm_uint16_t root_frame_slots; /**< Number of stack slots required by the module's root frame. */
     vm_uint16_t var_count; /**< Number of exported variables. */
     vm_uint16_t var_size; /**< Size in bytes of the variable export block. */
     vm_uint16_t func_count; /**< Number of exported functions. */
@@ -125,23 +125,19 @@ VM_PACKED_END
 /**
  * @name Functions for Script Handling.
  * @brief Functions for handling compiled VM scripts.
+ * @note Serialized script data is always stored in little-endian byte order    
+ *       in the binary format. The `vm_read_*` helpers read the raw payload,
+ *       convert it to the native byte order of the current host, and return    
+ *       values in host-endian representation. In other words, callers always   
+ *       receive `vm_uint16_t`, `vm_uint32_t`, `vm_sint32_t`, and floating-point
+ *       values as native CPU-order values, while the on-disk format remains    
+ *       little-endian for all `int16`, `int32`, and larger fields.
  * @{
  */
 
 /**
- * @note Serialized script data is always stored in little-endian byte order
- *       in the binary format. The `vm_read_*` helpers read the raw payload,
- *       convert it to the native byte order of the current host, and return
- *       values in host-endian representation. In other words, callers always
- *       receive `vm_uint16_t`, `vm_uint32_t`, `vm_sint32_t`, and floating-point
- *       values as native CPU-order values, while the on-disk format remains
- *       little-endian for all `int16`, `int32`, and larger fields.
- * @ingroup functions
- */
-
-/**
  * @brief     Calculates an Adler-32 checksum.
- * @param[in] data Bytes to checksum.
+ * @param[in] buffer Bytes to checksum.
  * @param[in] size Number of bytes in @p data.
  * @return    Adler-32 checksum value.
  * @ingroup   functions

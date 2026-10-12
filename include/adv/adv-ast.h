@@ -99,18 +99,12 @@ struct adv_node_t
 
     union
     {
-        /**
-         * @brief Generic list of statement child nodes.
-         */
         struct
         {
             adv_node_t*  first_stmt; /**< Head of statement nodes list. */
             adv_uint32_t stmt_count; /**< Number of statements in list. */
-        } stmts;
+        } stmts; /**< Statement list payload. */
 
-        /**
-         * @brief Variable declaration payload.
-         */
         struct
         {
             vm_string_h  name;      /**< Variable name string handle. */
@@ -118,11 +112,8 @@ struct adv_node_t
             adv_node_t*  init_expr; /**< Initializer expression node (nullptr if uninitialized). */
             adv_bool_t   is_global; /**< Flag indicating whether variable is globally scoped. */
             adv_symbol_h symbol;    /**< Handle to associated symbol. */
-        } var_decl;
+        } var_decl; /**< Variable declaration payload. */
 
-        /**
-         * @brief Function declaration payload.
-         */
         struct
         {
             vm_string_h  name;             /**< Function name string handle. */
@@ -131,106 +122,73 @@ struct adv_node_t
             adv_uint32_t param_count;      /**< Number of parameters. */
             adv_node_t*  body;             /**< Pointer to BLOCK node. */
             adv_symbol_h symbol;           /**< Handle to associated symbol. */
-        } func_decl;
+        } func_decl; /**< Function declaration payload. */
 
-        /**
-         * @brief Function parameter declaration payload.
-         */
         struct
         {
             vm_string_h name;      /**< Parameter name string handle. */
             vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
-            adv_symbol_h symbol;    /**< Handle to associated symbol. */
-        } param_decl;
+            adv_symbol_h symbol;   /**< Handle to associated symbol. */
+        } param_decl; /**< Function parameter declaration payload. */
 
-        /**
-         * @brief Import statement payload.
-         */
         struct
         {
             adv_node_t* root; /**< Root node of imported AST. */
             vm_string_h path; /**< Imported module or file path string handle. */
-        } import_stmt;
+        } import_stmt; /**< Import statement payload. */
 
-        /**
-         * @brief Conditional statement payload.
-         */
         struct
         {
             adv_node_t* cond;        /**< Condition expression. */
             adv_node_t* then_branch; /**< Execution block if condition evaluates to true. */
             adv_node_t* else_branch; /**< Optional else block or nested ADV_NODE_IF_STMT. */
-        } if_stmt;
+        } if_stmt; /**< Conditional statement payload. */
 
-        /**
-         * @brief Loop statement payload.
-         */
         struct
         {
             adv_node_t* cond; /**< Loop condition expression. */
             adv_node_t* body; /**< Pointer to BLOCK node executed per iteration. */
-        } while_stmt;
+        } while_stmt; /**< Loop statement payload. */
 
-        /**
-         * @brief Single expression statement payload (used for EXPR_STMT, RETURN_STMT, WAIT_STMT).
-         */
         struct
         {
             adv_node_t* expr; /**< Expression payload (nullptr if omitted/void). */
-        } expr_stmt;
+        } expr_stmt; /**< Expression statement payload. */
 
-        /**
-         * @brief Type cast expression payload.
-         */
         struct
         {
             adv_node_t*     operand;          /**< Expression being converted. */
             vm_string_h     target_type_hint; /**< Explicit target type string handle. */
             vm_value_type_t from_type;        /**< Original value type. */
             vm_value_type_t to_type;          /**< Target converted type. */
-        } cast_expr;
+        } cast_expr; /**< Type cast expression payload. */
 
-        /**
-         * @brief Identifier reference expression payload.
-         */
         struct
         {
             vm_string_h  name;      /**< Identifier name string handle. */
             vm_string_h  type_hint; /**< Type annotation handle (0 if omitted). */
             adv_symbol_h symbol;    /**< Handle to associated symbol. */
-        } id_expr;
+        } id_expr; /**< Identifier reference expression payload. */
 
-        /**
-         * @brief Assignment expression payload.
-         */
         struct
         {
-            adv_node_t* target; /**< Target node (IDENTIFIER_EXPR or MEMBER_ACCESS). */
-            adv_node_t* val;    /**< Value expression to assign. */
-        } assign_expr;
+            adv_node_t* target;     /**< Target node (IDENTIFIER_EXPR or MEMBER_ACCESS). */
+            adv_node_t* val;        /**< Value expression to assign. */
+        } assign_expr; /**< Assignment expression payload. */
 
-        /**
-         * @brief Binary operator expression payload.
-         */
         struct
         {
-            adv_uint32_t op;    /**< Operator token code (e.g. '+', EQ). */
-            adv_node_t*  left;  /**< Left-hand operand. */
-            adv_node_t*  right; /**< Right-hand operand. */
-        } binary_expr;
+            adv_uint32_t op;        /**< Operator token code (e.g. '+', EQ). */
+            adv_node_t*  left;      /**< Left-hand operand. */
+            adv_node_t*  right;     /**< Right-hand operand. */
+        } binary_expr; /**< Binary operator expression payload. */
 
-        /**
-         * @brief Unary operator expression payload.
-         */
         struct
         {
-            adv_uint32_t op;      /**< Operator token code. */
-            adv_node_t*  operand; /**< Target operand. */
-        } unary_expr;
+            adv_uint32_t op;        /**< Operator token code. */
+            adv_node_t*  operand;   /**< Target operand. */
+        } unary_expr; /**< Unary operator expression payload. */
 
-        /**
-         * @brief Call expression payload.
-         */
         struct
         {
             vm_string_h  name;      /**< Function or coroutine name string handle. */
@@ -238,16 +196,13 @@ struct adv_node_t
             adv_uint32_t arg_count; /**< Number of arguments passed. */
             adv_bool_t   is_async;  /**< True for asynchronous invocation `coroutine[a, b]`, false for standard `func(a, b)`. */
             adv_symbol_h symbol;    /**< Handle to associated symbol. */
-        } call_expr;
+        } call_expr; /**< Call expression payload. */
 
-        /**
-         * @brief Member access expression payload.
-         */
         struct
         {
-            adv_node_t* target; /**< Target object instance expression. */
-            vm_string_h member; /**< Member field name string handle. */
-        } member_access;
+            adv_node_t* target;     /**< Target object instance expression. */
+            vm_string_h member;     /**< Member field name string handle. */
+        } member_access; /**< Member access expression payload. */
 
         adv_bool_t    bool_val;    /**< Boolean literal value. */
         adv_sint32_t  int_val;     /**< Integer literal value. */

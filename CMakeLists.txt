@@ -27,6 +27,7 @@ include(cmake/update-version.cmake)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(ADV_MSVC_DYNAMIC_RUNTIME "Link dynamic runtime library instead of static" OFF)
+cmake_dependent_option(ADV_BUILD_DOC "Build doc" ON "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 cmake_dependent_option(ADV_ENABLE_INSTALL "Enable installation" ON "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 cmake_dependent_option(ADV_BUILD_PACKAGES "Build packages" ON "ADV_ENABLE_INSTALL" OFF)
 
@@ -98,4 +99,8 @@ endif()
 if(ADV_BUILD_TESTS)
     include(CTest)
     add_subdirectory(tests)
+endif()
+
+if(ADV_BUILD_DOC)
+  add_subdirectory(doc)
 endif()
