@@ -208,7 +208,11 @@ struct adv_node_t
         adv_sint32_t  int_val;     /**< Integer literal value. */
         adv_float32_t float_val;   /**< Floating-point literal value. */
         vm_string_h   str_val;     /**< String literal handle. */
-    };
+    }
+#ifdef DOXYGEN
+    payload; /**< Node payload. */
+#endif
+    ;
 };
 
 #ifdef __cplusplus

@@ -45,7 +45,11 @@ typedef struct
         vm_sint32_t  i32; /**< Signed 32-bit integer payload representation. */
         vm_float32_t f32; /**< 32-bit floating-point payload representation. */
         vm_string_h  str; /**< String handle payload representation. */
-    };
+    }
+#ifdef DOXYGEN
+    val; /**< Value payload. */
+#endif
+    ;
 } vm_value_t;
 
 #ifdef __cplusplus
