@@ -3,7 +3,7 @@
  * @brief     Symbol table entry definition.
  * @details   This header defines the structure representing a symbol table entry in the Adv compiler.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_SYMBOL_H
@@ -18,7 +18,7 @@ extern "C" {
 /**
  * @brief   Symbol kinds.
  * @details Identifies the role of a symbol declared in the source code.
- * @ingroup enums
+ * @ingroup adv_enums
  */
 typedef enum
 {
@@ -34,7 +34,7 @@ typedef enum
 /**
  * @brief   Symbol table entry.
  * @details Represents a symbol in the symbol table with its name, kind, type, and other attributes.
- * @ingroup structs
+ * @ingroup adv_structs
  */
 typedef struct
 {
@@ -53,7 +53,7 @@ typedef struct
 /**
  * @brief   Symbol scope.
  * @details Represents a lexical scope containing symbols and potentially nested child scopes.
- * @ingroup structs
+ * @ingroup adv_structs
  */
 typedef struct
 {

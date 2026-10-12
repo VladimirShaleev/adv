@@ -10,7 +10,7 @@
  *            - Bit flag operations for enumerations (C++ only).
  *            
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   vm_files
  * @copyright MIT License
  */
 #ifndef VM_PLATFORM_H
@@ -24,7 +24,7 @@
  *          In all other cases (static builds or non-Windows platforms), it expands to nothing.
  *          This allows proper importing of symbols from DLLs on Windows platforms.
  * @note    Define `VM_STATIC_BUILD` for static library configuration.
- * @ingroup macros
+ * @ingroup vm_macros
  */
 
 #ifndef VM_API
@@ -43,7 +43,7 @@
  *          and table layouts that must match a fixed on-disk layout.
  * @note    This macro is a compatibility helper and is intentionally left empty
  *          on compilers that do not require explicit packing directives.
- * @ingroup macros
+ * @ingroup vm_macros
  */
 
 /**
@@ -51,7 +51,7 @@
  * @brief   Closes a packed-structure region.
  * @details Restores the compiler's previous packing alignment after a
  *          VM_PACKED_BEGIN block.
- * @ingroup macros
+ * @ingroup vm_macros
  */
 
 /**
@@ -59,7 +59,7 @@
  * @brief   Attribute applied to packed structs.
  * @details GCC/Clang use `__attribute__((packed))`, while MSVC and other
  *          compilers rely on pragma-based packing directives.
- * @ingroup macros
+ * @ingroup vm_macros
  */
 
 #if defined(_MSC_VER)
@@ -101,7 +101,7 @@
 #endif
 
 /**
- * @addtogroup types Types
+ * @addtogroup vm_types
  * @{
  */
 
@@ -135,7 +135,7 @@ typedef void*       vm_data_t;    /**< pointer to data. */
  * @details   Creates a typedef for a pointer to an incomplete struct type,
  *            providing type safety while hiding implementation details.
  * @param[in] vm_name Base name for the type (suffix `_t` will be added).
- * @ingroup   macros
+ * @ingroup   vm_macros
  */
 #define VM_TYPE(vm_name) \
 typedef struct _##vm_name* vm_name##_t;

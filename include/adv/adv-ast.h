@@ -3,7 +3,7 @@
  * @brief     Abstract Syntax Tree (AST) node definitions.
  * @details   Defines the node types, source locations, and AST node structure used by the compiler frontend.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_AST_H
@@ -18,7 +18,7 @@ extern "C" {
 /**
  * @brief   AST node type identifiers.
  * @details Enumeration of all supported Abstract Syntax Tree node kinds.
- * @ingroup enums
+ * @ingroup adv_enums
  */
 typedef enum
 {
@@ -66,7 +66,7 @@ typedef enum
 /**
  * @brief   Source location info.
  * @details Stores filename handle, line, and column position in the source code.
- * @ingroup structs
+ * @ingroup adv_structs
  */
 typedef struct
 {
@@ -79,7 +79,7 @@ typedef struct
  * @brief   Forward declaration of an AST node.
  * @details The node definition follows below; pointers to this type are used
  *          to link nodes into the AST hierarchy.
- * @ingroup types
+ * @ingroup adv_types
  */
 typedef struct adv_node_t adv_node_t;
 
@@ -87,7 +87,7 @@ typedef struct adv_node_t adv_node_t;
  * @brief   Abstract Syntax Tree node.
  * @details Represents a generic node in the AST with type tag, source location, resolved semantic type, 
  *          tree hierarchy links, and type-specific union payload.
- * @ingroup structs
+ * @ingroup adv_structs
  */
 struct adv_node_t
 {

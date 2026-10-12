@@ -5,7 +5,7 @@
  *            the Adv compilator. It provides forward declarations for all major system
  *            components using opaque pointer types (#ADV_TYPE).
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_TYPES_H
@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 /**
- * @addtogroup types Types
+ * @addtogroup adv_types
  * @{
  */
 

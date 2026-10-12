@@ -4,7 +4,7 @@
  * @details   ADV - Adventure compiler for generating
  *            bytecode for a Virtual Machine.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  *
  *     MIT License
@@ -51,7 +51,7 @@ extern "C" {
  * @details    Creates an object for ADV compilation.
  * @param[out] compiler New compiler instance.
  * @return     New compiler instance
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_result_t
 adv_compiler_create(adv_compiler_t* compiler);
@@ -62,7 +62,7 @@ adv_compiler_create(adv_compiler_t* compiler);
  * @param[in] compiler Target compiler instance.
  * @return    Reference to same compiler.
  * @sa        ::adv_compiler_destroy
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_compiler_t
 adv_compiler_reference(adv_compiler_t compiler);
@@ -72,7 +72,7 @@ adv_compiler_reference(adv_compiler_t compiler);
  * @details   Destroys when reference count reaches zero.
  * @param[in] compiler Compiler to destroy.
  * @sa        ::adv_compiler_reference
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_compiler_destroy(adv_compiler_t compiler);
@@ -108,7 +108,7 @@ adv_compiler_destroy(adv_compiler_t compiler);
  *             why compilation did not succeed.
  * @note       To compile entirely from memory, pass an empty @p file and provide
  *             the primary file in @p sources.
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_result_t
 adv_compiler_compile(adv_compiler_t compiler,

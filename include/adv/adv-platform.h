@@ -9,7 +9,7 @@
  *            - Type definitions for consistent data sizes across platforms
  *            
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_PLATFORM_H
@@ -23,7 +23,7 @@
  *          In all other cases (static builds or non-Windows platforms), it expands to nothing.
  *          This allows proper importing of symbols from DLLs on Windows platforms.
  * @note    Define `ADV_STATIC_BUILD` for static library configuration.
- * @ingroup macros
+ * @ingroup adv_macros
  */
 
 #ifndef ADV_API
@@ -59,7 +59,7 @@
 #endif
 
 /**
- * @addtogroup types Types
+ * @addtogroup adv_types
  * @{
  */
 
@@ -93,7 +93,7 @@ typedef void*       adv_data_t;    /**< pointer to data. */
  * @details   Creates a typedef for a pointer to an incomplete struct type,
  *            providing type safety while hiding implementation details.
  * @param[in] adv_name Base name for the type (suffix `_t` will be added).
- * @ingroup   macros
+ * @ingroup   adv_macros
  */
 #define ADV_TYPE(adv_name) \
 typedef struct _##adv_name* adv_name##_t;
@@ -104,7 +104,7 @@ typedef struct _##adv_name* adv_name##_t;
  * @details   Creates a struct containing an index value, typically used for
  *            resource handles in API designs that avoid direct pointers.
  * @param[in] adv_name Base name for the handle type (suffix `_h` will be added).
- * @ingroup   macros
+ * @ingroup   adv_macros
  */
 #define ADV_HANDLE(adv_name) \
 typedef struct {             \

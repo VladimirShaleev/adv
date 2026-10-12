@@ -3,7 +3,7 @@
  * @brief     Instruction opcodes for the virtual machine.
  * @details   Defines the operations encoded in VM script bytecode.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   vm_files
  * @copyright MIT License
  */
 #ifndef VM_OPCODE_H
@@ -17,7 +17,7 @@ extern "C" {
  * @brief   Virtual machine instruction opcodes.
  * @details Identifies operations encoded in a script's bytecode. Instructions
  *          may consume values from or push values onto the VM stack.
- * @ingroup enums
+ * @ingroup vm_enums
  */
 typedef enum
 {

@@ -3,7 +3,7 @@
  * @brief     Opaque handle types for the virtual machine.
  * @details   Defines strongly-typed opaque handle declarations used across the VM API.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   vm_files
  * @copyright MIT License
  */
 #ifndef VM_TYPES_H
@@ -18,7 +18,7 @@ extern "C" {
 /**
  * @brief   Opaque handle to a virtual machine instance.
  * @details The instance representation is hidden from API users.
- * @ingroup types
+ * @ingroup vm_types
  */
 VM_TYPE(vm)
 

@@ -3,7 +3,7 @@
  * @brief     Warning/Error codes.
  * @details   Here are the warning and error codes that may occur during compilation.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_RESULT_H
@@ -20,7 +20,7 @@ extern "C" {
 /**
  * @brief   Result codes.
  * @details Enumeration of result codes.
- * @ingroup enums
+ * @ingroup adv_enums
  */
 typedef enum
 {
@@ -38,7 +38,7 @@ typedef enum
 /**
  * @brief   Compilation statuses.
  * @details This enumeration contains warnings and errors that may occur during compilation.
- * @ingroup enums
+ * @ingroup adv_enums
  */
 typedef enum
 {
@@ -101,7 +101,7 @@ typedef enum
 /**
  * @brief   Compilation message.
  * @details Detailed description of warning or compilation error.
- * @ingroup structs
+ * @ingroup adv_structs
  */
 typedef struct
 {
@@ -118,7 +118,7 @@ typedef struct
  * @details   Provides a text description for the result code.
  * @param[in] result Result code.
  * @return    Corresponding text description of the result code.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_utf8_t
 adv_result_to_string(adv_result_t result);
@@ -135,7 +135,7 @@ adv_result_to_string(adv_result_t result);
  * @param[in] compilation_result Target compilation result instance.
  * @return    Reference to same compilation result.
  * @sa        ::adv_compilation_result_destroy
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_compilation_result_t
 adv_compilation_result_reference(adv_compilation_result_t compilation_result);
@@ -145,7 +145,7 @@ adv_compilation_result_reference(adv_compilation_result_t compilation_result);
  * @details   Destroys when reference count reaches zero.
  * @param[in] compilation_result Compilation result to destroy.
  * @sa        ::adv_compilation_result_reference
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_compilation_result_destroy(adv_compilation_result_t compilation_result);
@@ -155,7 +155,7 @@ adv_compilation_result_destroy(adv_compilation_result_t compilation_result);
  * @details   Check if there were any notes during compilation.
  * @param[in] compilation_result Target compilation result instance.
  * @return    *TRUE*, if there are notes.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_bool_t
 adv_compilation_result_has_notes(adv_compilation_result_t compilation_result);
@@ -165,7 +165,7 @@ adv_compilation_result_has_notes(adv_compilation_result_t compilation_result);
  * @details   Check if there were any warnings during compilation.
  * @param[in] compilation_result Target compilation result instance.
  * @return    *TRUE*, if there are warnings.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_bool_t
 adv_compilation_result_has_warnings(adv_compilation_result_t compilation_result);
@@ -175,7 +175,7 @@ adv_compilation_result_has_warnings(adv_compilation_result_t compilation_result)
  * @details   Check if there were any errors during compilation.
  * @param[in] compilation_result Target compilation result instance.
  * @return    *TRUE*, if there are errors.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_bool_t
 adv_compilation_result_has_errors(adv_compilation_result_t compilation_result);
@@ -186,7 +186,7 @@ adv_compilation_result_has_errors(adv_compilation_result_t compilation_result);
  * @param[in]     compilation_result Target compilation result instance.
  * @param[in,out] message_count Number of messages.
  * @param[out]    messages Message array.
- * @ingroup       functions
+ * @ingroup       adv_functions
  */
 ADV_API void
 adv_compilation_result_get_messages(adv_compilation_result_t compilation_result,
@@ -198,7 +198,7 @@ adv_compilation_result_get_messages(adv_compilation_result_t compilation_result,
  * @details   Returns the root node resulting from compile the source code via ::adv_compiler_compile.
  * @param[in] compilation_result Target compilation result instance.
  * @return    Root node of the syntactic tree.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API const adv_node_t*
 adv_compilation_result_get_root_node(adv_compilation_result_t compilation_result);
@@ -208,7 +208,7 @@ adv_compilation_result_get_root_node(adv_compilation_result_t compilation_result
  * @details   Returns a handle to the top-level global lexical scope of the compiled script.
  * @param[in] compilation_result Target compilation result instance.
  * @return    Handle to the global lexical scope (`adv_scope_h`).
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_scope_h
 adv_compilation_result_get_global_scope(adv_compilation_result_t compilation_result);
@@ -220,7 +220,7 @@ adv_compilation_result_get_global_scope(adv_compilation_result_t compilation_res
  * @param[in] scope Lexical scope handle to start the lookup from.
  * @param[in] name UTF-8 encoded string name of the symbol to find.
  * @return    Handle to the found symbol, or an invalid handle if not found.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_symbol_h
 adv_compilation_result_lookup_symbol(adv_compilation_result_t compilation_result,
@@ -236,7 +236,7 @@ adv_compilation_result_lookup_symbol(adv_compilation_result_t compilation_result
  * @param[in]     column Column number in the source file (1-based).
  * @param[out]    symbols Pointer to the buffer where visible symbol handles will be written.
  * @param[in,out] symbol_count Pointer to the symbol count; specifies buffer capacity on input and receives the actual number of symbols on output.
- * @ingroup       functions
+ * @ingroup       adv_functions
  */
 ADV_API void
 adv_compilation_result_get_visible_symbols_at(adv_compilation_result_t compilation_result,
@@ -252,7 +252,7 @@ adv_compilation_result_get_visible_symbols_at(adv_compilation_result_t compilati
  * @param[in] compilation_result Target compilation result instance.
  * @param[in] scope Scope handle to resolve.
  * @return    Pointer to the constant scope structure, or NULL if the handle is invalid.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API const adv_scope_t*
 adv_compilation_result_get_scope(adv_compilation_result_t compilation_result,
@@ -264,7 +264,7 @@ adv_compilation_result_get_scope(adv_compilation_result_t compilation_result,
  * @param[in] compilation_result Target compilation result instance.
  * @param[in] symbol Symbol handle to resolve.
  * @return    Pointer to the constant symbol structure, or NULL if the handle is invalid.
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API const adv_symbol_t*
 adv_compilation_result_get_symbol(adv_compilation_result_t compilation_result,
@@ -277,7 +277,7 @@ adv_compilation_result_get_symbol(adv_compilation_result_t compilation_result,
  * @param[in]  string String id.
  * @param[out] length Length of the string, may be NULL.
  * @return     C string.
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_utf8_t
 adv_compilation_result_get_string(adv_compilation_result_t compilation_result,

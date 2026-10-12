@@ -6,7 +6,7 @@
  *            file, including section values and bytecode operands, are stored
  *            in little-endian byte order.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   vm_files
  * @copyright MIT License
  */
 #ifndef VM_SCRIPT_H
@@ -26,7 +26,7 @@ VM_PACKED_BEGIN
  *          checksum fields are always stored in little-endian byte order.
  *          Big-endian hosts must use the byte-swapping helpers when reading
  *          or writing multibyte values.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {
@@ -44,7 +44,7 @@ typedef struct
  *          and their operands. All multibyte values, including these fields
  *          and operands, are stored in little-endian byte order. Big-endian
  *          hosts must convert multibyte values with the byte-swapping helpers.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {
@@ -61,7 +61,7 @@ typedef struct
  * @details Stores the number and byte size of exported variables and
  *          functions. Values are kept in little-endian byte order and are
  *          converted with vm_swap_script_export when read on big-endian hosts.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {
@@ -80,7 +80,7 @@ typedef struct
  * @details Describes a single global variable symbol stored in the script
  *          export block. The name field indexes a string in the script data
  *          section, while the type field identifies the variable kind.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {
@@ -88,10 +88,17 @@ typedef struct
     vm_uint8_t  type; /**< Type code of the exported variable. */
 } VM_PACKED_ATTR vm_script_export_var_t;
 
+/**
+ * @brief   Exported function parameter metadata.
+ * @details Describes a parameter of an exported function or native function.
+ *          The name field identifies a string in the script data section, and
+ *          the type field stores the parameter's VM value type.
+ * @ingroup vm_structs
+ */
 typedef struct
 {
-    vm_uint32_t name;
-    vm_uint8_t  type;
+    vm_uint32_t name; /**< Offset of the parameter name string in the data section. */
+    vm_uint8_t  type; /**< VM value type code of the parameter. */
 } VM_PACKED_ATTR vm_script_export_param_t;
 
 /**
@@ -100,7 +107,7 @@ typedef struct
  *          block. The name field indexes a string in the script data section,
  *          while the text offset points to the function bytecode in the text
  *          block.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {
@@ -112,6 +119,13 @@ typedef struct
     /* vm_script_export_param_t params[param_count]; */
 } VM_PACKED_ATTR vm_script_export_func_t;
 
+/**
+ * @brief   Exported native function metadata.
+ * @details Describes a native function declared by the script. Its parameter
+ *          descriptors follow this structure in the export block as
+ *          @c param_count consecutive ::vm_script_export_param_t records.
+ * @ingroup vm_structs
+ */
 typedef struct
 {
     vm_uint32_t name; /**< Offset or index of the native function name in the data block. */
@@ -140,7 +154,7 @@ VM_PACKED_END
  * @param[in] buffer Bytes to checksum.
  * @param[in] size Number of bytes in @p data.
  * @return    Adler-32 checksum value.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API vm_uint32_t
 vm_adler_32(const vm_char_t* buffer, 
@@ -151,7 +165,7 @@ vm_adler_32(const vm_char_t* buffer,
  * @param[in] buffer Script bytes.
  * @param[in] size Number of bytes in @p data.
  * @return    *TRUE* if the checksum is valid; otherwise *FALSE*.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API vm_bool_t
 vm_validate_checksum(const vm_char_t* buffer, 
@@ -162,7 +176,7 @@ vm_validate_checksum(const vm_char_t* buffer,
  * @param[in] buffer Script bytes.
  * @param[in] size Number of bytes in @p data.
  * @return    *TRUE* if the version is supported; otherwise *FALSE*.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API vm_bool_t
 vm_validate_version(const vm_char_t* buffer, 
@@ -178,7 +192,7 @@ vm_validate_version(const vm_char_t* buffer,
  * @param[in]     size Total number of bytes available in @p buffer.
  * @param[in,out] offset Current read offset. Updated to the next unread byte.
  * @return        Unsigned 16-bit value in host byte order.
- * @ingroup       functions
+ * @ingroup       vm_functions
  */
 VM_API vm_uint16_t
 vm_read_uint16(const vm_char_t* buffer,
@@ -194,7 +208,7 @@ vm_read_uint16(const vm_char_t* buffer,
  * @param[in]     size Total number of bytes available in @p buffer.
  * @param[in,out] offset Current read offset. Updated to the next unread byte.
  * @return        Unsigned 32-bit value in host byte order.
- * @ingroup       functions
+ * @ingroup       vm_functions
  */
 VM_API vm_uint32_t
 vm_read_uint32(const vm_char_t* buffer,
@@ -210,7 +224,7 @@ vm_read_uint32(const vm_char_t* buffer,
  * @param[in]     size Total number of bytes available in @p buffer.
  * @param[in,out] offset Current read offset. Updated to the next unread byte.
  * @return        Signed 32-bit value in host byte order.
- * @ingroup       functions
+ * @ingroup       vm_functions
  */
 VM_API vm_sint32_t
 vm_read_int32(const vm_char_t* buffer,
@@ -226,7 +240,7 @@ vm_read_int32(const vm_char_t* buffer,
  * @param[in]     size Total number of bytes available in @p buffer.
  * @param[in,out] offset Current read offset. Updated to the next unread byte.
  * @return        Floating-point value in host byte order.
- * @ingroup       functions
+ * @ingroup       vm_functions
  */
 VM_API vm_float32_t
 vm_read_float(const vm_char_t* buffer,
@@ -240,7 +254,7 @@ vm_read_float(const vm_char_t* buffer,
  * @param[in]  size Total number of bytes available in @p buffer.
  * @param[out] header Destination header structure.
  * @return     Pointer to @p header on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_header_t*
 vm_read_script_header(const vm_char_t* buffer,
@@ -254,7 +268,7 @@ vm_read_script_header(const vm_char_t* buffer,
  * @param[in]  size Total number of bytes available in @p buffer.
  * @param[out] table Destination section table structure.
  * @return     Pointer to @p table on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_table_t*
 vm_read_script_table(const vm_char_t* buffer,
@@ -268,7 +282,7 @@ vm_read_script_table(const vm_char_t* buffer,
  * @param[in]  size Total number of bytes available in @p buffer.
  * @param[out] export_table Destination export table structure.
  * @return     Pointer to @p export_table on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_export_t*
 vm_read_script_export(const vm_char_t* buffer,
@@ -283,7 +297,7 @@ vm_read_script_export(const vm_char_t* buffer,
  * @param[in]  var_index  Variable index to read.
  * @param[out] export_var Destination variable descriptor.
  * @return     Pointer to @p export_var on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_export_var_t*
 vm_read_script_export_var(const vm_char_t* buffer,
@@ -299,7 +313,7 @@ vm_read_script_export_var(const vm_char_t* buffer,
  * @param[in]  func_index Function index to read.
  * @param[out] export_func Destination function descriptor.
  * @return     Pointer to @p export_func on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_export_func_t*
 vm_read_script_export_func(const vm_char_t* buffer,
@@ -316,7 +330,7 @@ vm_read_script_export_func(const vm_char_t* buffer,
  * @param[in]  param_index Parameter index to read.
  * @param[out] param Destination parameter descriptor.
  * @return     Pointer to @p param on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_export_param_t*
 vm_read_script_export_func_param(const vm_char_t* buffer,
@@ -333,7 +347,7 @@ vm_read_script_export_func_param(const vm_char_t* buffer,
  * @param[in]  native_index Native function index to read.
  * @param[out] export_native Destination native descriptor.
  * @return     Pointer to @p export_native on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_export_native_t*
 vm_read_script_export_native(const vm_char_t* buffer,
@@ -350,7 +364,7 @@ vm_read_script_export_native(const vm_char_t* buffer,
  * @param[in]  param_index  Parameter index to read.
  * @param[out] param Destination parameter descriptor.
  * @return     Pointer to @p param on success, or `NULL` on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_export_param_t*
 vm_read_script_export_native_param(const vm_char_t* buffer,

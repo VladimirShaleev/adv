@@ -3,7 +3,7 @@
  * @brief     Value representations and type definitions for the virtual machine.
  * @details   Defines the primitive types, string handle wrappers, and tagged union values used by the VM runtime.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   vm_files
  * @copyright MIT License
  */
 #ifndef VM_VALUE_H
@@ -18,7 +18,7 @@ extern "C" {
 /**
  * @brief   Value type identifiers.
  * @details Enumeration of primitive data types supported by the virtual machine.
- * @ingroup enums
+ * @ingroup vm_enums
  */
 typedef enum
 {
@@ -34,7 +34,7 @@ typedef enum
 /**
  * @brief   Tagged union representing a VM value.
  * @details Holds both the type tag and the actual payload data.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {

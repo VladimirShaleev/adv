@@ -3,7 +3,7 @@
  * @brief     Compiler options.
  * @details   This is where the structures and various compilation options are located.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_OPTIONS_H
@@ -19,7 +19,7 @@ extern "C" {
  * @brief   Script text or binary format type.
  * @details Defines the representation format of the script code, 
  *          distinguishing between human-readable text assembly and compiled binary bytecode.
- * @ingroup enums
+ * @ingroup adv_enums
  */
 typedef enum
 {
@@ -34,7 +34,7 @@ typedef enum
  * @details Provides a source file to the compiler from memory. The compiler
  *          reads @p data for @p size bytes; @p name identifies the source and
  *          is used when resolving imports.
- * @ingroup structs
+ * @ingroup adv_structs
  */
 typedef struct
 {
@@ -64,7 +64,7 @@ typedef struct
  *            The client does not need to keep the source data alive for the
  *            remainder of the compilation.
  * @sa        ::adv_release_import_callback_t
- * @ingroup   types
+ * @ingroup   adv_callbacks
  */
 typedef adv_source_t*
 (*adv_import_callback_t)(adv_utf8_t name,
@@ -79,7 +79,7 @@ typedef adv_source_t*
  * @param[in] source Source to release.
  * @param[in] data User data specified when setting the callback.
  * @sa        ::adv_import_callback_t
- * @ingroup   types
+ * @ingroup   adv_callbacks
  */
 typedef void
 (*adv_release_import_callback_t)(adv_source_t* source,
@@ -91,7 +91,7 @@ typedef void
  *            system, such as the network or console output, you can use this callback.
  * @param[in] source Source of compiler output.
  * @param[in] data User data specified when setting up a callback.
- * @ingroup   types
+ * @ingroup   adv_callbacks
  */
 typedef void
 (*adv_write_callback_t)(const adv_source_t* source,
@@ -110,7 +110,7 @@ typedef void
  * @details    Creates an object for setting compiler options.
  * @param[out] options New options instance.
  * @return     New options instance.
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_result_t
 adv_options_create(adv_options_t* options);
@@ -121,7 +121,7 @@ adv_options_create(adv_options_t* options);
  * @param[in] options Target options instance.
  * @return    Reference to same options.
  * @sa        ::adv_options_destroy
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_options_t
 adv_options_reference(adv_options_t options);
@@ -131,7 +131,7 @@ adv_options_reference(adv_options_t options);
  * @details   Destroys when reference count reaches zero.
  * @param[in] options Options to destroy.
  * @sa        ::adv_options_reference
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_destroy(adv_options_t options);
@@ -142,7 +142,7 @@ adv_options_destroy(adv_options_t options);
  * @param[in] options Target options.
  * @return    *TRUE* is enabled.
  * @sa        ::adv_options_set_warnings_as_errors
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_bool_t
 adv_options_get_warnings_as_errors(adv_options_t options);
@@ -153,7 +153,7 @@ adv_options_get_warnings_as_errors(adv_options_t options);
  * @param[in] options Target options.
  * @param[in] enable Enable treat warnings as errors.
  * @sa        ::adv_options_get_warnings_as_errors
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_warnings_as_errors(adv_options_t options,
@@ -165,7 +165,7 @@ adv_options_set_warnings_as_errors(adv_options_t options,
  * @param[in] options Target options.
  * @return    Current output format (::adv_format_t).
  * @sa        ::adv_options_set_output_format
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_format_t
 adv_options_get_output_format(adv_options_t options);
@@ -176,7 +176,7 @@ adv_options_get_output_format(adv_options_t options);
  * @param[in] options Target options.
  * @param[in] format Output format type to set.
  * @sa        ::adv_options_get_output_format
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_output_format(adv_options_t options,
@@ -188,7 +188,7 @@ adv_options_set_output_format(adv_options_t options,
  * @param[in] options Target options.
  * @return    Output directory or file path.
  * @sa        ::adv_options_set_output_path
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API adv_utf8_t
 adv_options_get_output_path(adv_options_t options);
@@ -200,7 +200,7 @@ adv_options_get_output_path(adv_options_t options);
  * @param[in] path Output directory or file path.
  * @note      Compiler output to the file system does not occur if output via a ::adv_options_set_writer is configured.
  * @sa        ::adv_options_get_output_path
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_output_path(adv_options_t options,
@@ -222,7 +222,7 @@ adv_options_set_output_path(adv_options_t options,
  * @note          When @p dirs is not `NULL`, at most the smaller of the input
  *                capacity and the configured directory count is written.
  * @sa            ::adv_options_set_import_dirs
- * @ingroup       functions
+ * @ingroup       adv_functions
  */
 ADV_API void
 adv_options_get_import_dirs(adv_options_t options,
@@ -240,7 +240,7 @@ adv_options_get_import_dirs(adv_options_t options,
  *            did not return a source and no matching entry was found in the
  *            sources passed to ::adv_compiler_compile.
  * @sa        ::adv_options_get_import_dirs
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_import_dirs(adv_options_t options,
@@ -254,7 +254,7 @@ adv_options_set_import_dirs(adv_options_t options,
  * @param[out] data Returning a callback user data pointer (may be null).
  * @return     Returns a callback.
  * @sa         ::adv_options_set_importer
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_import_callback_t
 adv_options_get_importer(adv_options_t options,
@@ -274,7 +274,7 @@ adv_options_get_importer(adv_options_t options,
  * @note      A typical use of an importer is to load source code from memory or
  *            from a source that is not available through the file system.
  * @sa        ::adv_options_get_importer
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_importer(adv_options_t options,
@@ -288,7 +288,7 @@ adv_options_set_importer(adv_options_t options,
  * @param[out] data Returning a callback user data pointer (may be null).
  * @return     Returns a callback.
  * @sa         ::adv_options_set_release_import
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_release_import_callback_t
 adv_options_get_release_import(adv_options_t options,
@@ -302,7 +302,7 @@ adv_options_get_release_import(adv_options_t options,
  * @param[in] callback Callback function.
  * @param[in] data Callback user data.
  * @sa        ::adv_options_get_release_import
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_release_import(adv_options_t options,
@@ -316,7 +316,7 @@ adv_options_set_release_import(adv_options_t options,
  * @param[out] data Returning a callback user data pointer (may be null).
  * @return     Returns a callback.
  * @sa         ::adv_options_set_writer
- * @ingroup    functions
+ * @ingroup    adv_functions
  */
 ADV_API adv_write_callback_t
 adv_options_get_writer(adv_options_t options,
@@ -331,7 +331,7 @@ adv_options_get_writer(adv_options_t options,
  * @param[in] data Callback user data.
  * @note      Typical uses of a writer are writing to memory or outputting to the console and the like.
  * @sa        ::adv_options_get_writer
- * @ingroup   functions
+ * @ingroup   adv_functions
  */
 ADV_API void
 adv_options_set_writer(adv_options_t options,

@@ -9,7 +9,7 @@
  *            - String version generation
  *            
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   adv_files
  * @copyright MIT License
  */
 #ifndef ADV_VERSION_H
@@ -25,7 +25,7 @@
  * @brief   Major version number (API-breaking changes).
  * @sa      ADV_VERSION
  * @sa      ADV_VERSION_STRING
- * @ingroup macros
+ * @ingroup adv_macros
  */
 #define ADV_VERSION_MAJOR 1
 
@@ -33,7 +33,7 @@
  * @brief   Minor version number (backwards-compatible additions).
  * @sa      ADV_VERSION
  * @sa      ADV_VERSION_STRING
- * @ingroup macros
+ * @ingroup adv_macros
  */
 #define ADV_VERSION_MINOR 0
 
@@ -41,7 +41,7 @@
  * @brief   Micro version number (bug fixes and patches).
  * @sa      ADV_VERSION
  * @sa      ADV_VERSION_STRING
- * @ingroup macros
+ * @ingroup adv_macros
  */
 #define ADV_VERSION_MICRO 0
 
@@ -66,7 +66,7 @@
  * @param[in] micro Micro version number.
  * @return    Encoded version as unsigned long.
  * @sa        ADV_VERSION
- * @ingroup   macros
+ * @ingroup   adv_macros
  */
 #define ADV_VERSION_ENCODE(major, minor, micro) \
     ((((unsigned long)(major)) << 24) | (((unsigned long)(minor)) << 16) | (unsigned long)(micro))
@@ -79,7 +79,7 @@
  * @param[in] micro Micro version number.
  * @return    Stringified version.
  * @note      For internal use only.
- * @ingroup   macros
+ * @ingroup   adv_macros
  * @private
  */
 #define ADV_VERSION_STRINGIZE_(major, minor, micro) #major "." #minor "." #micro
@@ -92,7 +92,7 @@
  * @param[in] micro Micro version number.
  * @return    Stringified version.
  * @sa        ADV_VERSION_STRING
- * @ingroup   macros
+ * @ingroup   adv_macros
  */
 #define ADV_VERSION_STRINGIZE(major, minor, micro)  ADV_VERSION_STRINGIZE_(major, minor, micro)
 
@@ -109,7 +109,7 @@
  * @details Combined version value suitable for numeric comparisons.
  *          Use #ADV_VERSION_STRING for human-readable format.
  * @sa      ADV_VERSION_STRING
- * @ingroup macros
+ * @ingroup adv_macros
  */
 #define ADV_VERSION ADV_VERSION_ENCODE( \
     ADV_VERSION_MAJOR, \
@@ -121,7 +121,7 @@
  * @details Version string in "MAJOR.MINOR.MICRO" format (e.g., "1.0.0").
  *          Use #ADV_VERSION for numeric comparisons.
  * @sa      ADV_VERSION
- * @ingroup macros
+ * @ingroup adv_macros
  */
 #define ADV_VERSION_STRING ADV_VERSION_STRINGIZE( \
     ADV_VERSION_MAJOR, \

@@ -4,7 +4,7 @@
  * @details   Declares VM result codes and functions for managing VM instances
  *            and loading and executing scripts.
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
- * @ingroup   files
+ * @ingroup   vm_files
  * @copyright MIT License
  *
  *     MIT License
@@ -45,7 +45,7 @@ extern "C" {
 /**
  * @brief   Result codes.
  * @details Enumeration of result codes.
- * @ingroup enums
+ * @ingroup vm_enums
  */
 typedef enum
 {
@@ -62,7 +62,7 @@ typedef enum
  * @details Represents a contiguous block of compiled VM bytecode in memory.
  *          The buffer may contain either binary bytecode or a textual assembler
  *          representation accepted by the VM loader.
- * @ingroup structs
+ * @ingroup vm_structs
  */
 typedef struct
 {
@@ -81,7 +81,7 @@ typedef struct
  * @param[in] native Native function registration handle.
  * @param[in] arg_count Number of arguments supplied by the caller.
  * @param[in] data User data registered with the native function.
- * @ingroup   callbacks
+ * @ingroup   vm_callbacks
  */
 typedef void
 (*vm_native_callback_t)(vm_t vm,
@@ -102,7 +102,7 @@ typedef void
  * @param[in] data User data passed to the importer.
  * @return    Pointer to a loaded bytecode block, or `NULL` when import fails.
  * @see       ::vm_release_import_callback_t
- * @ingroup   callbacks
+ * @ingroup   vm_callbacks
  */
 typedef vm_bytecode_t*
 (*vm_import_callback_t)(vm_t vm,
@@ -116,7 +116,7 @@ typedef vm_bytecode_t*
  * @param[in] vm Active VM instance.
  * @param[in] bytecode Bytecode block to release.
  * @param[in] data User data passed to the importer.
- * @ingroup   callbacks
+ * @ingroup   vm_callbacks
  */
 typedef void
 (*vm_release_import_callback_t)(vm_t vm,
@@ -128,7 +128,7 @@ typedef void
  * @details   Provides a text description for the result code.
  * @param[in] result Result code.
  * @return    Corresponding text description of the result code.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API vm_utf8_t
 vm_result_to_string(vm_result_t result);
@@ -144,7 +144,7 @@ vm_result_to_string(vm_result_t result);
  * @details    Creates an object for virtual machine.
  * @param[out] vm Receives the newly created instance.
  * @return     ::VM_RESULT_SUCCESS on success, or an error result.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_result_t
 vm_create(vm_t* vm);
@@ -157,7 +157,7 @@ vm_create(vm_t* vm);
  * @param[in] vm VM instance to reference.
  * @return    The same VM handle.
  * @sa        ::vm_destroy
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API vm_t
 vm_reference(vm_t vm);
@@ -168,7 +168,7 @@ vm_reference(vm_t vm);
  *            A null handle is ignored.
  * @param[in] vm VM instance to release.
  * @sa        ::vm_reference
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_destroy(vm_t vm);
@@ -178,7 +178,7 @@ vm_destroy(vm_t vm);
  * @details   Processes pending work for the VM, including scheduled ticks and
  *            deferred runtime tasks.
  * @param[in] vm VM instance to advance.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_tick(vm_t vm);
@@ -190,7 +190,7 @@ vm_tick(vm_t vm);
  * @param[in]  vm VM instance that will execute the script.
  * @param[in]  file UTF-8 path to the script file.
  * @return     Handle of the loaded script, or an invalid handle on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_h
 vm_load_script_from_file(vm_t vm,
@@ -204,7 +204,7 @@ vm_load_script_from_file(vm_t vm,
  * @param[in]  code Script data.
  * @param[in]  code_size Size of @p code in bytes.
  * @return     Handle of the loaded script, or an invalid handle on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_script_h
 vm_load_script_from_memory(vm_t vm,
@@ -218,7 +218,7 @@ vm_load_script_from_memory(vm_t vm,
  * @param[in]  vm VM instance owning the thread.
  * @param[in]  script Script to execute.
  * @return     Thread handle, or an invalid handle on failure.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_thread_h
 vm_run_thread(vm_t vm,
@@ -230,7 +230,7 @@ vm_run_thread(vm_t vm,
  *            with its execution context.
  * @param[in] vm VM instance owning the thread.
  * @param[in] thread Thread to shut down.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_shutdown_thread(vm_t vm,
@@ -246,7 +246,7 @@ vm_shutdown_thread(vm_t vm,
  * @param[in]  index Argument index.
  * @return     Argument value at @p index.
  * @sa         ::vm_register_native
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_value_t
 vm_thread_get_arg(vm_t vm,
@@ -263,7 +263,7 @@ vm_thread_get_arg(vm_t vm,
  * @param[in] index Result slot index.
  * @param[in] value Result value to store.
  * @sa        ::vm_register_native
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_thread_set_result(vm_t vm,
@@ -278,7 +278,7 @@ vm_thread_set_result(vm_t vm,
  * @param[in]  string String handle to resolve.
  * @param[out] length Optional length of the returned string in characters.
  * @return     UTF-8 text for the string, or empty string if the handle is invalid.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_utf8_t
 vm_get_string(vm_t vm,
@@ -292,7 +292,7 @@ vm_get_string(vm_t vm,
  * @param[in]  vm VM instance owning the string table.
  * @param[in]  string UTF-8 text to intern.
  * @return     Interned string handle.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_string_h
 vm_intern_string(vm_t vm,
@@ -306,7 +306,7 @@ vm_intern_string(vm_t vm,
  * @param[in]  native Native function handle.
  * @param[out] data Optional user data pointer associated with the native.
  * @return     Pointer to the native callback function, or `NULL` if unavailable.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_native_callback_t
 vm_get_native(vm_t vm,
@@ -325,7 +325,7 @@ vm_get_native(vm_t vm,
  * @param[in]  data Optional user data passed to the callback.
  * @return     Registered native handle, or an invalid handle on failure.
  * @sa         ::vm_unregister_native
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_native_h
 vm_register_native(vm_t vm,
@@ -339,7 +339,7 @@ vm_register_native(vm_t vm,
  * @param[in] vm VM instance owning the native registration.
  * @param[in] native Native handle to unregister.
  * @sa        ::vm_register_native
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_unregister_native(vm_t vm,
@@ -358,7 +358,7 @@ vm_unregister_native(vm_t vm,
  *             when @p dirs is `NULL`.
  * @param[out] dirs Array of UTF-8 directory paths, or `NULL` to query the
  *             required buffer size.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API void
 vm_get_import_dirs(vm_t vm,
@@ -371,7 +371,7 @@ vm_get_import_dirs(vm_t vm,
  * @param[in] vm VM instance to update.
  * @param[in] dir_count Number of entries in @p dirs.
  * @param[in] dirs Array of UTF-8 directory paths.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_set_import_dirs(vm_t vm,
@@ -385,7 +385,7 @@ vm_set_import_dirs(vm_t vm,
  * @param[in]  vm VM instance to query.
  * @param[out] data Optional user data pointer associated with the importer.
  * @return     Current importer callback, or `NULL` when no importer is set.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_import_callback_t
 vm_get_importer(vm_t vm,
@@ -398,7 +398,7 @@ vm_get_importer(vm_t vm,
  * @param[in] vm VM instance to update.
  * @param[in] callback Import callback implementation.
  * @param[in] data User data passed to the importer.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_set_importer(vm_t vm,
@@ -412,7 +412,7 @@ vm_set_importer(vm_t vm,
  * @param[in]  vm VM instance to query.
  * @param[out] data Optional user data pointer associated with the release callback.
  * @return     Current release callback, or `NULL` when no callback is set.
- * @ingroup    functions
+ * @ingroup    vm_functions
  */
 VM_API vm_release_import_callback_t
 vm_get_release_import(vm_t vm,
@@ -424,7 +424,7 @@ vm_get_release_import(vm_t vm,
  * @param[in] vm VM instance to update.
  * @param[in] callback Release callback implementation.
  * @param[in] data User data passed to the release callback.
- * @ingroup   functions
+ * @ingroup   vm_functions
  */
 VM_API void
 vm_set_release_import(vm_t vm,
