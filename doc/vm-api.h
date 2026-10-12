@@ -34,13 +34,13 @@
  */
 
 /**
- * @defgroup vm_files Files
- * @ingroup vm_api
- * @brief List of files.
- */
-
-/**
  * @defgroup vm_callbacks Callbacks
  * @ingroup vm_api
  * @brief List of callbacks.
+ */
+
+/**
+ * @defgroup vm_files Files
+ * @ingroup vm_api
+ * @brief List of files.
  */

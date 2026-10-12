@@ -34,13 +34,13 @@
  */
 
 /**
- * @defgroup adv_files Files
- * @ingroup adv_api
- * @brief List of files.
- */
-
-/**
  * @defgroup adv_callbacks Callbacks
  * @ingroup adv_api
  * @brief List of callbacks.
+ */
+
+/**
+ * @defgroup adv_files Files
+ * @ingroup adv_api
+ * @brief List of files.
  */
