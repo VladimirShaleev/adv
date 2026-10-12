@@ -1,7 +1,7 @@
 /**
  * @file      vm-version.h
  * @brief     Library version information and utilities.
- * @details   This header provides version information for the Idl library,
+ * @details   This header provides version information for the VM library,
  *            including version number components and macros for version comparison
  *            and string generation. It supports:
  *            - Major/Minor/Micro version components
@@ -56,9 +56,11 @@
 /**
  * @brief     Encodes version components into a single integer.
  * @details   Combines major, minor, and micro versions into a 32-bit value:
- *            - Bits 24-31: Major version
- *            - Bits 16-23: Minor version
- *            - Bits 0-15: Micro version
+ *            - Bits 24-31: Major version (0-255)
+ *            - Bits 16-23: Minor version (0-255)
+ *            - Bits 0-15: Micro version (0-65535)
+ *            The encoded value can be compared numerically when each component
+ *            is within its documented range.
  * @param[in] major Major version number.
  * @param[in] minor Minor version number.
  * @param[in] micro Micro version number.
@@ -66,7 +68,8 @@
  * @sa        VM_VERSION
  * @ingroup   macros
  */
-#define VM_VERSION_ENCODE(major, minor, micro) (((unsigned long) major) << 16 | (minor) << 8 | (micro))
+#define VM_VERSION_ENCODE(major, minor, micro) \
+    ((((unsigned long)(major)) << 24) | (((unsigned long)(minor)) << 16) | (unsigned long)(micro))
 
 /**
  * @brief     Internal macro for string version generation.

@@ -15,6 +15,11 @@
 extern "C" {
 #endif
 
+/**
+ * @brief   Symbol kinds.
+ * @details Identifies the role of a symbol declared in the source code.
+ * @ingroup enums
+ */
 typedef enum
 {
     ADV_SYMBOL_KIND_VARIABLE    = 0, /**< Variable symbol. */

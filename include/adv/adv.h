@@ -78,26 +78,36 @@ ADV_API void
 adv_compiler_destroy(adv_compiler_t compiler);
 
 /**
- * @brief      Compile ADV.
- * @param[in]  compiler Target compiler.
- * @param[in]  file Path to .adv file for compile.
- * @param[in]  source_count Number of sources.
- * @param[in]  sources Sources.
- * @param[in]  options Compile options, may be null.
- * @param[out] result Compilation result.
- * @return     Compilation result.
- * @parblock
- * @note       To read source code from memory instead of the file system, use *sources* and/or configure
- *             the importer with ::adv_options_set_importer and pass the *file* argument as empty.
- * @endparblock
- * @parblock
- * @note       Priorities for resolving source code imports:
- *             - ::adv_options_set_importer - import callback if specified;
- *             - *sources* - then the source code array, if specified;
- *             - ::adv_options_set_import_dirs - then in the paths to the import directories, if specified;
- *             - then the current working directory.
+ * @brief      Compiles a source file or in-memory source.
+ * @details    If @p file is not `NULL` and is not empty, it identifies the
+ *             primary source file. Otherwise, the compiler takes the primary
+ *             source from @p sources. If neither is provided, there is no
+ *             source to compile.
  *
- * @endparblock
+ *             Imports are resolved first through the importer configured with
+ *             ::adv_options_set_importer, then through the entries in
+ *             @p sources. If neither supplies the module, the compiler searches
+ *             the file system, including the importing file's directory, the
+ *             configured import directories, and the current working directory.
+ *
+ *             The returned ::adv_result_t reports whether compilation succeeded
+ *             regardless of whether @p result is `NULL`. When @p result is not
+ *             `NULL`, it receives a compilation result object containing
+ *             diagnostic messages and, when available, the syntax tree and
+ *             symbol table.
+ * @param[in]  compiler Compiler instance.
+ * @param[in]  file Path to the primary `.adv` file, or `NULL`/empty to compile
+ *             the primary source from @p sources.
+ * @param[in]  source_count Number of entries in @p sources.
+ * @param[in]  sources In-memory source files. May be `NULL` when
+ *             @p source_count is zero.
+ * @param[in]  options Compilation options, or `NULL` to use default options.
+ * @param[out] result Receives the compilation result object, or may be `NULL`
+ *             if detailed diagnostics and compilation data are not needed.
+ * @return     ::ADV_RESULT_SUCCESS on success, or an error result describing
+ *             why compilation did not succeed.
+ * @note       To compile entirely from memory, pass an empty @p file and provide
+ *             the primary file in @p sources.
  * @ingroup    functions
  */
 ADV_API adv_result_t

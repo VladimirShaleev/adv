@@ -31,14 +31,16 @@ typedef enum
 
 /**
  * @brief   Source code.
- * @details Used to provide source code in memory.
+ * @details Provides a source file to the compiler from memory. The compiler
+ *          reads @p data for @p size bytes; @p name identifies the source and
+ *          is used when resolving imports.
  * @ingroup structs
  */
 typedef struct
 {
-    adv_utf8_t        name; /**< Source name (used to resolve imports). */
-    const adv_char_t* data; /**< Source code. */
-    adv_uint32_t      size; /**< Size of ::adv_source_t::data in bytes. */
+    adv_utf8_t        name; /**< Source name used to resolve imports. */
+    const adv_char_t* data; /**< Source contents. */
+    adv_uint32_t      size; /**< Number of bytes in @p data. */
 } adv_source_t;
 
 /**
@@ -48,15 +50,20 @@ typedef struct
  */
 
 /**
- * @brief     Callback to get sources.
- * @details   Used to retrieve and compile sources from memory.
- * @param[in] name The name of the file that the compiler is trying to get (for example, when it encounters "import").
- * @param[in] depth Current imports nesting level.
- * @param[in] data User data specified when setting up a callback.
- * @return    Should return the source if the file can be resolved, or null to indicate
- *            to the compiler that it cannot resolve the source and should try to find
- *            the source elsewhere (e.g. via import paths).
- * @sa        If the callback allocates memory, then you can free it in the callback adv_release_import_callback_t.
+ * @brief     Callback that supplies source files to the compiler.
+ * @details   Called first when the compiler resolves an import. The callback
+ *            may obtain the source in any way, including allocating it in memory
+ *            or reading it from a file.
+ * @param[in] name Import or source name requested by the compiler.
+ * @param[in] depth Import nesting level; the primary source is at level zero.
+ * @param[in] data User data specified when setting the callback.
+ * @return    Pointer to the requested source, or `NULL` to let the compiler
+ *            continue searching the provided sources and file-system paths.
+ * @note      The compiler reads and parses a returned source before calling
+ *            ::adv_release_import_callback_t, if a release callback is set.
+ *            The client does not need to keep the source data alive for the
+ *            remainder of the compilation.
+ * @sa        ::adv_release_import_callback_t
  * @ingroup   types
  */
 typedef adv_source_t*
@@ -65,11 +72,13 @@ typedef adv_source_t*
                          adv_data_t data);
 
 /**
- * @brief     Callback to release sources.
- * @details   If adv_import_callback_t allocated memory dynamically for the source, you can free it here.
- * @param[in] source Source for release.
- * @param[in] data User data specified when setting up a callback.
- * @sa        adv_import_callback_t.
+ * @brief     Callback that releases a source returned by the importer.
+ * @details   Called immediately after the compiler has read and parsed a source
+ *            returned by ::adv_import_callback_t. Use it to release memory or
+ *            other resources associated with that source.
+ * @param[in] source Source to release.
+ * @param[in] data User data specified when setting the callback.
+ * @sa        ::adv_import_callback_t
  * @ingroup   types
  */
 typedef void
@@ -198,11 +207,20 @@ adv_options_set_output_path(adv_options_t options,
                             adv_utf8_t path);
 
 /**
- * @brief         Returns an array of directories to search for imports.
- * @details       These paths are used to search source code when an import is encountered during compilation.
- * @param[in]     options Target options.
- * @param[in,out] dir_count Number of directories.
- * @param[out]    dirs Import directories.
+ * @brief         Gets the configured import directories.
+ * @details       Copies up to the supplied capacity of directory pointers into
+ *                @p dirs. The strings are owned by the options object; the
+ *                caller must not free them. Their addresses may change when
+ *                ::adv_options_set_import_dirs is called, so make copies if
+ *                they must be kept longer.
+ * @param[in]     options Options object to query.
+ * @param[in,out] dir_count On input, capacity of @p dirs when @p dirs is not
+ *                `NULL`. On output, number of directory pointers written. If
+ *                @p dirs is `NULL`, receives the total number of configured
+ *                directories.
+ * @param[out]    dirs Destination array, or `NULL` to query the total count.
+ * @note          When @p dirs is not `NULL`, at most the smaller of the input
+ *                capacity and the configured directory count is written.
  * @sa            ::adv_options_set_import_dirs
  * @ingroup       functions
  */
@@ -216,9 +234,11 @@ adv_options_get_import_dirs(adv_options_t options,
  * @details   These paths are used to search source code when an import is encountered during compilation.
  * @param[in] options Target options.
  * @param[in] dir_count Number of directories.
- * @param[in] dirs Import directories.
+ * @param[in] dirs UTF-8 import directory paths. The options object copies these
+ *            strings.
  * @note      These paths are used when resolving imports if the callback passed to ::adv_options_set_importer
- *            did not return a source (if ::adv_options_set_importer was configured)
+ *            did not return a source and no matching entry was found in the
+ *            sources passed to ::adv_compiler_compile.
  * @sa        ::adv_options_get_import_dirs
  * @ingroup   functions
  */
@@ -246,19 +266,13 @@ adv_options_get_importer(adv_options_t options,
  * @param[in] options Target options.
  * @param[in] callback Callback function.
  * @param[in] data Callback user data.
- * @parblock
- * @note      If set, the importer will be used to resolve sources as the highest
- *            priority (then the sources passed to ::adv_compiler_compile in the *sources*
- *            argument will be used, then the directories passed to ::adv_options_set_import_dirs will be used,
- *            and then the current working directory).
- * @endparblock
- * @parblock
- * @note      If *file* was not passed to ::adv_compiler_compile to compile from the file system,
- *            then the importer will also be used to obtain the main (primary) file named *\<input\>*.
- * @endparblock
- * @parblock
- * @note      A typical use of an importer is to read source code from memory.
- * @endparblock
+ * @note      If set, the importer is queried before the sources passed to
+ *            ::adv_compiler_compile. If it returns `NULL` and no matching source
+ *            is found, the compiler searches the file system, including the
+ *            importing file's directory, the configured import directories, and
+ *            the current working directory.
+ * @note      A typical use of an importer is to load source code from memory or
+ *            from a source that is not available through the file system.
  * @sa        ::adv_options_get_importer
  * @ingroup   functions
  */

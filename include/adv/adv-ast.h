@@ -75,6 +75,12 @@ typedef struct
     adv_uint32_t column;   /**< 1-based column number. */
 } adv_location_t;
 
+/**
+ * @brief   Forward declaration of an AST node.
+ * @details The node definition follows below; pointers to this type are used
+ *          to link nodes into the AST hierarchy.
+ * @ingroup types
+ */
 typedef struct adv_node_t adv_node_t;
 
 /**

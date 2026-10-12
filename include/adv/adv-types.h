@@ -41,8 +41,8 @@ ADV_TYPE(adv_compiler)           /**< Compiler interface. */
 /**
  * @name    ADV Resource Handles
  * @brief   Index-based handles for ADV compiler resources.
- * @details Strongly typed handles identify strings and compiled scripts
- *          managed by the virtual machine.
+ * @details Strongly typed handles identify symbols and lexical scopes in a
+ *          compilation result.
  * @sa      ADV_HANDLE
  * @{
  */

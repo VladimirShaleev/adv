@@ -7,7 +7,6 @@
  *            - Symbol visibility control (DLL import/export on Windows)
  *            - C/C++ interoperability
  *            - Type definitions for consistent data sizes across platforms
- *            - Bit flag operations for enumerations (C++ only).
  *            
  * @author    Vladimir Shaleev <vladimirshaleev@gmail.com>
  * @ingroup   files
@@ -105,6 +104,7 @@ typedef struct _##adv_name* adv_name##_t;
  * @details   Creates a struct containing an index value, typically used for
  *            resource handles in API designs that avoid direct pointers.
  * @param[in] adv_name Base name for the handle type (suffix `_h` will be added).
+ * @ingroup   macros
  */
 #define ADV_HANDLE(adv_name) \
 typedef struct {             \
