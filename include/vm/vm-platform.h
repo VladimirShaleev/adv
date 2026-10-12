@@ -146,6 +146,7 @@ typedef struct _##vm_name* vm_name##_t;
  * @details   Creates a struct containing an index value, typically used for
  *            resource handles in API designs that avoid direct pointers.
  * @param[in] vm_name Base name for the handle type (suffix `_h` will be added).
+ * @ingroup   vm_macros
  */
 #define VM_HANDLE(vm_name) \
 typedef struct {           \

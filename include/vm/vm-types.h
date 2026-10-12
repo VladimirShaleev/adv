@@ -16,24 +16,57 @@ extern "C" {
 #endif
 
 /**
- * @brief   Opaque handle to a virtual machine instance.
- * @details The instance representation is hidden from API users.
- * @ingroup vm_types
- */
-VM_TYPE(vm)
-
-/**
- * @name    VM Resource Handles
- * @brief   Index-based handles for VM resources.
- * @details Strongly typed handles identify strings and compiled scripts
- *          managed by the virtual machine.
- * @sa      VM_HANDLE
+ * @addtogroup vm_types
  * @{
  */
-VM_HANDLE(vm_string) /**< Handle identifying an interned string in the VM string pool. */
-VM_HANDLE(vm_script) /**< Handle identifying a compiled script managed by the VM. */
-VM_HANDLE(vm_thread) /**< Handle to a running VM thread. */
-VM_HANDLE(vm_native) /**< Handle to a native function entry. */
+
+/**
+ * @name    Opaque Object Types
+ * @brief   Forward declarations for VM objects using opaque pointer types
+ * @details These macros generate typedefs for pointers to incomplete struct types,
+ *          providing type safety while hiding implementation details.
+ * @sa      VM_TYPE
+ * @{
+ */
+VM_TYPE(vm) /**< Opaque handle to a virtual machine instance. */
+/** @} */
+
+/** 
+ * @struct  vm_string_h
+ * @brief   Handle of an interned string.
+ * @details Handle identifying an interned string in the VM string pool.
+ * @var     vm_string_h::handle
+ * Handle, contains the value 0 if not defined.
+ */
+VM_HANDLE(vm_string)
+
+/**
+ * @struct  vm_script_h
+ * @brief   Handle a compiled script.
+ * @details Handle identifying a compiled script managed by the VM.
+ * @var     vm_script_h::handle
+ * Handle, contains the value 0 if not defined.
+ */
+VM_HANDLE(vm_script)
+
+/**
+ * @struct  vm_thread_h
+ * @brief   Handle of a thread.
+ * @details Handle to a running VM thread.
+ * @var     vm_thread_h::handle
+ * Handle, contains the value 0 if not defined.
+ */
+VM_HANDLE(vm_thread)
+
+/**
+ * @struct  vm_native_h
+ * @brief   Handle of a native function.
+ * @details Handle to a native function entry.
+ * @var     vm_native_h::handle
+ * Handle, contains the value 0 if not defined.
+ */
+VM_HANDLE(vm_native)
+
 /** @} */
 
 #ifdef __cplusplus

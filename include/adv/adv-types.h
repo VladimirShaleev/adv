@@ -28,8 +28,7 @@ extern "C" {
  * @name    Opaque Object Types
  * @brief   Forward declarations for compiler objects using opaque pointer types
  * @details These macros generate typedefs for pointers to incomplete struct types,
- *          providing type safety while hiding implementation details. Each represents
- *          a major subsystem in the Adv compiler.
+ *          providing type safety while hiding implementation details.
  * @sa      ADV_TYPE
  * @{
  */
@@ -38,17 +37,23 @@ ADV_TYPE(adv_options)            /**< Compilation options. */
 ADV_TYPE(adv_compiler)           /**< Compiler interface. */
 /** @} */
 
-/**
- * @name    ADV Resource Handles
- * @brief   Index-based handles for ADV compiler resources.
- * @details Strongly typed handles identify symbols and lexical scopes in a
- *          compilation result.
- * @sa      ADV_HANDLE
- * @{
+/** 
+ * @struct  adv_symbol_h
+ * @brief   Handle of a symbol.
+ * @details Handle identifying a symbol in the symbol table.
+ * @var     adv_symbol_h::handle
+ * Handle, contains the value 0 if not defined.
  */
-ADV_HANDLE(adv_symbol) /**< Handle identifying a symbol in the symbol table. */
-ADV_HANDLE(adv_scope)  /**< Handle identifying a scope in the symbol table. */
-/** @} */
+ADV_HANDLE(adv_symbol)
+
+/** 
+ * @struct  adv_scope_h
+ * @brief   Handle of a scope.
+ * @details Handle identifying a scope in the symbol table.
+ * @var     adv_scope_h::handle
+ * Handle, contains the value 0 if not defined.
+ */
+ADV_HANDLE(adv_scope)
 
 /** @} */
 

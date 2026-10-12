@@ -93,7 +93,7 @@
       <constructors visible="yes" title=""/>
       <functions visible="yes" title=""/>
       <related visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <properties visible="yes" title=""/>
       <events visible="yes" title=""/>
     </memberdef>
@@ -118,7 +118,7 @@
       <dictionaries visible="yes" title=""/>
       <enums visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <properties visible="yes" title=""/>
       <membergroups visible="yes"/>
     </memberdecl>
@@ -130,7 +130,7 @@
       <dictionaries visible="yes" title=""/>
       <enums visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <properties visible="yes" title=""/>
     </memberdef>
     <authorsection visible="yes"/>
@@ -166,7 +166,7 @@
       <dictionaries visible="yes" title=""/>
       <enums visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <properties visible="yes" title=""/>
       <membergroups visible="yes"/>
     </memberdecl>
@@ -179,7 +179,7 @@
       <dictionaries visible="yes" title=""/>
       <enums visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <properties visible="yes" title=""/>
     </memberdef>
     <authorsection/>
@@ -204,7 +204,7 @@
       <enums visible="yes" title=""/>
       <enumvalues visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <signals visible="yes" title=""/>
       <publicslots visible="yes" title=""/>
       <protectedslots visible="yes" title=""/>
@@ -225,7 +225,7 @@
       <enums visible="yes" title=""/>
       <enumvalues visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <signals visible="yes" title=""/>
       <publicslots visible="yes" title=""/>
       <protectedslots visible="yes" title=""/>
@@ -247,7 +247,7 @@
       <enums visible="yes" title=""/>
       <typedefs visible="yes" title=""/>
       <functions visible="yes" title=""/>
-      <variables visible="yes" title=""/>
+      <variables visible="no" title=""/>
       <membergroups visible="yes" title=""/>
     </memberdecl>
     <detaileddescription visible="yes" title=""/>
