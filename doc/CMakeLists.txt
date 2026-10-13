@@ -81,6 +81,57 @@ doxygen_add_docs(html
     ${ADV_DOC_MARKDOWN}
     USE_STAMP_FILE)
 
+# Remove unused sections in ToC
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/fixtoc.cmake"
+    [=[
+    file(READ "${SOURCE}" TEXT)
+    string(REPLACE ",\n    [ \"Data Structures\", \"annotated.html\", [\n      [ \"Data Structures\", \"annotated.html\", \"annotated_dup\" ]\n    ] ],\n    [ \"Files\", \"files.html\", [\n      [ \"File List\", \"files.html\", \"files_dup\" ]\n    ] ]" "" TEXT "${TEXT}")
+    file(WRITE "${TARGET}" "${TEXT}")
+    ]=])
+add_custom_command(
+    OUTPUT navtreedata
+    COMMAND ${CMAKE_COMMAND}
+      -DSOURCE=${CMAKE_CURRENT_BINARY_DIR}/html/navtreedata.js
+      -DTARGET=${CMAKE_CURRENT_BINARY_DIR}/html/navtreedata.js
+      -P ${CMAKE_CURRENT_BINARY_DIR}/fixtoc.cmake
+    DEPENDS html "${CMAKE_CURRENT_BINARY_DIR}/fixtoc.cmake"
+    VERBATIM)
+
+# Remove unused sections in menu
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/fixmenu.cmake"
+    [=[
+    file(READ "${SOURCE}" TEXT)
+    string(REPLACE ",\n{text:\"Data Structures\",url:\"annotated.html\",children:[\n{text:\"Data Structures\",url:\"annotated.html\"}]},\n{text:\"Files\",url:\"files.html\",children:[\n{text:\"File List\",url:\"files.html\"}]}" "" TEXT "${TEXT}")
+    file(WRITE "${TARGET}" "${TEXT}")
+    ]=])
+add_custom_command(
+    OUTPUT menudata
+    COMMAND ${CMAKE_COMMAND}
+        -DSOURCE=${CMAKE_CURRENT_BINARY_DIR}/html/menudata.js
+        -DTARGET=${CMAKE_CURRENT_BINARY_DIR}/html/menudata.js
+        -P ${CMAKE_CURRENT_BINARY_DIR}/fixmenu.cmake
+    DEPENDS html "${CMAKE_CURRENT_BINARY_DIR}/fixmenu.cmake"
+    VERBATIM)
+
+# Override search data
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/fixsearch.cmake"
+    [=[
+    set(TEXT "")
+    string(APPEND TEXT "var indexSectionsWithContent =\n{\n  0: \"acdefhiklmnprstv\",\n  1: \"av\",\n  2: \"av\",\n  3: \"av\",\n  4: \"av\",\n  5: \"av\",\n  6: \"av\",\n  7: \"acefmstv\"\n};\n\n")
+    string(APPEND TEXT "var indexSectionNames =\n{\n  0: \"all\",\n  1: \"classes\",\n  2: \"files\",\n  3: \"functions\",\n  4: \"typedefs\",\n  5: \"enums\",\n  6: \"enumvalues\",\n  7: \"groups\"\n};\n\n")
+    string(APPEND TEXT "var indexSectionLabels =\n{\n  0: \"All\",\n  1: \"Structures\",\n  2: \"Files\",\n  3: \"Functions\",\n  4: \"Typedefs\",\n  5: \"Enumerations\",\n  6: \"Enumeration Values\",\n  7: \"APIs\"\n};\n")
+    file(WRITE "${TARGET}" "${TEXT}")
+    ]=])
+add_custom_command(
+    OUTPUT searchdata
+    COMMAND ${CMAKE_COMMAND}
+        -DTARGET=${CMAKE_CURRENT_BINARY_DIR}/html/search/searchdata.js
+        -P ${CMAKE_CURRENT_BINARY_DIR}/fixsearch.cmake
+    DEPENDS html "${CMAKE_CURRENT_BINARY_DIR}/fixsearch.cmake"
+    VERBATIM)
+
+add_custom_target(doc ALL DEPENDS html navtreedata menudata searchdata)
+
 if(ADV_ENABLE_INSTALL)
     install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html" DESTINATION doc COMPONENT doc)
 endif()

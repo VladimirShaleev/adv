@@ -218,7 +218,7 @@ private:
             if (auto minor = parseComponent(str, false)) {
                 if (auto micro = parseComponent(str, true)) {
                     auto version = VM_VERSION_ENCODE(major.value(), minor.value(), micro.value());
-                    if ((version >> 16) == (VM_VERSION >> 16)) {
+                    if ((version >> 24) == (VM_VERSION >> 24)) {
                         return version;
                     }
                 }
@@ -594,7 +594,7 @@ bool validateVersion(std::span<const char> code, uint32_t expectedVersion, uint3
     if (compiledVersion) {
         *compiledVersion = version;
     }
-    return (version >> 16) == (expectedVersion >> 16);
+    return (version >> 24) == (expectedVersion >> 24);
 }
 
 std::vector<uint8_t> translateTextToBinary(std::span<const char> text, TranslateResult& error) noexcept {

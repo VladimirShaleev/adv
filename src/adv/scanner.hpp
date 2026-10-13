@@ -121,7 +121,7 @@ private:
             }
             if (!utils::validateVersion(bytecode, ADV_VERSION, &version)) {
                 _ctx.setBytecode(moduleName, {}, utils::Format::Unknown);
-                auto verStr = fmt::format("{}.{}.{}", (version >> 16) & 0xFF, (version >> 8) & 0xFF, version & 0xFF);
+                auto verStr = fmt::format("{}.{}.{}", (version >> 24) & 0xFF, (version >> 16) & 0xFF, version & 0xFFFF);
                 _ctx.log<ADV_STATUS_E3044>(_options, loc, verStr, ADV_VERSION_STRING);
             }
             _filename = path.string();
