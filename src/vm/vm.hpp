@@ -45,18 +45,14 @@ namespace vm {
 }
 
 template <typename T>
-[[nodiscard]] UTILS_FORCE_INLINE T parseString(vm_string_h str, const utils::StringPool& pool) noexcept {
+[[nodiscard]] UTILS_FORCE_INLINE std::optional<T> parseString(vm_string_h str, const utils::StringPool& pool) noexcept {
     T val{};
     auto view = pool[str];
     const auto [_, ec] = std::from_chars(view.data(), view.data() + view.length(), val);
     if (ec == std::errc()) {
         return val;
-    } else if (ec == std::errc::result_out_of_range) {
-        // TODO: log
-    } else {
-        // TODO: log
     }
-    return T{};
+    return std::nullopt;
 }
 
 } // namespace vm

@@ -68,7 +68,9 @@ public:
     }
 
     void destroyThread(vm_thread_h thread) noexcept {
-        // TODO: not implemented
+        if (auto it = std::find(_threadHandles.begin(), _threadHandles.end(), thread); it != _threadHandles.end()) {
+            _threads.access(*it)->state = ThreadState::Dead;
+        }
     }
 
     [[nodiscard]] const vm_value_t* getArg(vm_thread_h thread, vm_uint16_t index) const noexcept {
@@ -157,6 +159,23 @@ public:
         }
     }
 
+    [[nodiscard]] vm_logger_callback_t getLogger(vm_data_t* data) {
+        if (data) {
+            *data = _loggerData;
+        }
+        return _logger;
+    }
+
+    void setLogger(vm_logger_callback_t callback, vm_data_t data) {
+        if (callback) {
+            _logger = callback;
+            _loggerData = data;
+        } else {
+            _logger = nullptr;
+            _loggerData = nullptr;
+        }
+    }
+
     void tick() {
         for (size_t i = 0; i < _threadHandles.size();) {
             auto handle = _threadHandles[i++];
@@ -205,6 +224,12 @@ private:
         auto text = module->text();
         auto data = module->data();
         while (thread->state == ThreadState::Running && thread->instructionPos < text.size()) {
+            const auto logPos = thread->instructionPos;
+            const auto log = [this, thread, logPos](vm_utf8_t message) {
+                if (_logger) {
+                    _logger(this, _threads.handle(thread), logPos, message, _loggerData);
+                }
+            };
             const auto opcode = static_cast<vm_opcode_t>(text[thread->instructionPos++]);
             switch (opcode) {
             case VM_OPCODE_NO_OPERATION:
@@ -212,7 +237,7 @@ private:
             case VM_OPCODE_IMPORT: {
                 const auto view = utils::readString(text, thread->instructionPos, data);
                 if (!_moduleManager.hasModule(view)) {
-                    const auto waitThread = import(view);
+                    const auto waitThread = import(view, log);
                     module = _moduleManager.getModule(thread->script);
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_NO_OPERATION, 0);
                     if (waitThread != Undefined) {
@@ -224,74 +249,76 @@ private:
                 break;
             }
             case VM_OPCODE_PUSH_TRUE:
-                thread->stack[thread->stackPos++] = valueFromBool(true);
+                push(thread, valueFromBool(true), log);
                 break;
             case VM_OPCODE_PUSH_FALSE:
-                thread->stack[thread->stackPos++] = valueFromBool(false);
+                push(thread, valueFromBool(false), log);
                 break;
             case VM_OPCODE_PUSH_INT: {
                 const auto value = utils::readInt32(text, thread->instructionPos);
-                thread->stack[thread->stackPos++] = valueFromInt32(value);
+                push(thread, valueFromInt32(value), log);
                 break;
             }
             case VM_OPCODE_PUSH_FLOAT: {
                 const auto value = utils::readFloat(text, thread->instructionPos);
-                thread->stack[thread->stackPos++] = valueFromFloat(value);
+                push(thread, valueFromFloat(value), log);
                 break;
             }
             case VM_OPCODE_PUSH_STRING_FROM_DATA: {
                 const auto view = utils::readString(text, thread->instructionPos, data);
                 const auto str = _cache.pool.insert(view);
                 module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_PUSH_STRING, str.handle);
-                thread->stack[thread->stackPos++] = valueFromString({str});
+                push(thread, valueFromString({str}), log);
                 break;
             }
             case VM_OPCODE_PUSH_STRING: {
                 const auto str = utils::readUint32(text, thread->instructionPos);
-                thread->stack[thread->stackPos++] = valueFromString({str});
+                push(thread, valueFromString({str}), log);
                 break;
             }
             case VM_OPCODE_PUSH_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveVar(name); slot != Undefined) {
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_PUSH_GLOBAL, slot.handle);
-                    thread->stack[thread->stackPos++] = _globalManager.getVar(slot);
+                    push(thread, _globalManager.getVar(slot), log);
                 } else {
-                    // TODO: log
+                    const auto message = fmt::format("Global variable '{}' for reading not found", name);
+                    log(message.c_str());
                 }
                 break;
             }
             case VM_OPCODE_PUSH_GLOBAL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
-                thread->stack[thread->stackPos++] = _globalManager.getVar({slot});
+                push(thread, _globalManager.getVar({slot}), log);
                 break;
             }
             case VM_OPCODE_PUSH_LOCAL: {
                 const auto slot = utils::readUint16(text, thread->instructionPos);
                 const auto& currentFrame = thread->frames[thread->frameCount - 1];
                 const auto localSlot = currentFrame.baseStackPos + slot;
-                thread->stack[thread->stackPos++] = thread->stack[localSlot];
+                push(thread, thread->stack[localSlot], log);
                 break;
             }
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveVar(name); slot != Undefined) {
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_POP_GLOBAL, slot.handle);
-                    _globalManager.setVar(slot, thread->stack[--thread->stackPos]);
+                    _globalManager.setVar(slot, pop(thread, log));
                 } else {
-                    // TODO: log
+                    const auto message = fmt::format("Global variable '{}' for writing not found", name);
+                    log(message.c_str());
                 }
                 break;
             }
             case VM_OPCODE_POP_GLOBAL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
-                _globalManager.setVar({slot}, thread->stack[--thread->stackPos]);
+                _globalManager.setVar({slot}, pop(thread, log));
                 break;
             }
             case VM_OPCODE_POP_LOCAL: {
                 const auto slot = utils::readUint16(text, thread->instructionPos);
                 const auto& currentFrame = thread->frames[thread->frameCount - 1];
-                const auto val = thread->stack[--thread->stackPos];
+                const auto val = pop(thread, log);
                 const auto localSlot = currentFrame.baseStackPos + slot;
                 thread->stack[localSlot] = val;
                 break;
@@ -300,119 +327,120 @@ private:
                 --thread->stackPos;
                 break;
             case VM_OPCODE_BOOL_TO_INT:
-                cast<bool, vm_sint32_t>(thread);
+                cast<bool, vm_sint32_t>(thread, log);
                 break;
             case VM_OPCODE_BOOL_TO_FLOAT:
-                cast<bool, vm_float32_t>(thread);
+                cast<bool, vm_float32_t>(thread, log);
                 break;
             case VM_OPCODE_BOOL_TO_STRING:
-                cast<bool, vm_string_h>(thread);
+                cast<bool, vm_string_h>(thread, log);
                 break;
             case VM_OPCODE_INT_TO_BOOL:
-                cast<vm_sint32_t, bool>(thread);
+                cast<vm_sint32_t, bool>(thread, log);
                 break;
             case VM_OPCODE_INT_TO_FLOAT:
-                cast<vm_sint32_t, vm_float32_t>(thread);
+                cast<vm_sint32_t, vm_float32_t>(thread, log);
                 break;
             case VM_OPCODE_INT_TO_STRING:
-                cast<vm_sint32_t, vm_string_h>(thread);
+                cast<vm_sint32_t, vm_string_h>(thread, log);
                 break;
             case VM_OPCODE_FLOAT_TO_BOOL:
-                cast<vm_float32_t, bool>(thread);
+                cast<vm_float32_t, bool>(thread, log);
                 break;
             case VM_OPCODE_FLOAT_TO_INT:
-                cast<vm_float32_t, vm_sint32_t>(thread);
+                cast<vm_float32_t, vm_sint32_t>(thread, log);
                 break;
             case VM_OPCODE_FLOAT_TO_STRING:
-                cast<vm_float32_t, vm_string_h>(thread);
+                cast<vm_float32_t, vm_string_h>(thread, log);
                 break;
             case VM_OPCODE_STRING_TO_BOOL:
-                cast<vm_string_h, bool>(thread);
+                cast<vm_string_h, bool>(thread, log);
                 break;
             case VM_OPCODE_STRING_TO_INT:
-                cast<vm_string_h, vm_sint32_t>(thread);
+                cast<vm_string_h, vm_sint32_t>(thread, log);
                 break;
             case VM_OPCODE_STRING_TO_FLOAT:
-                cast<vm_string_h, vm_float32_t>(thread);
+                cast<vm_string_h, vm_float32_t>(thread, log);
                 break;
             case VM_OPCODE_BITWISE_NOT:
-                operation<BitwiseNot>(thread);
+                operation<BitwiseNot>(thread, log);
                 break;
             case VM_OPCODE_LOGICAL_NOT:
-                operation<LogicalNot>(thread);
+                operation<LogicalNot>(thread, log);
                 break;
             case VM_OPCODE_NUMERIC_NEGATION:
-                operation<NumericNegation>(thread);
+                operation<NumericNegation>(thread, log);
                 break;
             case VM_OPCODE_BITWISE_AND:
-                operation<And>(thread);
+                operation<And>(thread, log);
                 break;
             case VM_OPCODE_BITWISE_OR:
-                operation<Or>(thread);
+                operation<Or>(thread, log);
                 break;
             case VM_OPCODE_BITWISE_XOR:
-                operation<Xor>(thread);
+                operation<Xor>(thread, log);
                 break;
             case VM_OPCODE_LOGIC_SHIFT_LEFT:
-                operation<LogicShiftLeft>(thread);
+                operation<LogicShiftLeft>(thread, log);
                 break;
             case VM_OPCODE_LOGIC_SHIFT_RIGHT:
-                operation<LogicShiftRight>(thread);
+                operation<LogicShiftRight>(thread, log);
                 break;
             case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
-                operation<ArithmeticShiftLeft>(thread);
+                operation<ArithmeticShiftLeft>(thread, log);
                 break;
             case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
-                operation<ArithmeticShiftRight>(thread);
+                operation<ArithmeticShiftRight>(thread, log);
                 break;
             case VM_OPCODE_ADD:
-                operation<Add>(thread);
+                operation<Add>(thread, log);
                 break;
             case VM_OPCODE_SUBTRACT:
-                operation<Sub>(thread);
+                operation<Sub>(thread, log);
                 break;
             case VM_OPCODE_MULTIPLY:
-                operation<Mul>(thread);
+                operation<Mul>(thread, log);
                 break;
             case VM_OPCODE_DIVISION:
-                operation<Div>(thread);
+                operation<Div>(thread, log);
                 break;
             case VM_OPCODE_MOD:
-                operation<Mod>(thread);
+                operation<Mod>(thread, log);
                 break;
             case VM_OPCODE_EQUAL:
-                operation<Equal>(thread);
+                operation<Equal>(thread, log);
                 break;
             case VM_OPCODE_NOT_EQUAL:
-                operation<NotEqual>(thread);
+                operation<NotEqual>(thread, log);
                 break;
             case VM_OPCODE_LESS:
-                operation<Less>(thread);
+                operation<Less>(thread, log);
                 break;
             case VM_OPCODE_LESS_EQUAL:
-                operation<LessEqual>(thread);
+                operation<LessEqual>(thread, log);
                 break;
             case VM_OPCODE_GREAT:
-                operation<Great>(thread);
+                operation<Great>(thread, log);
                 break;
             case VM_OPCODE_GREAT_EQUAL:
-                operation<GreatEqual>(thread);
+                operation<GreatEqual>(thread, log);
                 break;
             case VM_OPCODE_CALL_NATIVE_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto native = _nativeManager.find(name); native != Undefined) {
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL_NATIVE, native.handle);
                     const auto func = _nativeManager.func(native);
-                    callNative(thread, native, *func);
+                    callNative(thread, native, *func, log);
                 } else {
-                    // TODO: log
+                    const auto message = fmt::format("Native function '{}' not found", name);
+                    log(message.c_str());
                 }
                 break;
             }
             case VM_OPCODE_CALL_NATIVE: {
                 const auto native = utils::readUint32(text, thread->instructionPos);
                 const auto func = _nativeManager.func({native});
-                callNative(thread, {native}, *func);
+                callNative(thread, {native}, *func, log);
                 break;
             }
             case VM_OPCODE_CALL_BY_NAME: {
@@ -420,25 +448,26 @@ private:
                 if (auto slot = _globalManager.resolveFunc(name); slot != Undefined) {
                     module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL, slot.handle);
                     const auto& func = _globalManager.getFunc(slot);
-                    call(thread, func, module);
+                    call(thread, func, module, log);
                     text = module->text();
                     data = module->data();
                 } else {
-                    // TODO: log
+                    const auto message = fmt::format("Function '{}' not found", name);
+                    log(message.c_str());
                 }
                 break;
             }
             case VM_OPCODE_CALL: {
                 const auto slot = utils::readUint32(text, thread->instructionPos);
                 const auto& func = _globalManager.getFunc({slot});
-                call(thread, func, module);
+                call(thread, func, module, log);
                 text = module->text();
                 data = module->data();
                 break;
             }
             case VM_OPCODE_RETURN: {
                 if (thread->frameCount == 0) {
-                    // log
+                    log("It is not possible to return from the root");
                     thread->state = ThreadState::Dead;
                     return;
                 }
@@ -462,13 +491,13 @@ private:
                 break;
             case VM_OPCODE_JUMP_IF_FALSE: {
                 const auto target = utils::readUint32(text, thread->instructionPos);
-                const auto value = thread->stack[--thread->stackPos];
+                const auto value = pop(thread, log);
                 if (value.type == VM_VALUE_TYPE_BOOL) {
                     if (!value.b) {
                         thread->instructionPos = target;
                     }
                 } else {
-                    // TODO: log
+                    log("The operand is not a boolean type");
                 }
                 break;
             }
@@ -479,15 +508,37 @@ private:
             case VM_OPCODE_HALT:
                 thread->state = ThreadState::Dead;
                 return;
-            default:
-                // TODO: add log: [Error] Thread %d: Unknown opcode 0x%02X at IP %u\n", t->id, opcode, t->ip - 1
+            default: {
+                const auto message = fmt::format("Unknown opcode {0:#x}", static_cast<int>(opcode));
+                log(message.c_str());
                 thread->state = ThreadState::Dead;
                 return;
+            }
             }
         }
     }
 
-    vm_thread_h import(std::string_view moduleName) {
+    template <typename Logger>
+    void push(ScriptThread* thread, const vm_value_t& value, Logger&& log) {
+        if (thread->stackPos < StackSize) {
+            thread->stack[thread->stackPos++] = value;
+        } else {
+            log("Call Stack Overflow in thread");
+        }
+    }
+
+    template <typename Logger>
+    [[nodiscard]] vm_value_t pop(ScriptThread* thread, Logger&& log) {
+        if (thread->stackPos > 0) {
+            return thread->stack[--thread->stackPos];
+        } else {
+            log("There are no values ​​in the stack.");
+            return valueFromInt32(0);
+        }
+    }
+
+    template <typename Logger>
+    vm_thread_h import(std::string_view moduleName, Logger&& log) {
         vm_thread_h result = Undefined;
         vm_script_h script = Undefined;
         if (_importer) {
@@ -502,12 +553,14 @@ private:
             script = loadScriptFromFile(moduleName.data());
         }
         if (script == Undefined) {
-            // TODO: log
+            const auto message = fmt::format("Module '{}' not found", moduleName);
+            log(message.c_str());
         }
         return createThread(script);
     }
 
-    void callNative(ScriptThread* thread, vm_native_h nativeHandle, const Native& native) {
+    template <typename Logger>
+    void callNative(ScriptThread* thread, vm_native_h nativeHandle, const Native& native, Logger&& log) {
         if (thread->stackPos + native.returnCount < StackSize) {
             thread->currentNative = nativeHandle;
             native.func(this, _threads.handle(thread), nativeHandle, native.paramCount, native.data);
@@ -522,13 +575,14 @@ private:
                 thread->stack[thread->stackPos++] = retVal;
             }
         } else {
-            // log
+            log("Call Stack Overflow in thread");
         }
     }
 
-    void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module) {
+    template <typename Logger>
+    void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module, Logger&& log) {
         if (thread->frameCount >= MaxFrames) {
-            // TODO: add log printf("[VM Error] Call Stack Overflow in thread %d\n", thread->id);
+            log("Call Stack Overflow in thread");
             thread->state = ThreadState::Dead;
             return;
         }
@@ -551,34 +605,38 @@ private:
         }
     }
 
-    template <typename From, typename To>
-    void cast(ScriptThread* thread) {
-        auto value = thread->stack[--thread->stackPos];
-        thread->stack[thread->stackPos++] = Cast<From, To>::cast(value, _cache);
+    template <typename From, typename To, typename Logger>
+    void cast(ScriptThread* thread, Logger&& log) {
+        auto failed = false;
+        auto value = pop(thread, log);
+        thread->stack[thread->stackPos++] = Cast<From, To>::cast(value, _cache, failed);
+        if (failed) {
+            log("Operand type casting error");
+        }
     }
 
-    template <typename Op>
-    void operation(ScriptThread* thread) noexcept {
+    template <typename Op, typename Logger>
+    void operation(ScriptThread* thread, Logger&& log) noexcept {
         if constexpr (Op::isUnary) {
-            const auto a = thread->stack[--thread->stackPos];
+            const auto a = pop(thread, log);
             if constexpr (Op::isLogic) {
-                thread->stack[thread->stackPos++] = logicOperation<Op>(a, a);
+                thread->stack[thread->stackPos++] = logicOperation<Op>(a, a, std::move(log));
             } else {
-                thread->stack[thread->stackPos++] = arithmeticOperation<Op>(a, a);
+                thread->stack[thread->stackPos++] = arithmeticOperation<Op>(a, a, std::move(log));
             }
         } else {
-            const auto b = thread->stack[--thread->stackPos];
-            const auto a = thread->stack[--thread->stackPos];
+            const auto b = pop(thread, log);
+            const auto a = pop(thread, log);
             if constexpr (Op::isLogic) {
-                thread->stack[thread->stackPos++] = logicOperation<Op>(a, b);
+                thread->stack[thread->stackPos++] = logicOperation<Op>(a, b, std::move(log));
             } else {
-                thread->stack[thread->stackPos++] = arithmeticOperation<Op>(a, b);
+                thread->stack[thread->stackPos++] = arithmeticOperation<Op>(a, b, std::move(log));
             }
         }
     }
 
-    template <typename Op>
-    [[nodiscard]] vm_value_t logicOperation(const vm_value_t& a, const vm_value_t& b) noexcept {
+    template <typename Op, typename Logger>
+    [[nodiscard]] vm_value_t logicOperation(const vm_value_t& a, const vm_value_t& b, Logger&& log) noexcept {
         if (a.type == b.type && Op::allowed(a.type)) {
             switch (a.type) {
             case VM_VALUE_TYPE_BOOL:
@@ -594,12 +652,12 @@ private:
                 break;
             }
         }
-        // TODO: log
-        return {};
+        log("The logical operation cannot be performed because the operand types do not match");
+        return valueFromBool(false);
     }
 
-    template <typename Op>
-    [[nodiscard]] vm_value_t arithmeticOperation(const vm_value_t& a, const vm_value_t& b) noexcept {
+    template <typename Op, typename Logger>
+    [[nodiscard]] vm_value_t arithmeticOperation(const vm_value_t& a, const vm_value_t& b, Logger&& log) noexcept {
         if (a.type == b.type && Op::allowed(a.type)) {
             switch (a.type) {
             case VM_VALUE_TYPE_BOOL:
@@ -615,8 +673,8 @@ private:
                 break;
             }
         }
-        // TODO: log
-        return {};
+        log("The arithmetic operation cannot be performed because the operand types do not match");
+        return valueFromInt32(0);
     }
 
     Cache _cache;
@@ -630,8 +688,10 @@ private:
     std::vector<std::filesystem::path> _importDirs{};
     vm_import_callback_t _importer{};
     vm_release_import_callback_t _releaseImport{};
+    vm_logger_callback_t _logger{};
     vm_data_t _importerData{};
     vm_data_t _releaseImportData{};
+    vm_data_t _loggerData{};
 };
 
 } // namespace vm
@@ -923,5 +983,15 @@ vm_release_import_callback_t vm_get_release_import(vm_t vm, vm_data_t* data) {
 void vm_set_release_import(vm_t vm, vm_release_import_callback_t callback, vm_data_t data) {
     if (vm) {
         vm->as<vm::VM>()->setReleaseImport(callback, data);
+    }
+}
+
+vm_logger_callback_t vm_get_logger(vm_t vm, vm_data_t* data) {
+    return vm ? vm->as<vm::VM>()->getLogger(data) : nullptr;
+}
+
+void vm_set_logger(vm_t vm, vm_logger_callback_t callback, vm_data_t data) {
+    if (vm) {
+        vm->as<vm::VM>()->setLogger(callback, data);
     }
 }

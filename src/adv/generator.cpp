@@ -730,25 +730,25 @@ adv_result_t Generator::text() {
                 op = "neg"sv;
                 break;
             case VM_OPCODE_BITWISE_AND:
-                assert(!"todo");
+                op = "and"sv;
                 break;
             case VM_OPCODE_BITWISE_OR:
-                assert(!"todo");
+                op = "or"sv;
                 break;
             case VM_OPCODE_BITWISE_XOR:
-                assert(!"todo");
+                op = "xor"sv;
                 break;
             case VM_OPCODE_LOGIC_SHIFT_LEFT:
-                assert(!"todo");
+                op = "lsl"sv;
                 break;
             case VM_OPCODE_LOGIC_SHIFT_RIGHT:
-                assert(!"todo");
+                op = "lsr"sv;
                 break;
             case VM_OPCODE_ARITHMETIC_SHIFT_LEFT:
-                assert(!"todo");
+                op = "asl"sv;
                 break;
             case VM_OPCODE_ARITHMETIC_SHIFT_RIGHT:
-                assert(!"todo");
+                op = "asr"sv;
                 break;
             case VM_OPCODE_ADD:
                 op = "add"sv;
@@ -821,10 +821,10 @@ adv_result_t Generator::text() {
                 break;
             }
             case VM_OPCODE_YIELD:
-                assert(!"todo");
+                op = "yield"sv;
                 break;
             case VM_OPCODE_WAIT:
-                assert(!"todo");
+                op = "wait"sv;
                 break;
             case VM_OPCODE_HALT:
                 op = "halt"sv;

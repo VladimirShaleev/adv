@@ -50,11 +50,6 @@ const vm_value_t& GlobalManager::getVar(VarSlot slot) const noexcept { return *_
 const GlobalManager::Func& GlobalManager::getFunc(FuncSlot slot) const noexcept { return *_funcs.get(slot); }
 
 void GlobalManager::addGlobalVar(std::string_view name, vm_value_type_t type) {
-    if (auto slot = resolveVar(name); slot != Undefined) {
-        if (getVar(slot).type != type) {
-            // TODO: add log
-        }
-    }
     const auto str = _cache.pool.insert(name);
     const auto _ = _vars.emplace(str, type);
 }

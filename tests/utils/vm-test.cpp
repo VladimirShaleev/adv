@@ -15,7 +15,7 @@ TEST(VM, Test) {
     vm_utf8_t dirs[] = {"D:\\Development\\Projects\\adv\\build\\"};
     vm_set_import_dirs(vm, std::size(dirs), dirs);
 
-    auto script = vm_load_script_from_file(vm, "D:\\Development\\Projects\\adv\\build\\test.adt");
+    auto script = vm_load_script_from_file(vm, "D:\\Development\\Projects\\adv\\build\\test.adb");
     EXPECT_NE(script, Undefined);
 
     vm_register_native(

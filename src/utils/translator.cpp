@@ -893,6 +893,27 @@ private:
         if (equals(str, "neg"sv)) {
             return VM_OPCODE_NUMERIC_NEGATION;
         }
+        if (equals(str, "and"sv)) {
+            return VM_OPCODE_BITWISE_AND;
+        }
+        if (equals(str, "or"sv)) {
+            return VM_OPCODE_BITWISE_OR;
+        }
+        if (equals(str, "xor"sv)) {
+            return VM_OPCODE_BITWISE_XOR;
+        }
+        if (equals(str, "lsl"sv)) {
+            return VM_OPCODE_LOGIC_SHIFT_LEFT;
+        }
+        if (equals(str, "lsr"sv)) {
+            return VM_OPCODE_LOGIC_SHIFT_RIGHT;
+        }
+        if (equals(str, "asl"sv)) {
+            return VM_OPCODE_ARITHMETIC_SHIFT_LEFT;
+        }
+        if (equals(str, "asr"sv)) {
+            return VM_OPCODE_ARITHMETIC_SHIFT_RIGHT;
+        }
         if (equals(str, "add"sv)) {
             return VM_OPCODE_ADD;
         }
@@ -940,6 +961,12 @@ private:
         }
         if (equals(str, "jfalse"sv)) {
             return VM_OPCODE_JUMP_IF_FALSE;
+        }
+        if (equals(str, "yield"sv)) {
+            return VM_OPCODE_YIELD;
+        }
+        if (equals(str, "wait"sv)) {
+            return VM_OPCODE_WAIT;
         }
         if (equals(str, "halt"sv)) {
             return VM_OPCODE_HALT;

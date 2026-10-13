@@ -123,6 +123,13 @@ typedef void
                                 vm_bytecode_t* bytecode,
                                 vm_data_t data);
 
+typedef void
+(*vm_logger_callback_t)(vm_t vm,
+                        vm_thread_h thread,
+                        vm_uint32_t instruction_pos,
+                        vm_utf8_t message,
+                        vm_data_t data);
+
 /**
  * @brief     Converts error code to descriptive string.
  * @details   Provides a text description for the result code.
@@ -430,6 +437,15 @@ VM_API void
 vm_set_release_import(vm_t vm,
                       vm_release_import_callback_t callback,
                       vm_data_t data);
+
+VM_API vm_logger_callback_t
+vm_get_logger(vm_t vm,
+              vm_data_t* data);
+
+VM_API void
+vm_set_logger(vm_t vm,
+              vm_logger_callback_t callback,
+              vm_data_t data);
 
 /** @} */
 
