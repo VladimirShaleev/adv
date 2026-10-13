@@ -37,7 +37,6 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
-#include <magic_enum/magic_enum.hpp>
 #include <utils/utils.hpp>
 
 constexpr vm_value_type_t VM_VALUE_TYPE_VOID = vm_value_type_t(int(VM_VALUE_TYPE_COUNT_ENUMS) + 1);

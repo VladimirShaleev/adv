@@ -1,7 +1,6 @@
 #include "translator.hpp"
 
 #include <fmt/format.h>
-#include <magic_enum/magic_enum.hpp>
 
 #include <vm/vm-opcode.h>
 #include <vm/vm-script.h>
