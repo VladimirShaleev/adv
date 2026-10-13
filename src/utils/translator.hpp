@@ -20,6 +20,7 @@ struct TranslateResult {
         UnknownFormat,
         UnknownOpcode,
         UnknownIdentifier,
+        InvalidIdentifierReference,
         RedefinedIdentifier,
         IncompatibleVersion,
         ValueOutOfRange,

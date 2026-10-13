@@ -509,9 +509,10 @@ adv_result_t Generator::text() {
     };
 
     constexpr std::string_view tab = "    "sv;
-    std::cout << ".header"sv << std::endl;
-    std::cout << tab << "format: ADVT"sv << std::endl;
-    std::cout << tab << "version: "sv << VM_VERSION_STRING << std::endl;
+    std::ostringstream ss;
+    ss << ".header"sv << std::endl;
+    ss << tab << "format: ADVT"sv << std::endl;
+    ss << tab << "version: "sv << VM_VERSION_STRING << std::endl;
 
     std::set<std::string> identifiers;
     identifiers.insert("true");
@@ -546,8 +547,8 @@ adv_result_t Generator::text() {
     const auto exports = utils::read<vm_script_export_t>(bytecode);
     const auto moduleName = utils::readString(exports.module_name, data);
     std::map<adv_uint32_t, std::pair<std::string, bool>> labels;
-    std::cout << std::endl << ".export"sv << std::endl;
-    std::cout << tab << "module "sv << moduleName << " "sv << exports.root_frame_slots << std::endl;
+    ss << std::endl << ".export"sv << std::endl;
+    ss << tab << "module "sv << moduleName << " "sv << exports.root_frame_slots << std::endl;
     for (size_t i = 0; i < exports.var_count; ++i) {
         const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
         const auto name = utils::readString(var.name, data);
@@ -555,7 +556,7 @@ adv_result_t Generator::text() {
         if (type.empty()) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
-        std::cout << tab << "var "sv << name << ": "sv << type << std::endl;
+        ss << tab << "var "sv << name << ": "sv << type << std::endl;
         if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
@@ -564,7 +565,7 @@ adv_result_t Generator::text() {
         const auto native = utils::read<vm_script_export_native_t>(bytecode, i);
         const auto name = utils::readString(native.name, data);
         const auto ret = readType(native.return_type);
-        std::cout << tab << "native "sv << name << '(';
+        ss << tab << "native "sv << name << '(';
         for (size_t p = 0; p < native.param_count; ++p) {
             const auto var = utils::read<utils::NativeParam>(bytecode, i, p).param;
             const auto name = utils::readString(var.name, data);
@@ -573,15 +574,15 @@ adv_result_t Generator::text() {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
             if (p > 0) {
-                std::cout << ", "sv;
+                ss << ", "sv;
             }
-            std::cout << name << ": "sv << type;
+            ss << name << ": "sv << type;
         }
-        std::cout << ')';
+        ss << ')';
         if (!ret.empty()) {
-            std::cout << ": "sv << ret;
+            ss << ": "sv << ret;
         }
-        std::cout << std::endl;
+        ss << std::endl;
         if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
@@ -590,7 +591,7 @@ adv_result_t Generator::text() {
         const auto fun = utils::read<vm_script_export_func_t>(bytecode, i);
         const auto name = utils::readString(fun.name, data);
         const auto ret = readType(fun.return_type);
-        std::cout << tab << "function "sv << name << '(';
+        ss << tab << "function "sv << name << '(';
         for (size_t p = 0; p < fun.param_count; ++p) {
             const auto var = utils::read<vm_script_export_param_t>(bytecode, i, p);
             const auto name = utils::readString(var.name, data);
@@ -599,15 +600,15 @@ adv_result_t Generator::text() {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
             if (p > 0) {
-                std::cout << ", "sv;
+                ss << ", "sv;
             }
-            std::cout << name << ": "sv << type;
+            ss << name << ": "sv << type;
         }
-        std::cout << ')';
+        ss << ')';
         if (!ret.empty()) {
-            std::cout << ": "sv << ret;
+            ss << ": "sv << ret;
         }
-        std::cout << ' ' << fun.frame_slot_count << std::endl;
+        ss << ' ' << fun.frame_slot_count << std::endl;
         if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
@@ -842,53 +843,58 @@ adv_result_t Generator::text() {
         }
     }
     if (hasDataSection) {
-        std::cout << std::endl << ".data"sv << std::endl;
+        ss << std::endl << ".data"sv << std::endl;
         for (const auto& [text, countAndId] : strings) {
             if (countAndId.first > 1) {
-                std::cout << tab << countAndId.second << ": \""sv << utils::escape(text) << '"' << std::endl;
+                ss << tab << countAndId.second << ": \""sv << utils::escape(text) << '"' << std::endl;
             }
         }
     }
     if (!codeLines.empty()) {
-        std::cout << std::endl << ".text"sv << std::endl;
+        ss << std::endl << ".text"sv << std::endl;
         std::string_view prevOp = "";
         for (const auto& [index, op, val] : codeLines) {
             std::string label{tab.data(), tab.length()};
             if (auto it = labels.find(index); it != labels.end()) {
                 if (it->second.second || prevOp == "ret"sv) {
-                    std::cout << std::endl;
+                    ss << std::endl;
                 }
-                std::cout << it->second.first << ':' << std::endl;
+                ss << it->second.first << ':' << std::endl;
             }
-            std::cout << label << op;
+            ss << label << op;
             if (val.index() != 0) {
-                std::cout << ' ';
+                ss << ' ';
                 if (std::holds_alternative<Id>(val)) {
                     auto name = std::get<Id>(val).name;
-                    std::cout << name;
+                    ss << name;
                 } else if (std::holds_alternative<std::string_view>(val)) {
                     auto str = std::get<std::string_view>(val);
                     if (auto it = strings.find(str); it != strings.end() && it->second.first > 1) {
-                        std::cout << it->second.second;
+                        ss << it->second.second;
                     } else {
-                        std::cout << '"' << utils::escape(str) << '"';
+                        ss << '"' << utils::escape(str) << '"';
                     }
                 } else if (std::holds_alternative<adv_sint16_t>(val)) {
-                    std::cout << std::get<adv_sint16_t>(val);
+                    ss << std::get<adv_sint16_t>(val);
                 } else if (std::holds_alternative<adv_sint32_t>(val)) {
-                    std::cout << std::get<adv_sint32_t>(val);
+                    ss << std::get<adv_sint32_t>(val);
                 } else if (std::holds_alternative<adv_float32_t>(val)) {
                     auto str = fmt::format("{:g}", std::get<adv_float32_t>(val));
                     if (str.find_last_of('.') == std::string::npos) {
                         str += ".0"s;
                     }
-                    std::cout << str;
+                    ss << str;
                 }
             }
-            std::cout << std::endl;
+            ss << std::endl;
             prevOp = op;
         }
     }
+    const auto textAsm = ss.str();
+    const auto begin = (const uint8_t*) textAsm.data();
+    const auto end = begin + textAsm.length();
+    std::vector<adv_uint8_t> result(begin, end);
+    _ctx.setBytecode(moduleName, std::move(result), utils::Format::Advt);
     return ADV_RESULT_SUCCESS;
 }
 

@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <new>
 #include <optional>

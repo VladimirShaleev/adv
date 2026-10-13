@@ -5,7 +5,10 @@
 
 #include <vm/vm-opcode.h>
 #include <vm/vm-script.h>
+#include <vm/vm-value.h>
 #include <vm/vm-version.h>
+
+using namespace std::string_view_literals;
 
 namespace utils {
 
@@ -14,8 +17,13 @@ namespace {
 enum class TokenType {
     Eof,
     Colon,
+    Comma,
     Comment,
+    LBrace,
+    LParen,
     Newline,
+    RBrace,
+    RParen,
     Section,
     String,
     Identifier
@@ -41,19 +49,47 @@ struct PatchInstruction {
     vm_uint32_t line;
 };
 
+enum class SymbolKind {
+    Variable,
+    Native,
+    Function,
+    Data
+};
+
+struct SymbolParameter {
+    std::string_view name;
+    vm_value_type_t type;
+};
+
+struct Symbol {
+    SymbolKind kind;
+    std::string_view name;
+    vm_value_type_t type{VM_VALUE_TYPE_UNKNOWN};
+    vm_uint16_t frameSlotCount{0};
+    std::vector<SymbolParameter> parameters;
+    vm_uint32_t offset{};
+    vm_uint32_t line{0};
+};
+
 struct Advt {
-    static constexpr vm_uint32_t offsetData =
+    static constexpr vm_uint32_t offsetExport =
         static_cast<vm_uint32_t>(sizeof(vm_script_header_t) + sizeof(vm_script_table_t));
 
     Format format;
     vm_uint32_t version;
-    std::unordered_map<std::string_view, std::string_view> identifierMap;
-    std::vector<PatchInstruction> identifiers;
-    std::vector<PatchInstruction> labels;
+    std::map<std::string_view, Symbol> symbolMap;
+    std::unordered_map<std::string_view, vm_uint32_t> dataMap;
     std::unordered_map<std::string_view, vm_uint32_t> labelMap;
-    std::unordered_map<std::string_view, vm_uint32_t> dataSectionMap;
-    std::vector<uint8_t> headerAndDataSection;
+    std::vector<PatchInstruction> pushData;
+    std::vector<PatchInstruction> variables;
+    std::vector<PatchInstruction> jumps;
+    std::vector<PatchInstruction> calls;
+    std::vector<uint8_t> dataSection;
+    std::vector<uint8_t> exportSection;
     std::vector<uint8_t> textSection;
+    std::optional<uint32_t> moduleName;
+    vm_uint16_t rootFrameSlots{0};
+    vm_uint32_t moduleLine{0};
 };
 
 class Lexer {
@@ -96,6 +132,26 @@ public:
         case ':': {
             advance();
             return Token{TokenType::Colon, _source.substr(_cursor - 1, 1), _line, startCol};
+        }
+        case ',': {
+            advance();
+            return Token{TokenType::Comma, _source.substr(_cursor - 1, 1), _line, startCol};
+        }
+        case '(': {
+            advance();
+            return Token{TokenType::LParen, _source.substr(_cursor - 1, 1), _line, startCol};
+        }
+        case ')': {
+            advance();
+            return Token{TokenType::RParen, _source.substr(_cursor - 1, 1), _line, startCol};
+        }
+        case '{': {
+            advance();
+            return Token{TokenType::LBrace, _source.substr(_cursor - 1, 1), _line, startCol};
+        }
+        case '}': {
+            advance();
+            return Token{TokenType::RBrace, _source.substr(_cursor - 1, 1), _line, startCol};
         }
         case '"': {
             advance();
@@ -141,7 +197,8 @@ private:
     }
 
     [[nodiscard]] static bool isDelimiter(char c) noexcept {
-        return std::isspace(c) || c == ':' || c == ';' || c == '"';
+        return std::isspace(c) || c == ':' || c == ';' || c == '"' || c == ',' || c == '(' || c == ')' || c == '{' ||
+               c == '}';
     }
 
     std::string_view _source;
@@ -155,9 +212,7 @@ public:
     explicit Parser(Lexer& lexer) : _lexer(lexer) { advance(); }
 
     std::pair<std::vector<uint8_t>, Format> parse() {
-        using namespace std::string_view_literals;
         Advt result{};
-        result.headerAndDataSection.resize(Advt::offsetData);
         while (_currentToken.type != TokenType::Eof) {
             skipNewlinesAndComments();
             if (_currentToken.type == TokenType::Eof) {
@@ -165,10 +220,10 @@ public:
             }
             if (_currentToken.type == TokenType::Section) {
                 std::string_view sec = _currentToken.value;
-                if (equals(sec, ".format"sv)) {
-                    result.format = parseFormat();
-                } else if (equals(sec, ".version"sv)) {
-                    result.version = parseVersion();
+                if (equals(sec, ".header"sv)) {
+                    parseHeaderSection(result);
+                } else if (equals(sec, ".export"sv)) {
+                    parseExportSection(result);
                 } else if (equals(sec, ".data")) {
                     parseDataSection(result);
                 } else if (equals(sec, ".text")) {
@@ -181,6 +236,7 @@ public:
             }
         }
         resolveIdentifiers(result);
+        buildExportSection(result);
         return {mergeTextSection(result), result.format};
     }
 
@@ -211,8 +267,207 @@ private:
         throw TranslateResult{_format, errorCode, message, line.value_or(token.line), line ? 0 : token.column};
     }
 
-    [[nodiscard]] vm_uint32_t parseVersion() {
-        auto strVer = parseHeaderValue();
+    void parseHeaderSection(Advt& result) {
+        advance();
+        if (_currentToken.type == TokenType::Colon) {
+            advance();
+        }
+        while (_currentToken.type != TokenType::Eof) {
+            skipNewlinesAndComments();
+            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
+                break;
+            }
+            expect(TokenType::Identifier, "Expected header field");
+            const auto field = _currentToken.value;
+            advance();
+            expect(TokenType::Colon, "Expected ':' after header field");
+            advance();
+            expect(TokenType::Identifier, "Expected header value");
+            const auto value = _currentToken.value;
+            advance();
+            if (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
+                _currentToken.type != TokenType::Section && _currentToken.type != TokenType::Eof) {
+                error("Unexpected token after header value", TranslateResult::SyntaxError);
+            }
+            if (equals(field, "format"sv)) {
+                result.format = parseFormatValue(value);
+            } else if (equals(field, "version"sv)) {
+                result.version = parseVersionValue(value);
+            } else {
+                error(fmt::format("Unknown header field '{}'", field), TranslateResult::SyntaxError);
+            }
+        }
+    }
+
+    void parseExportSection(Advt& result) {
+        advance();
+        if (_currentToken.type == TokenType::Colon) {
+            advance();
+        }
+        while (_currentToken.type != TokenType::Eof) {
+            skipNewlinesAndComments();
+            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
+                break;
+            }
+            expect(TokenType::Identifier, "Expected export declaration");
+            const auto declaration = _currentToken.value;
+            const auto line = _currentToken.line;
+            advance();
+            if (equals(declaration, "module"sv)) {
+                if (result.moduleName) {
+                    error("Duplicate module export", TranslateResult::RedefinedIdentifier, false, line);
+                }
+                expect(TokenType::Identifier, "Expected module name");
+                result.moduleName = emplaceData(result, _currentToken.value);
+                result.moduleLine = line;
+                advance();
+                expect(TokenType::Identifier, "Expected root frame slot count");
+                result.rootFrameSlots = parseValue<vm_uint16_t>(_currentToken.value);
+                advance();
+                expectExportLineEnd();
+                continue;
+            }
+
+            Symbol symbol{};
+            symbol.line = line;
+            expect(TokenType::Identifier, "Expected export name");
+            symbol.name = _currentToken.value;
+            advance();
+            if (equals(declaration, "var"sv)) {
+                symbol.kind = SymbolKind::Variable;
+                expect(TokenType::Colon, "Expected ':' after variable name");
+                advance();
+                symbol.type = parseExportType();
+            } else if (equals(declaration, "native"sv) || equals(declaration, "function"sv)) {
+                const bool isFunction = equals(declaration, "function"sv);
+                symbol.kind = isFunction ? SymbolKind::Function : SymbolKind::Native;
+                symbol.parameters = parseExportParameters();
+                if (_currentToken.type == TokenType::Colon) {
+                    advance();
+                    symbol.type = parseExportType();
+                }
+                if (isFunction) {
+                    expect(TokenType::Identifier, "Expected function frame slot count");
+                    symbol.frameSlotCount = parseValue<vm_uint16_t>(_currentToken.value);
+                    advance();
+                }
+            } else {
+                error(
+                    fmt::format("Unknown export declaration '{}'", declaration),
+                    TranslateResult::SyntaxError,
+                    false,
+                    line);
+            }
+            expectExportLineEnd();
+            if (auto it = result.symbolMap.find(symbol.name); it != result.symbolMap.end()) {
+                error(
+                    fmt::format("Duplicate export identifier '{}'", symbol.name),
+                    TranslateResult::RedefinedIdentifier,
+                    false,
+                    line);
+            } else {
+                result.symbolMap[symbol.name] = std::move(symbol);
+            }
+        }
+    }
+
+    void parseDataSection(Advt& result) {
+        advance();
+        if (_currentToken.type == TokenType::Colon) {
+            advance();
+        }
+        while (_currentToken.type != TokenType::Eof) {
+            skipNewlinesAndComments();
+            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
+                break;
+            }
+            expect(TokenType::Identifier, "Expected data alias identifier");
+            auto name = _currentToken.value;
+            advance();
+            expect(TokenType::Colon, "Expected ':' after data alias");
+            advance();
+            skipNewlinesAndComments();
+            expect(TokenType::String, "Expected string literal in .data section");
+            if (result.symbolMap.contains(name)) {
+                error(
+                    fmt::format("Duplicate identifier '{}'", _currentToken.value),
+                    TranslateResult::RedefinedIdentifier);
+            }
+            Symbol symbol{};
+            symbol.kind = SymbolKind::Data;
+            symbol.name = name;
+            symbol.type = VM_VALUE_TYPE_STRING;
+            symbol.offset = emplaceData(result, _currentToken.value);
+            symbol.line = _currentToken.line;
+            result.symbolMap[name] = std::move(symbol);
+            advance();
+        }
+    }
+
+    void parseTextSection(Advt& result) {
+        advance();
+        if (_currentToken.type == TokenType::Colon) {
+            advance();
+        }
+        while (_currentToken.type != TokenType::Eof) {
+            skipNewlinesAndComments();
+            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
+                break;
+            }
+            auto isPushOp = false;
+            Instruction instruction{};
+            instruction.line = _currentToken.line;
+            if (_currentToken.type == TokenType::Identifier) {
+                auto firstToken(_currentToken.value);
+                advance();
+                if (_currentToken.type == TokenType::Colon) {
+                    instruction.label = firstToken;
+                    advance();
+                    skipNewlinesAndComments();
+                    if (_currentToken.type != TokenType::Identifier) {
+                        pushInstruction(result, instruction);
+                        continue;
+                    }
+                    isPushOp = equals(_currentToken.value, "push");
+                    if (!isPushOp) {
+                        instruction.opcode = parseOpcode(_currentToken.value);
+                    }
+                    advance();
+                } else {
+                    isPushOp = equals(firstToken, "push");
+                    if (!isPushOp) {
+                        instruction.opcode = parseOpcode(firstToken);
+                    }
+                }
+            } else {
+                error("Expected instruction or label", TranslateResult::ExpectedInstruction);
+            }
+            while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
+                   _currentToken.type != TokenType::Eof) {
+                if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
+                    instruction.operand = _currentToken.value;
+                } else {
+                    error("Unexpected token in operands", TranslateResult::UnexpectedTokenInOperand);
+                }
+                advance();
+            }
+            if (isPushOp) {
+                instruction.opcode = parsePushOpcode(instruction.operand);
+            }
+            pushInstruction(result, instruction);
+        }
+    }
+
+    [[nodiscard]] Format parseFormatValue(std::string_view str) {
+        if (equals(str, "ADVT"sv)) {
+            _format = Format::Advt;
+            return Format::Advt;
+        }
+        _format = Format::Unknown;
+        error(fmt::format("Unknown format '{}'", str), TranslateResult::UnknownFormat);
+    }
+
+    [[nodiscard]] vm_uint32_t parseVersionValue(std::string_view strVer) {
         auto str = strVer;
         if (auto major = parseComponent(str, false)) {
             if (auto minor = parseComponent(str, false)) {
@@ -229,15 +484,58 @@ private:
             TranslateResult::IncompatibleVersion);
     }
 
-    [[nodiscard]] Format parseFormat() {
-        using namespace std::string_view_literals;
-        auto str = parseHeaderValue();
-        if (equals(str, "ADVT"sv)) {
-            _format = Format::Advt;
-            return Format::Advt;
+    [[nodiscard]] vm_value_type_t parseExportType() {
+        expect(TokenType::Identifier, "Expected export type");
+        const auto typeName = _currentToken.value;
+        advance();
+        if (equals(typeName, "bool"sv)) {
+            return VM_VALUE_TYPE_BOOL;
         }
-        _format = Format::Unknown;
-        error(fmt::format("Unknown format '{}'", str), TranslateResult::UnknownFormat);
+        if (equals(typeName, "int"sv)) {
+            return VM_VALUE_TYPE_INT;
+        }
+        if (equals(typeName, "float"sv)) {
+            return VM_VALUE_TYPE_FLOAT;
+        }
+        if (equals(typeName, "string"sv)) {
+            return VM_VALUE_TYPE_STRING;
+        }
+        error(fmt::format("Unknown export type '{}'", typeName), TranslateResult::UnknownIdentifier);
+    }
+
+    [[nodiscard]] std::vector<SymbolParameter> parseExportParameters() {
+        expect(
+            _currentToken.type == TokenType::LBrace ? TokenType::LBrace : TokenType::LParen,
+            "Expected '(' before function parameters");
+        const auto closeType = _currentToken.type == TokenType::LBrace ? TokenType::RBrace : TokenType::RParen;
+        advance();
+        std::vector<SymbolParameter> parameters;
+        if (_currentToken.type == closeType) {
+            advance();
+            return parameters;
+        }
+        while (true) {
+            expect(TokenType::Identifier, "Expected parameter name");
+            const auto name = _currentToken.value;
+            advance();
+            expect(TokenType::Colon, "Expected ':' after parameter name");
+            advance();
+            const auto type = parseExportType();
+            parameters.push_back({name, type});
+            if (_currentToken.type == closeType) {
+                advance();
+                return parameters;
+            }
+            expect(TokenType::Comma, "Expected ',' or closing parenthesis after parameter");
+            advance();
+        }
+    }
+
+    void expectExportLineEnd() {
+        if (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
+            _currentToken.type != TokenType::Section && _currentToken.type != TokenType::Eof) {
+            error("Unexpected token after export declaration", TranslateResult::SyntaxError);
+        }
     }
 
     template <typename T>
@@ -251,88 +549,6 @@ private:
             error(fmt::format("Value out of range '{}'", str), TranslateResult::ValueOutOfRange);
         } else {
             error(fmt::format("Syntax Error '{}'", str), TranslateResult::SyntaxError);
-        }
-    }
-
-    [[nodiscard]] std::string_view parseHeaderValue() {
-        advance();
-        expect(TokenType::Colon, "Expected ':' after header name");
-        advance();
-        skipNewlinesAndComments();
-        if (_currentToken.type != TokenType::Identifier) {
-            error("Expected header value", TranslateResult::ExpectedHeaderValue);
-        }
-        auto result = _currentToken.value;
-        advance();
-        return result;
-    }
-
-    void parseDataSection(Advt& result) {
-        advance();
-        expect(TokenType::Colon, "Expected ':' after .data");
-        advance();
-        while (_currentToken.type != TokenType::Eof) {
-            skipNewlinesAndComments();
-            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
-                break;
-            }
-            expect(TokenType::Identifier, "Expected data alias identifier");
-            auto name = _currentToken.value;
-            advance();
-            expect(TokenType::Colon, "Expected ':' after data alias");
-            advance();
-            skipNewlinesAndComments();
-            expect(TokenType::String, "Expected string literal in .data section");
-            if (result.identifierMap.contains(_currentToken.value)) {
-                error(
-                    fmt::format("Duplicate identifier '{}'", _currentToken.value),
-                    TranslateResult::RedefinedIdentifier);
-            }
-            result.identifierMap[name] = _currentToken.value;
-            advance();
-        }
-    }
-
-    void parseTextSection(Advt& result) {
-        advance();
-        expect(TokenType::Colon, "Expected ':' after .text");
-        advance();
-        while (_currentToken.type != TokenType::Eof) {
-            skipNewlinesAndComments();
-            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
-                break;
-            }
-            Instruction instruction;
-            instruction.line = _currentToken.line;
-            if (_currentToken.type == TokenType::Identifier) {
-                auto firstToken(_currentToken.value);
-                advance();
-                if (_currentToken.type == TokenType::Colon) {
-                    instruction.label = firstToken;
-                    advance();
-                    skipNewlinesAndComments();
-                    if (_currentToken.type != TokenType::Identifier) {
-                        pushInstruction(result, instruction);
-                        continue;
-                    }
-                    instruction.opcode = parseOpcode(_currentToken.value);
-                    advance();
-                } else {
-                    instruction.opcode = parseOpcode(firstToken);
-                }
-            } else {
-                error("Expected instruction or label", TranslateResult::ExpectedInstruction);
-            }
-            while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
-                   _currentToken.type != TokenType::Eof) {
-                if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
-                    instruction.operand = _currentToken.value;
-                } else {
-                    error("Unexpected token in operands", TranslateResult::UnexpectedTokenInOperand);
-                }
-                advance();
-            }
-            pushInstruction(result, instruction);
         }
     }
 
@@ -354,7 +570,7 @@ private:
             break;
         case VM_OPCODE_JUMP:
         case VM_OPCODE_JUMP_IF_FALSE:
-            result.labels.emplace_back(operand, pollOffset(result.textSection), instruction.line);
+            result.jumps.emplace_back(operand, pollOffset(result.textSection), instruction.line);
             pushUint32(0, result.textSection);
             break;
         case VM_OPCODE_PUSH_INT:
@@ -364,62 +580,234 @@ private:
             pushFloat(parseValue<vm_float32_t>(operand), result.textSection);
             break;
         case VM_OPCODE_PUSH_STRING_FROM_DATA:
+            if (!operand.empty() && operand[0] == '"') {
+                pushUint32(emplaceData(result, operand), result.textSection);
+            } else {
+                if (auto it = result.symbolMap.find(operand); it != result.symbolMap.end()) {
+                    if (it->second.kind != SymbolKind::Data) {
+                        error(
+                            fmt::format(
+                                "The identifier '{}' does not represent a string in the data section.", operand),
+                            TranslateResult::InvalidIdentifierReference,
+                            false,
+                            instruction.line);
+                    }
+                    pushUint32(it->second.offset, result.textSection);
+                } else {
+                    result.pushData.emplace_back(operand, pollOffset(result.textSection), instruction.line);
+                    pushUint32(0, result.textSection);
+                }
+            }
+            break;
+        case VM_OPCODE_IMPORT:
+            pushUint32(emplaceData(result, operand), result.textSection);
+            break;
         case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
         case VM_OPCODE_POP_GLOBAL_BY_NAME:
-            if (!operand.empty() && operand[0] == '"') {
-                if (auto it = result.dataSectionMap.find(operand); it != result.dataSectionMap.end()) {
-                    pushUint32(it->second, result.textSection);
-                } else {
-                    const auto offset = pushStringData(operand, result.headerAndDataSection, Advt::offsetData);
-                    result.dataSectionMap[operand] = offset;
-                    pushUint32(offset, result.textSection);
+            if (auto it = result.symbolMap.find(operand); it != result.symbolMap.end()) {
+                if (it->second.kind != SymbolKind::Variable) {
+                    error(
+                        fmt::format(
+                            "The identifier '{}' does not represent a variable in the export section.", operand),
+                        TranslateResult::InvalidIdentifierReference,
+                        false,
+                        instruction.line);
                 }
             } else {
-                result.identifiers.emplace_back(operand, pollOffset(result.textSection), instruction.line);
-                pushUint32(0, result.textSection);
+                result.variables.emplace_back(operand, pollOffset(result.textSection), instruction.line);
             }
+            pushUint32(emplaceData(result, operand), result.textSection);
+            break;
+        case VM_OPCODE_CALL_NATIVE_BY_NAME:
+        case VM_OPCODE_CALL_BY_NAME:
+            result.calls.emplace_back(operand, pollOffset(result.textSection), instruction.line);
+            pushUint32(emplaceData(result, operand), result.textSection);
             break;
         default:
             break;
         }
     }
 
+    [[nodiscard]] vm_uint32_t emplaceData(Advt& result, std::string_view str) {
+        if (auto it = result.dataMap.find(str); it != result.dataMap.end()) {
+            return it->second;
+        } else {
+            const auto offset = pushStringData(str, result.dataSection);
+            result.dataMap[str] = offset;
+            return offset;
+        }
+    }
+
     void resolveIdentifiers(Advt& result) {
-        for (const auto& [id, offsetText, line] : result.identifiers) {
-            auto it = result.identifierMap.find(id);
-            if (it == result.identifierMap.end()) {
+        for (const auto& [id, offsetText, line] : result.pushData) {
+            auto it = result.symbolMap.find(id);
+            if (it == result.symbolMap.end()) {
                 error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
             }
-            auto str = it->second;
-            if (auto m = result.dataSectionMap.find(str); m != result.dataSectionMap.end()) {
-                patchUint32(offsetText, m->second, result.textSection);
-            } else {
-                const auto offset = pushStringData(str, result.headerAndDataSection, Advt::offsetData);
-                result.dataSectionMap[str] = offset;
-                patchUint32(offsetText, offset, result.textSection);
+            if (it->second.kind != SymbolKind::Data) {
+                error(
+                    fmt::format("The identifier '{}' does not represent a string in the data section.", id),
+                    TranslateResult::InvalidIdentifierReference,
+                    false,
+                    line);
+            }
+            patchUint32(offsetText, it->second.offset, result.textSection);
+        }
+        for (const auto& [id, offsetText, line] : result.variables) {
+            if (auto it = result.symbolMap.find(id); it != result.symbolMap.end()) {
+                if (it->second.kind != SymbolKind::Variable) {
+                    error(
+                        fmt::format("The identifier '{}' does not represent a variable in the export section.", id),
+                        TranslateResult::InvalidIdentifierReference,
+                        false,
+                        line);
+                }
             }
         }
-        for (const auto& [id, offsetText, line] : result.labels) {
+        for (const auto& [id, offsetText, line] : result.jumps) {
             auto it = result.labelMap.find(id);
             if (it == result.labelMap.end()) {
                 error(
-                    fmt::format("label identifier '{}' not found", id),
+                    fmt::format("Label identifier '{}' not found", id),
                     TranslateResult::UnknownIdentifier,
+                    false,
+                    line);
+            }
+            if (auto s = result.symbolMap.find(it->first); s != result.symbolMap.end()) {
+                error(
+                    fmt::format(
+                        "The jump instruction can refer only to labels, not to functions, variables, or string "
+                        "references ('{}')",
+                        id),
+                    TranslateResult::InvalidIdentifierReference,
                     false,
                     line);
             }
             const auto offset = it->second;
             patchUint32(offsetText, offset, result.textSection);
         }
+        for (const auto& [id, offsetText, line] : result.calls) {
+            if (auto it = result.symbolMap.find(id); it != result.symbolMap.end()) {
+                if (it->second.kind != SymbolKind::Function && it->second.kind != SymbolKind::Native) {
+                    error(
+                        fmt::format("The identifier '{}' does not represent a variable in the export section.", id),
+                        TranslateResult::InvalidIdentifierReference,
+                        false,
+                        line);
+                }
+                const auto opcode = result.textSection[offsetText - 1];
+                if (opcode == VM_OPCODE_CALL_NATIVE_BY_NAME && it->second.kind != SymbolKind::Native) {
+                    error(
+                        fmt::format(
+                            "The identifier '{}' does not represent a native function in the export section.", id),
+                        TranslateResult::InvalidIdentifierReference,
+                        false,
+                        line);
+                } else if (opcode == VM_OPCODE_CALL_BY_NAME && it->second.kind != SymbolKind::Function) {
+                    error(
+                        fmt::format("The identifier '{}' does not represent a function in the export section.", id),
+                        TranslateResult::InvalidIdentifierReference,
+                        false,
+                        line);
+                }
+                if (it->second.kind == SymbolKind::Function) {
+                    if (auto lb = result.labelMap.find(it->first); lb != result.labelMap.end()) {
+                        it->second.offset = lb->second;
+                    } else {
+                        error(
+                            fmt::format("Function label '{}' not found", it->first),
+                            TranslateResult::InvalidIdentifierReference,
+                            false,
+                            it->second.line);
+                    }
+                }
+            }
+        }
+    }
+
+    [[nodiscard]] vm_uint16_t checkedUint16(size_t value, vm_uint32_t line) {
+        if (value > std::numeric_limits<vm_uint16_t>::max()) {
+            error("Export section value exceeds 16-bit limit", TranslateResult::ValueOutOfRange, false, line);
+        }
+        return static_cast<vm_uint16_t>(value);
+    }
+
+    void buildExportSection(Advt& result) {
+        if (result.symbolMap.empty() && !result.moduleName.has_value()) {
+            return;
+        }
+        vm_script_export_t exports{};
+        exports.module_name = result.moduleName.value_or(0);
+        exports.root_frame_slots = result.rootFrameSlots;
+        result.exportSection.resize(sizeof(exports));
+        std::vector<vm_script_export_param_t> params;
+        for (const auto& [_, symbol] : result.symbolMap) {
+            if (symbol.kind == SymbolKind::Variable) {
+                vm_script_export_var_t var{emplaceData(result, symbol.name), (vm_uint8_t)symbol.type};
+                exports.var_count++;
+                exports.var_size += sizeof(var);
+                var = utils::swapBytes(var);
+                auto data = (const uint8_t*)&var;
+                std::copy(data, data + sizeof(var), std::back_inserter(result.exportSection));
+            }
+        }
+        for (const auto& [_, symbol] : result.symbolMap) {
+            if (symbol.kind == SymbolKind::Function) {
+                params.clear();
+                vm_script_export_func_t func{
+                    emplaceData(result, symbol.name), symbol.offset, symbol.frameSlotCount, (vm_uint8_t)symbol.type};
+                exports.func_count++;
+                exports.func_size += sizeof(func);
+                for (const auto& param : symbol.parameters) {
+                    params.emplace_back(emplaceData(result, param.name), (vm_uint8_t)param.type);
+                    func.param_count++;
+                    exports.func_size += sizeof(vm_script_export_param_t);
+                }
+                func = utils::swapBytes(func);
+                auto data = (const uint8_t*)&func;
+                std::copy(data, data + sizeof(func), std::back_inserter(result.exportSection));
+                for (auto& param : params) {
+                    param = utils::swapBytes(param);
+                    data = (const uint8_t*)&param;
+                    std::copy(data, data + sizeof(param), std::back_inserter(result.exportSection));
+                }
+            }
+        }
+        for (const auto& [_, symbol] : result.symbolMap) {
+            if (symbol.kind == SymbolKind::Native) {
+                params.clear();
+                vm_script_export_native_t native{emplaceData(result, symbol.name), (vm_uint8_t)symbol.type};
+                exports.native_count++;
+                exports.native_size += sizeof(native);
+                for (const auto& param : symbol.parameters) {
+                    params.emplace_back(emplaceData(result, param.name), (vm_uint8_t)param.type);
+                    native.param_count++;
+                    exports.native_size += sizeof(vm_script_export_param_t);
+                }
+                native = utils::swapBytes(native);
+                auto data = (const uint8_t*)&native;
+                std::copy(data, data + sizeof(native), std::back_inserter(result.exportSection));
+                for (auto& param : params) {
+                    param = utils::swapBytes(param);
+                    data = (const uint8_t*)&param;
+                    std::copy(data, data + sizeof(param), std::back_inserter(result.exportSection));
+                }
+            }
+        }
+        exports = utils::swapBytes(exports);
+        std::memcpy(result.exportSection.data(), &exports, sizeof(exports));
     }
 
     std::vector<vm_uint8_t> mergeTextSection(Advt& result) {
-        std::vector<vm_uint8_t> bytecode = std::move(result.headerAndDataSection);
-        const auto offsetText = bytecode.size();
-        bytecode.resize(offsetText + result.textSection.size());
+        std::vector<vm_uint8_t> bytecode(Advt::offsetExport);
+        const auto offsetExport = static_cast<vm_uint32_t>(bytecode.size());
+        bytecode.insert(bytecode.end(), result.exportSection.begin(), result.exportSection.end());
+        const auto offsetData = static_cast<vm_uint32_t>(bytecode.size());
+        bytecode.insert(bytecode.end(), result.dataSection.begin(), result.dataSection.end());
+        const auto offsetText = static_cast<vm_uint32_t>(bytecode.size());
+        bytecode.insert(bytecode.end(), result.textSection.begin(), result.textSection.end());
         auto header = aliasCast<vm_script_header_t*>(bytecode.data());
         auto table = aliasCast<vm_script_table_t*>(bytecode.data() + sizeof(vm_script_header_t));
-        auto text = bytecode.data() + offsetText;
 
         header->magic[0] = 'a';
         header->magic[1] = 'd';
@@ -427,26 +815,160 @@ private:
         header->magic[3] = 'b';
         header->checksum = 0;
         header->version = swapBytes(static_cast<vm_uint32_t>(VM_VERSION));
-        table->data_offset = swapBytes(Advt::offsetData);
-        table->data_size = swapBytes(static_cast<vm_uint32_t>(offsetText) - Advt::offsetData);
+        table->export_offset = swapBytes(offsetExport);
+        table->export_size = swapBytes(static_cast<vm_uint32_t>(result.exportSection.size()));
+        table->data_offset = swapBytes(offsetData);
+        table->data_size = swapBytes(static_cast<vm_uint32_t>(result.dataSection.size()));
         table->text_offset = swapBytes(static_cast<vm_uint32_t>(offsetText));
         table->text_size = swapBytes(static_cast<vm_uint32_t>(result.textSection.size()));
-        std::memcpy(text, result.textSection.data(), result.textSection.size());
         auto view = std::views::all(bytecode);
         header->checksum = swapBytes(adler32(std::move(view)));
         return bytecode;
     }
 
-    [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) {
-        char buffer[64] = "VM_OPCODE_";
-        if (str.length() + 10 < sizeof(buffer)) {
-            std::memcpy(buffer + 10, str.data(), str.length());
-            auto opcode = magic_enum::enum_cast<vm_opcode_t>({buffer, str.length() + 10}, magic_enum::case_insensitive);
-            if (opcode) {
-                return opcode.value();
-            }
+    [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) const {
+        if (equals(str, "import"sv)) {
+            return VM_OPCODE_IMPORT;
+        }
+        if (equals(str, "push"sv)) {
+            assert(!"unreachable code");
+            return VM_OPCODE_NO_OPERATION;
+        }
+        if (equals(str, "push_global"sv)) {
+            return VM_OPCODE_PUSH_GLOBAL_BY_NAME;
+        }
+        if (equals(str, "pop_global"sv)) {
+            return VM_OPCODE_POP_GLOBAL_BY_NAME;
+        }
+        if (equals(str, "push_local"sv)) {
+            return VM_OPCODE_PUSH_LOCAL;
+        }
+        if (equals(str, "pop_local"sv)) {
+            return VM_OPCODE_POP_LOCAL;
+        }
+        if (equals(str, "pop"sv)) {
+            return VM_OPCODE_POP;
+        }
+        if (equals(str, "btoi"sv)) {
+            return VM_OPCODE_BOOL_TO_INT;
+        }
+        if (equals(str, "btof"sv)) {
+            return VM_OPCODE_BOOL_TO_FLOAT;
+        }
+        if (equals(str, "btos"sv)) {
+            return VM_OPCODE_BOOL_TO_STRING;
+        }
+        if (equals(str, "itob"sv)) {
+            return VM_OPCODE_INT_TO_BOOL;
+        }
+        if (equals(str, "itof"sv)) {
+            return VM_OPCODE_INT_TO_FLOAT;
+        }
+        if (equals(str, "itos"sv)) {
+            return VM_OPCODE_INT_TO_STRING;
+        }
+        if (equals(str, "ftob"sv)) {
+            return VM_OPCODE_FLOAT_TO_BOOL;
+        }
+        if (equals(str, "ftoi"sv)) {
+            return VM_OPCODE_FLOAT_TO_INT;
+        }
+        if (equals(str, "ftos"sv)) {
+            return VM_OPCODE_FLOAT_TO_STRING;
+        }
+        if (equals(str, "stob"sv)) {
+            return VM_OPCODE_STRING_TO_BOOL;
+        }
+        if (equals(str, "stoi"sv)) {
+            return VM_OPCODE_STRING_TO_INT;
+        }
+        if (equals(str, "stof"sv)) {
+            return VM_OPCODE_STRING_TO_FLOAT;
+        }
+        if (equals(str, "bits_not"sv)) {
+            return VM_OPCODE_BITWISE_NOT;
+        }
+        if (equals(str, "logic_not"sv)) {
+            return VM_OPCODE_LOGICAL_NOT;
+        }
+        if (equals(str, "neg"sv)) {
+            return VM_OPCODE_NUMERIC_NEGATION;
+        }
+        if (equals(str, "add"sv)) {
+            return VM_OPCODE_ADD;
+        }
+        if (equals(str, "sub"sv)) {
+            return VM_OPCODE_SUBTRACT;
+        }
+        if (equals(str, "mul"sv)) {
+            return VM_OPCODE_MULTIPLY;
+        }
+        if (equals(str, "div"sv)) {
+            return VM_OPCODE_DIVISION;
+        }
+        if (equals(str, "mod"sv)) {
+            return VM_OPCODE_MOD;
+        }
+        if (equals(str, "eq"sv)) {
+            return VM_OPCODE_EQUAL;
+        }
+        if (equals(str, "ne"sv)) {
+            return VM_OPCODE_NOT_EQUAL;
+        }
+        if (equals(str, "less"sv)) {
+            return VM_OPCODE_LESS;
+        }
+        if (equals(str, "less_equal"sv)) {
+            return VM_OPCODE_LESS_EQUAL;
+        }
+        if (equals(str, "great"sv)) {
+            return VM_OPCODE_GREAT;
+        }
+        if (equals(str, "great_equal"sv)) {
+            return VM_OPCODE_GREAT_EQUAL;
+        }
+        if (equals(str, "call"sv)) {
+            return VM_OPCODE_CALL_BY_NAME;
+        }
+        if (equals(str, "call_native"sv)) {
+            return VM_OPCODE_CALL_NATIVE_BY_NAME;
+        }
+        if (equals(str, "ret"sv)) {
+            return VM_OPCODE_RETURN;
+        }
+        if (equals(str, "jump"sv)) {
+            return VM_OPCODE_JUMP;
+        }
+        if (equals(str, "jfalse"sv)) {
+            return VM_OPCODE_JUMP_IF_FALSE;
+        }
+        if (equals(str, "halt"sv)) {
+            return VM_OPCODE_HALT;
         }
         error(fmt::format("Unknown opcode '{}'", str), TranslateResult::UnknownOpcode);
+    }
+
+    [[nodiscard]] vm_opcode_t parsePushOpcode(std::string_view operand) const noexcept {
+        if (!operand.empty() && operand.front() == '"') {
+            return VM_OPCODE_PUSH_STRING_FROM_DATA;
+        }
+        if (equals(operand, "true"sv)) {
+            return VM_OPCODE_PUSH_TRUE;
+        }
+        if (equals(operand, "false"sv)) {
+            return VM_OPCODE_PUSH_FALSE;
+        }
+        vm_sint32_t intValue{};
+        if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), intValue);
+            ec == std::errc{}) {
+            return VM_OPCODE_PUSH_INT;
+        }
+        vm_float32_t floatValue{};
+        if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), floatValue);
+            ec == std::errc{}) {
+            return VM_OPCODE_PUSH_FLOAT;
+        }
+        return VM_OPCODE_PUSH_STRING_FROM_DATA;
     }
 
     [[nodiscard]] static std::optional<vm_uint32_t> parseComponent(std::string_view& str, bool isLast) noexcept {
@@ -513,11 +1035,12 @@ private:
         buffer[offset + 3] = static_cast<uint8_t>((val >> 24) & 0xFF);
     }
 
-    [[nodiscard]] static vm_uint32_t
-    pushStringData(std::string_view str, std::vector<uint8_t>& buffer, vm_uint32_t offsetData) {
-        const auto offset = static_cast<vm_uint32_t>(buffer.size()) - offsetData;
-        pushUint16(static_cast<vm_uint16_t>(str.length() - 2), buffer);
-        buffer.insert(buffer.end(), str.begin() + 1, str.end() - 1);
+    [[nodiscard]] static vm_uint32_t pushStringData(std::string_view str, std::vector<uint8_t>& buffer) {
+        const auto offset = static_cast<vm_uint32_t>(buffer.size());
+        const auto isQuoted = str.size() >= 2 && str.front() == '"' && str.back() == '"';
+        const auto content = isQuoted ? str.substr(1, str.size() - 2) : str;
+        pushUint16(static_cast<vm_uint16_t>(content.length()), buffer);
+        buffer.insert(buffer.end(), content.begin(), content.end());
         buffer.push_back(uint8_t('\0'));
         return offset;
     }
