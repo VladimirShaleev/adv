@@ -176,44 +176,48 @@ public:
         }
     }
 
-    void tick() {
-        for (size_t i = 0; i < _threadHandles.size();) {
-            auto handle = _threadHandles[i++];
-            auto thread = _threads.access(handle);
-            if (thread->state == ThreadState::Dead) {
-                for (size_t j = 0; j < _threadHandles.size(); ++j) {
-                    if (j != i) {
-                        auto otherThread = _threads.access(_threadHandles[j]);
-                        if (otherThread->waitThread == handle) {
-                            otherThread->waitThread = Undefined;
-                            otherThread->state = ThreadState::Running;
+    void tick(vm_uint32_t elapsedMs) {
+        assert(_iterations == 0 && "It is impossible to call vm_tick while vm_tick is executing");
+        _iterations = 1;
+        for (size_t step = 0; step < _iterations; ++step) {
+            for (size_t i = 0; i < _threadHandles.size();) {
+                auto handle = _threadHandles[i++];
+                auto thread = _threads.access(handle);
+                if (thread->state == ThreadState::Dead) {
+                    for (size_t j = 0; j < _threadHandles.size(); ++j) {
+                        if (j != i) {
+                            auto otherThread = _threads.access(_threadHandles[j]);
+                            if (otherThread->waitThread == handle) {
+                                otherThread->waitThread = Undefined;
+                                otherThread->state = ThreadState::Running;
+                            }
                         }
                     }
-                }
-                _threads.release(_threadHandles[--i]);
-                if (_threadHandles.size() > 1) {
-                    _threadHandles[i] = _threadHandles.back();
-                }
-                _threadHandles.pop_back();
-                continue;
-            }
-            if (thread->state == ThreadState::Waiting) {
-                if (thread->waitTicks > 0) {
-                    thread->waitTicks--; // TODO use elapsed, thread->waitTicks -= std::min(thread->waitTicks, elapsed);
-                }
-                if (thread->waitTicks == 0 && thread->waitThread == Undefined) {
-                    thread->state = ThreadState::Running;
-                } else if (
-                    thread->waitThread != Undefined &&
-                    _threads.access(thread->waitThread)->state == ThreadState::Dead) {
-                    thread->waitThread = Undefined;
-                    thread->state = ThreadState::Running;
-                } else {
+                    _threads.release(_threadHandles[--i]);
+                    if (_threadHandles.size() > 1) {
+                        _threadHandles[i] = _threadHandles.back();
+                    }
+                    _threadHandles.pop_back();
                     continue;
                 }
-            }
-            if (thread->state == ThreadState::Running) {
-                stepThread(thread);
+                if (thread->state == ThreadState::Waiting) {
+                    if (thread->waitTicks > 0) {
+                        thread->waitTicks -= std::min(thread->waitTicks, elapsedMs);
+                    }
+                    if (thread->waitTicks == 0 && thread->waitThread == Undefined) {
+                        thread->state = ThreadState::Running;
+                    } else if (
+                        thread->waitThread != Undefined &&
+                        _threads.access(thread->waitThread)->state == ThreadState::Dead) {
+                        thread->waitThread = Undefined;
+                        thread->state = ThreadState::Running;
+                    } else {
+                        continue;
+                    }
+                }
+                if (thread->state == ThreadState::Running) {
+                    stepThread(thread);
+                }
             }
         }
     }
@@ -243,6 +247,7 @@ private:
                     if (waitThread != Undefined) {
                         thread->state = ThreadState::Waiting;
                         thread->waitThread = waitThread;
+                        ++_iterations;
                         return;
                     }
                 }
@@ -692,6 +697,7 @@ private:
     vm_data_t _importerData{};
     vm_data_t _releaseImportData{};
     vm_data_t _loggerData{};
+    size_t _iterations{};
 };
 
 } // namespace vm
@@ -873,9 +879,9 @@ void vm_destroy(vm_t vm) {
     }
 }
 
-void vm_tick(vm_t vm) {
+void vm_tick(vm_t vm, vm_uint32_t elapsed_ms) {
     if (vm) {
-        vm->as<vm::VM>()->tick();
+        vm->as<vm::VM>()->tick(elapsed_ms);
     }
 }
 

@@ -40,10 +40,10 @@ TEST(VM, Test) {
     auto thread = vm_run_thread(vm, script);
     EXPECT_NE(thread, Undefined);
 
-    vm_tick(vm);
-    vm_tick(vm);
+    vm_tick(vm, 16);
+    vm_tick(vm, 16);
 
     auto thread2 = vm_run_thread(vm, script);
     EXPECT_NE(thread2, Undefined);
-    vm_tick(vm);
+    vm_tick(vm, 16);
 }

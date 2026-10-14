@@ -123,6 +123,20 @@ typedef void
                                 vm_bytecode_t* bytecode,
                                 vm_data_t data);
 
+/**
+ * @brief     VM logging callback.
+ * @details   Called when the VM reports a runtime diagnostic while executing
+ *            a thread.
+ * @param[in] vm Active VM instance.
+ * @param[in] thread Thread that produced the diagnostic.
+ * @param[in] instruction_pos Bytecode position of the instruction that
+ *            produced the diagnostic.
+ * @param[in] message UTF-8 diagnostic message.
+ * @param[in] data User data associated with the logger.
+ * @see       ::vm_get_logger
+ * @see       ::vm_set_logger
+ * @ingroup   vm_callbacks
+ */
 typedef void
 (*vm_logger_callback_t)(vm_t vm,
                         vm_thread_h thread,
@@ -182,13 +196,15 @@ vm_destroy(vm_t vm);
 
 /**
  * @brief     Advances the VM execution loop.
- * @details   Processes pending work for the VM, including scheduled ticks and
- *            deferred runtime tasks.
+ * @details   Processes pending work for the VM and advances time-based waits
+ *            by the specified elapsed time.
  * @param[in] vm VM instance to advance.
+ * @param[in] elapsed_ms Elapsed time in milliseconds to apply to VM timers.
  * @ingroup   vm_functions
  */
 VM_API void
-vm_tick(vm_t vm);
+vm_tick(vm_t vm,
+        vm_uint32_t elapsed_ms);
 
 /**
  * @brief      Loads a script from a file and starts its execution.
@@ -438,10 +454,31 @@ vm_set_release_import(vm_t vm,
                       vm_release_import_callback_t callback,
                       vm_data_t data);
 
+/**
+ * @brief      Retrieves the VM logging callback.
+ * @details    Returns the current logger and optionally its associated user
+ *             data.
+ * @param[in]  vm VM instance to query.
+ * @param[out] data Optional pointer that receives the logger's user data.
+ * @return     Current logger callback, or `NULL` when no logger is set.
+ * @see        ::vm_set_logger
+ * @ingroup    vm_functions
+ */
 VM_API vm_logger_callback_t
 vm_get_logger(vm_t vm,
               vm_data_t* data);
 
+/**
+ * @brief     Sets the VM logging callback.
+ * @details   Configures the callback used to report runtime diagnostics.
+ *            Passing `NULL` as @p callback disables logging.
+ * @param[in] vm VM instance to update.
+ * @param[in] callback Logger callback, or `NULL` to disable logging.
+ * @param[in] data User data passed to the callback.
+ * @see       ::vm_get_logger
+ * @see       ::vm_logger_callback_t
+ * @ingroup   vm_functions
+ */
 VM_API void
 vm_set_logger(vm_t vm,
               vm_logger_callback_t callback,
