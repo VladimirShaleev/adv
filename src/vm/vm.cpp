@@ -179,7 +179,8 @@ public:
     void tick(vm_uint32_t elapsedMs) {
         assert(_iterations == 0 && "It is impossible to call vm_tick while vm_tick is executing");
         _iterations = 1;
-        for (size_t step = 0; step < _iterations; ++step) {
+        while (_iterations != 0) {
+            --_iterations;
             for (size_t i = 0; i < _threadHandles.size();) {
                 auto handle = _threadHandles[i++];
                 auto thread = _threads.access(handle);

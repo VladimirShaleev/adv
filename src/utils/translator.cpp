@@ -685,6 +685,19 @@ private:
             const auto offset = it->second;
             patchUint32(offsetText, offset, result.textSection);
         }
+        for (auto& [id, symbol] : result.symbolMap) {
+            if (symbol.kind == SymbolKind::Function) {
+                if (auto lb = result.labelMap.find(id); lb != result.labelMap.end()) {
+                    symbol.offset = lb->second;
+                } else {
+                    error(
+                        fmt::format("Function label '{}' not found", id),
+                        TranslateResult::InvalidIdentifierReference,
+                        false,
+                        symbol.line);
+                }
+            }
+        }
         for (const auto& [id, offsetText, line] : result.calls) {
             if (auto it = result.symbolMap.find(id); it != result.symbolMap.end()) {
                 if (it->second.kind != SymbolKind::Function && it->second.kind != SymbolKind::Native) {
@@ -708,17 +721,6 @@ private:
                         TranslateResult::InvalidIdentifierReference,
                         false,
                         line);
-                }
-                if (it->second.kind == SymbolKind::Function) {
-                    if (auto lb = result.labelMap.find(it->first); lb != result.labelMap.end()) {
-                        it->second.offset = lb->second;
-                    } else {
-                        error(
-                            fmt::format("Function label '{}' not found", it->first),
-                            TranslateResult::InvalidIdentifierReference,
-                            false,
-                            it->second.line);
-                    }
                 }
             }
         }

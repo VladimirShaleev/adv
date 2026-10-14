@@ -80,6 +80,36 @@ TEST(Translator, TranslatesNasmlikeSectionsAndInstructions) {
     EXPECT_FALSE(bytecode.empty());
 }
 
+TEST(Translator, ResolvesUncalledExportedFunctionOffset) {
+    const std::string source =
+        ".header\n"
+        "    format: ADVT\n"
+        "    version: 1.0.0\n"
+        ".export\n"
+        "    module other_module 0\n"
+        "    var g_test: int\n"
+        "    native export_native(value: bool)\n"
+        "    function sum(a: int, b: int): int 2\n"
+        ".text\n"
+        "    push 2\n"
+        "    pop_global g_test\n"
+        "    jump label\n"
+        "sum:\n"
+        "    push_local 0\n"
+        "    push_local 1\n"
+        "    add\n"
+        "    ret\n"
+        "label:\n"
+        "    halt\n";
+
+    utils::TranslateResult result{};
+    const auto bytecode = utils::translateTextToBinary(source, result);
+    ASSERT_EQ(result.errorCode, utils::TranslateResult::NoError) << result.message;
+
+    const auto function = utils::read<vm_script_export_func_t>(bytecode, 0);
+    EXPECT_EQ(function.text_offset, 15);
+}
+
 TEST(Translator, SerializesExportSymbols) {
     const std::string source =
         ".header\n"
