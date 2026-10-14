@@ -984,15 +984,17 @@ private:
         if (equals(operand, "false"sv)) {
             return VM_OPCODE_PUSH_FALSE;
         }
+        if (const auto pos = operand.find('.'); pos != std::string_view::npos) {
+            vm_float32_t floatValue{};
+            if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), floatValue);
+                ec == std::errc{}) {
+                return VM_OPCODE_PUSH_FLOAT;
+            }
+        }
         vm_sint32_t intValue{};
         if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), intValue);
             ec == std::errc{}) {
             return VM_OPCODE_PUSH_INT;
-        }
-        vm_float32_t floatValue{};
-        if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), floatValue);
-            ec == std::errc{}) {
-            return VM_OPCODE_PUSH_FLOAT;
         }
         return VM_OPCODE_PUSH_STRING_FROM_DATA;
     }
