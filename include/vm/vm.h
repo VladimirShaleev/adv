@@ -145,6 +145,15 @@ typedef void
                         vm_data_t data);
 
 /**
+ * @brief     Gets the VM library version.
+ * @details   Returns the version number of the VM library.
+ * @return    VM library version.
+ * @ingroup   vm_functions
+ */
+VM_API vm_uint32_t
+vm_version(void);
+
+/**
  * @brief     Converts error code to descriptive string.
  * @details   Provides a text description for the result code.
  * @param[in] result Result code.

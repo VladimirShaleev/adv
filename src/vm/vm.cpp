@@ -569,7 +569,9 @@ private:
     void callNative(ScriptThread* thread, vm_native_h nativeHandle, const Native& native, Logger&& log) {
         if (thread->stackPos + native.returnCount < StackSize) {
             thread->currentNative = nativeHandle;
-            native.func(this, _threads.handle(thread), nativeHandle, native.paramCount, native.data);
+            if (native.func) {
+                native.func(this, _threads.handle(thread), nativeHandle, native.paramCount, native.data);
+            }
             vm_value_t retVal{};
             if (native.returnCount) {
                 assert(native.returnCount == 1);
@@ -702,6 +704,8 @@ private:
 };
 
 } // namespace vm
+
+vm_uint32_t vm_version(void) { return VM_VERSION; }
 
 vm_utf8_t vm_result_to_string(vm_result_t result) {
     switch (result) {

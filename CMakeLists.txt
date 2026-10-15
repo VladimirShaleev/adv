@@ -48,9 +48,6 @@ file(GLOB UTILS_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp")
 add_library(utils OBJECT ${UTILS_SOURCES})
 set_default_properties(TARGET utils)
-if(EMSCRIPTEN)
-    target_compile_options(utils PRIVATE -fexceptions)
-endif()
 target_link_libraries(utils PRIVATE fmt::fmt)
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -59,6 +56,7 @@ target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 file(GLOB VM_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.cpp")
+list(FILTER VM_SOURCES EXCLUDE REGEX "\\.js\\.cpp")
 add_library(vm ${VM_SOURCES})
 add_library(${PROJECT_NAME}::vm ALIAS vm)
 set_default_properties(TARGET vm STATIC VM_STATIC_BUILD)
@@ -108,6 +106,7 @@ endif()
 
 if(EMSCRIPTEN)
     file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
+    target_compile_options(utils PRIVATE -fexceptions)
     target_compile_options(vm PRIVATE -fexceptions)
 
     set(VM_JS_LINK_OPTIONS
@@ -116,10 +115,15 @@ if(EMSCRIPTEN)
         -sALLOW_MEMORY_GROWTH=1
         -sEXPORT_NAME=VM
         -sDISABLE_EXCEPTION_CATCHING=0)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=0")
+    else()
+        list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=1")
+    endif()
 
     foreach(VM_JS_TARGET IN ITEMS adv-vm adv-vm-esm)
-        add_executable(${VM_JS_TARGET} src/vm.js.cpp)
-        target_link_libraries(${VM_JS_TARGET} PRIVATE vm embind)
+        add_executable(${VM_JS_TARGET} src/vm/vm.js.cpp)
+        target_link_libraries(${VM_JS_TARGET} PRIVATE vm fmt::fmt embind)
         set_default_properties(TARGET ${VM_JS_TARGET})
         target_compile_options(${VM_JS_TARGET} PRIVATE -fexceptions)
         target_link_options(${VM_JS_TARGET} PRIVATE ${VM_JS_LINK_OPTIONS})
