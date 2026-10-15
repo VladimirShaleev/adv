@@ -50,10 +50,10 @@
 # endif
 #elif defined(__ANDROID__) && !defined(ADV_PLATFORM_ANDROID)
 # define ADV_PLATFORM_ANDROID
-#elif defined(__linux__) && !defined(ADV_PLATFORM_LINUX)
-# define ADV_PLATFORM_LINUX
 #elif defined(__EMSCRIPTEN__) && !defined(ADV_PLATFORM_WEB)
 # define ADV_PLATFORM_WEB
+#elif defined(__linux__) && !defined(ADV_PLATFORM_LINUX)
+# define ADV_PLATFORM_LINUX
 #else
 # error unsupported platform
 #endif

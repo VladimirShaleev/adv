@@ -92,10 +92,10 @@
 # endif
 #elif defined(__ANDROID__) && !defined(VM_PLATFORM_ANDROID)
 # define VM_PLATFORM_ANDROID
-#elif defined(__linux__) && !defined(VM_PLATFORM_LINUX)
-# define VM_PLATFORM_LINUX
 #elif defined(__EMSCRIPTEN__) && !defined(VM_PLATFORM_WEB)
 # define VM_PLATFORM_WEB
+#elif defined(__linux__) && !defined(VM_PLATFORM_LINUX)
+# define VM_PLATFORM_LINUX
 #else
 # error unsupported platform
 #endif

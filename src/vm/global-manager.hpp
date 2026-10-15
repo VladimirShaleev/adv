@@ -30,7 +30,7 @@ public:
     [[nodiscard]] VarSlot resolveVar(std::string_view name) const noexcept;
     [[nodiscard]] FuncSlot resolveFunc(std::string_view name) const noexcept;
 
-    [[nodiscard]] void setVar(VarSlot slot, const vm_value_t& value) noexcept;
+    void setVar(VarSlot slot, const vm_value_t& value) noexcept;
     [[nodiscard]] const vm_value_t& getVar(VarSlot slot) const noexcept;
     [[nodiscard]] const Func& getFunc(FuncSlot slot) const noexcept;
 

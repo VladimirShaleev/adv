@@ -1,0 +1,23 @@
+{
+  "name": "adv-vm",
+  "version": "@PROJECT_VERSION@",
+  "description": "The Adv virtual machine for JavaScript and WebAssembly",
+  "main": "./adv-vm.js",
+  "module": "./adv-vm.esm.mjs",
+  "types": "./adv-vm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./adv-vm.d.ts",
+      "import": "./adv-vm.esm.mjs",
+      "require": "./adv-vm.js"
+    }
+  },
+  "files": [
+    "adv-vm.js",
+    "adv-vm.wasm",
+    "adv-vm.esm.mjs",
+    "adv-vm.esm.wasm",
+    "adv-vm.d.ts",
+    "adv-vm.esm.d.ts"
+  ]
+}

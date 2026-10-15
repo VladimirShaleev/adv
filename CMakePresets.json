@@ -70,6 +70,21 @@
             }
         },
         {
+            "name": "wasm-base",
+            "displayName": "WebAssembly base configuration",
+            "hidden": true,
+            "generator": "Ninja",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+                "ADV_BUILD_DOC": "OFF",
+                "ADV_BUILD_ADV": "OFF",
+                "ADV_BUILD_TOOL": "OFF",
+                "ADV_BUILD_TESTS": "OFF",
+                "ADV_ENABLE_INSTALL": "OFF"
+            }
+        },
+        {
             "name": "win64-release",
             "displayName": "Windows x64 (release)",
             "inherits": [
@@ -122,6 +137,24 @@
                 "debug",
                 "vcpkg"
             ]
+        },
+        {
+            "name": "wasm-release",
+            "displayName": "WebAssembly (release)",
+            "inherits": [
+                "wasm-base",
+                "release",
+                "vcpkg"
+            ]
+        },
+        {
+            "name": "wasm-debug",
+            "displayName": "WebAssembly (debug)",
+            "inherits": [
+                "wasm-base",
+                "debug",
+                "vcpkg"
+            ]
         }
     ],
     "buildPresets": [
@@ -156,6 +189,16 @@
             "name": "linux-debug",
             "displayName": "Linux (debug)",
             "configurePreset": "linux-debug"
+        },
+        {
+            "name": "wasm-release",
+            "displayName": "WebAssembly (release)",
+            "configurePreset": "wasm-release"
+        },
+        {
+            "name": "wasm-debug",
+            "displayName": "WebAssembly (debug)",
+            "configurePreset": "wasm-debug"
         }
     ],
     "testPresets": [
