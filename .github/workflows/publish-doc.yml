@@ -1,0 +1,55 @@
+name: Publish documentation
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set build output dir
+        id: strings
+        shell: bash
+        run: |
+          echo "build_output_dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+
+      - name: Install Doxygen and Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          wget https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz
+          tar -xzf doxygen-1.18.0.linux.bin.tar.gz
+          sudo install -m 755 doxygen-1.18.0/bin/doxygen /usr/local/bin/doxygen
+          doxygen --version
+
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build_output_dir }} -S ${{ github.workspace }}
+          -DADV_BUILD_DOC=ON
+          -DADV_BUILD_ADV=OFF
+          -DADV_BUILD_TOOL=OFF
+          -DADV_BUILD_TESTS=OFF
+          -DADV_ENABLE_INSTALL=OFF
+
+      - name: Build documentation
+        run: cmake --build ${{ steps.strings.outputs.build_output_dir }} --target doc
+
+      - name: Publish documentation
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ steps.strings.outputs.build_output_dir }}/doc/html
