@@ -39,6 +39,8 @@ jobs:
       - name: Configure CMake
         run: >
           cmake -B ${{ steps.strings.outputs.build_output_dir }} -S ${{ github.workspace }}
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=x64-linux
           -DADV_BUILD_DOC=ON
           -DADV_BUILD_ADV=OFF
           -DADV_BUILD_TOOL=OFF
