@@ -39,6 +39,11 @@ typedef enum
 typedef struct
 {
     vm_value_type_t type; /**< Type identifier of the stored value. */
+
+    /**
+     * @brief   Payload data for the value.
+     * @details Stores the payload corresponding to the value's type tag.
+     */
     union
     {
         vm_bool_t    b;   /**< Boolean payload representation. */
@@ -47,7 +52,7 @@ typedef struct
         vm_string_h  str; /**< String handle payload representation. */
     }
 #ifdef DOXYGEN
-    val; /**< Value payload. */
+    unnamed; /**< Value payload. */
 #endif
     ;
 } vm_value_t;

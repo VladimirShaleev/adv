@@ -102,7 +102,7 @@
     </memberdecl>
     <detaileddescription visible="no" title=""/>
     <memberdef>
-      <inlineclasses visible="no" title=""/>
+      <inlineclasses visible="yes" title=""/>
       <typedefs visible="no" title=""/>
       <sequences visible="no" title=""/>
       <dictionaries visible="no" title=""/>

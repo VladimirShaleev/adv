@@ -1,3 +1,13 @@
 #nav-sync {
   display: none;
 }
+
+table.memberdecls td.title,
+table.memberdecls td.ititle,
+table.memberdecls tr.heading + tr td.title,
+table.memberdecls tr.heading + tr td.ititle,
+table.memberdecls tr.groupHeader + tr td.title,
+table.memberdecls tr.groupHeader + tr td.ititle {
+  border: none;
+  border-radius: 0;
+}

@@ -97,14 +97,25 @@ struct adv_node_t
     adv_node_t*     parent;        /**< Pointer to parent AST node. */
     adv_node_t*     next_sibling;  /**< Pointer to next sibling AST node. */
 
+    /**
+     * @brief   Type-specific payload for the AST node.
+     * @details The active member is determined by the node's type and stores
+     *          the data associated with that node kind.
+     */
     union
     {
+        /**
+         * @brief Payload for program and block statement lists.
+         **/
         struct
         {
             adv_node_t*  first_stmt; /**< Head of statement nodes list. */
             adv_uint32_t stmt_count; /**< Number of statements in list. */
         } stmts; /**< Statement list payload. */
 
+        /**
+         * @brief Payload for a variable declaration.
+         **/
         struct
         {
             vm_string_h  name;      /**< Variable name string handle. */
@@ -114,6 +125,9 @@ struct adv_node_t
             adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } var_decl; /**< Variable declaration payload. */
 
+        /**
+         * @brief Payload for a function or native declaration.
+         **/
         struct
         {
             vm_string_h  name;             /**< Function name string handle. */
@@ -124,6 +138,9 @@ struct adv_node_t
             adv_symbol_h symbol;           /**< Handle to associated symbol. */
         } func_decl; /**< Function declaration payload. */
 
+        /**
+         * @brief Payload for a function parameter declaration.
+         **/
         struct
         {
             vm_string_h name;      /**< Parameter name string handle. */
@@ -131,12 +148,18 @@ struct adv_node_t
             adv_symbol_h symbol;   /**< Handle to associated symbol. */
         } param_decl; /**< Function parameter declaration payload. */
 
+        /**
+         * @brief Payload for an import statement.
+         **/
         struct
         {
             adv_node_t* root; /**< Root node of imported AST. */
             vm_string_h path; /**< Imported module or file path string handle. */
         } import_stmt; /**< Import statement payload. */
 
+        /**
+         * @brief Payload for a conditional statement.
+         **/
         struct
         {
             adv_node_t* cond;        /**< Condition expression. */
@@ -144,17 +167,26 @@ struct adv_node_t
             adv_node_t* else_branch; /**< Optional else block or nested ADV_NODE_IF_STMT. */
         } if_stmt; /**< Conditional statement payload. */
 
+        /**
+         * @brief Payload for a while loop statement.
+         **/
         struct
         {
             adv_node_t* cond; /**< Loop condition expression. */
             adv_node_t* body; /**< Pointer to BLOCK node executed per iteration. */
         } while_stmt; /**< Loop statement payload. */
 
+        /**
+         * @brief Payload for expression, return, and wait statements.
+         **/
         struct
         {
             adv_node_t* expr; /**< Expression payload (nullptr if omitted/void). */
         } expr_stmt; /**< Expression statement payload. */
 
+        /**
+         * @brief Payload for implicit and explicit cast expressions.
+         **/
         struct
         {
             adv_node_t*     operand;          /**< Expression being converted. */
@@ -163,6 +195,9 @@ struct adv_node_t
             vm_value_type_t to_type;          /**< Target converted type. */
         } cast_expr; /**< Type cast expression payload. */
 
+        /**
+         * @brief Payload for an identifier reference expression.
+         **/
         struct
         {
             vm_string_h  name;      /**< Identifier name string handle. */
@@ -170,12 +205,18 @@ struct adv_node_t
             adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } id_expr; /**< Identifier reference expression payload. */
 
+        /**
+         * @brief Payload for an assignment expression.
+         **/
         struct
         {
             adv_node_t* target;     /**< Target node (IDENTIFIER_EXPR or MEMBER_ACCESS). */
             adv_node_t* val;        /**< Value expression to assign. */
         } assign_expr; /**< Assignment expression payload. */
 
+        /**
+         * @brief Payload for a binary operator expression.
+         **/
         struct
         {
             adv_uint32_t op;        /**< Operator token code (e.g. '+', EQ). */
@@ -183,12 +224,18 @@ struct adv_node_t
             adv_node_t*  right;     /**< Right-hand operand. */
         } binary_expr; /**< Binary operator expression payload. */
 
+        /**
+         * @brief Payload for a unary operator expression.
+         **/
         struct
         {
             adv_uint32_t op;        /**< Operator token code. */
             adv_node_t*  operand;   /**< Target operand. */
         } unary_expr; /**< Unary operator expression payload. */
 
+        /**
+         * @brief Payload for a function or coroutine call expression.
+         **/
         struct
         {
             vm_string_h  name;      /**< Function or coroutine name string handle. */
@@ -198,6 +245,9 @@ struct adv_node_t
             adv_symbol_h symbol;    /**< Handle to associated symbol. */
         } call_expr; /**< Call expression payload. */
 
+        /**
+         * @brief Payload for a member access expression.
+         **/
         struct
         {
             adv_node_t* target;     /**< Target object instance expression. */
@@ -210,7 +260,7 @@ struct adv_node_t
         vm_string_h   str_val;     /**< String literal handle. */
     }
 #ifdef DOXYGEN
-    payload; /**< Node payload. */
+    unnamed; /**< Node payload. */
 #endif
     ;
 };
