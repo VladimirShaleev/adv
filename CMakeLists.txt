@@ -146,6 +146,10 @@ if(EMSCRIPTEN)
         "${PROJECT_SOURCE_DIR}/README.md"
         "${PROJECT_BINARY_DIR}/dist/README.md"
         COPYONLY)
+    configure_file(
+        "${PROJECT_SOURCE_DIR}/LICENSE"
+        "${PROJECT_BINARY_DIR}/dist/LICENSE"
+        COPYONLY)
 endif()
 
 if(ADV_BUILD_TESTS)

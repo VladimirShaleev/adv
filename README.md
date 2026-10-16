@@ -21,7 +21,7 @@ three main components:
 ## WebAssembly VM
 
 The Emscripten build packages `libvm` as both a CommonJS-compatible factory
-(`adv-vm.js`) and an ES module factory (`adv-vm.esm.mjs`). It also emits
+(`vm-js.js`) and an ES module factory (`vm-js.esm.mjs`). It also emits
 TypeScript declarations and the matching `.wasm` files into
 `build/wasm-release/dist`.
 
@@ -41,7 +41,7 @@ both module formats initialize asynchronously and provide the same API:
 
 ```js
 // CommonJS
-const createAdvVM = require("adv-vm");
+const createAdvVM = require("@vladimirshaleev/adv-vm");
 createAdvVM().then(({ Vm }) => {
   const vm = new Vm();
   // Use vm.loadScript(), vm.runThread(), and vm.tick() here.
@@ -51,7 +51,7 @@ createAdvVM().then(({ Vm }) => {
 
 ```js
 // ES module
-import createAdvVM from "adv-vm";
+import createAdvVM from "@vladimirshaleev/adv-vm";
 const { Vm } = await createAdvVM();
 const vm = new Vm();
 const script = vm.loadScript(new Uint8Array(compiledBytecode));

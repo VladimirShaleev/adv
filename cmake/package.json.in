@@ -1,16 +1,39 @@
 {
-  "name": "vm-js",
+  "name": "@vladimirshaleev/adv-vm",
   "version": "@PROJECT_VERSION@",
-  "description": "The Adv virtual machine for JavaScript and WebAssembly",
+  "description": "Bytecode virtual machine for the Adv scripting language, compiled to WebAssembly",
+  "keywords": [
+    "adv",
+    "scripting-language",
+    "virtual-machine",
+    "bytecode"
+  ],
+  "author": "Vladimir Shaleev <vladimirshaleev@gmail.com>",
+  "license": "MIT",
+  "homepage": "@PROJECT_HOMEPAGE_URL@",
+  "repository": {
+    "type": "git",
+    "url": "git+@PROJECT_HOMEPAGE_URL@.git"
+  },
+  "bugs": {
+    "url": "@PROJECT_HOMEPAGE_URL@/issues"
+  },
   "main": "./vm-js.js",
   "module": "./vm-js.esm.mjs",
+  "browser": "./vm-js.esm.mjs",
   "types": "./vm-js.d.ts",
   "exports": {
     ".": {
       "types": "./vm-js.d.ts",
+      "browser": "./vm-js.esm.mjs",
       "import": "./vm-js.esm.mjs",
-      "require": "./vm-js.js"
-    }
+      "require": "./vm-js.js",
+      "default": "./vm-js.esm.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     @VM_JS_WASM@"vm-js.js",
