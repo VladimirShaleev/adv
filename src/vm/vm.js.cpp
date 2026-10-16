@@ -123,12 +123,12 @@ private:
         args.call<void>("push", thread);
         args.call<void>("push", native);
         for (vm_uint16_t i = 0; i < argCount; ++i) {
-            args.call<void>("push", toJsValue(vm, vm_thread_get_arg(vm, thread, i)));
+            args.call<void>("push", valueToJs(vm, vm_thread_get_arg(vm, thread, i)));
         }
         const auto result = val::global("Reflect").call<val>("apply", callback, val::undefined(), args);
         if (!result.isUndefined()) {
             if (const auto func = vm_reflect_native_func(vm, native); func && func->return_count == 1) {
-                const auto value = fromJsValue(vm, result, func->returns[0]);
+                const auto value = valueFromJs(vm, result, func->returns[0]);
                 vm_thread_set_result(vm, thread, 0, &value);
             }
         }
@@ -193,7 +193,7 @@ private:
         return emscripten::vecFromJSArray<vm_uint8_t>(bytes);
     }
 
-    [[nodiscard]] static val toJsValue(vm_t vm, const vm_value_t& value) {
+    [[nodiscard]] static val valueToJs(vm_t vm, const vm_value_t& value) {
         switch (value.type) {
         case VM_VALUE_TYPE_BOOL:
             return val(value.b != 0);
@@ -209,7 +209,7 @@ private:
         }
     }
 
-    [[nodiscard]] static vm_value_t fromJsValue(vm_t vm, const val& value, vm_value_type_t targetType) {
+    [[nodiscard]] static vm_value_t valueFromJs(vm_t vm, const val& value, vm_value_type_t targetType) {
         if (value.isUndefined()) {
             return {};
         }

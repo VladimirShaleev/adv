@@ -117,12 +117,13 @@ if(EMSCRIPTEN)
         -fwasm-exceptions
         --bind)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(VM_JS_WASM "\"vm-js.wasm\",\n    \"vm-js.esm.wasm\",\n    ")
         list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=0")
     else()
         list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=1")
     endif()
 
-    foreach(VM_JS_TARGET IN ITEMS adv-vm adv-vm-esm)
+    foreach(VM_JS_TARGET IN ITEMS vm-js vm-js-esm)
         add_executable(${VM_JS_TARGET} src/vm/vm.js.cpp)
         target_link_libraries(${VM_JS_TARGET} PRIVATE vm fmt::fmt)
         set_default_properties(TARGET ${VM_JS_TARGET})
@@ -132,10 +133,10 @@ if(EMSCRIPTEN)
             RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
     endforeach()
 
-    target_link_options(adv-vm PRIVATE --emit-tsd "${PROJECT_BINARY_DIR}/dist/adv-vm.d.ts")
-    target_link_options(adv-vm-esm PRIVATE -sEXPORT_ES6=1 --emit-tsd "${PROJECT_BINARY_DIR}/dist/adv-vm.esm.d.ts")
-    set_target_properties(adv-vm PROPERTIES OUTPUT_NAME "adv-vm" SUFFIX ".js")
-    set_target_properties(adv-vm-esm PROPERTIES OUTPUT_NAME "adv-vm.esm" SUFFIX ".mjs")
+    target_link_options(vm-js PRIVATE --emit-tsd "${PROJECT_BINARY_DIR}/dist/vm-js.d.ts")
+    target_link_options(vm-js-esm PRIVATE -sEXPORT_ES6=1 --emit-tsd "${PROJECT_BINARY_DIR}/dist/vm-js.esm.d.ts")
+    set_target_properties(vm-js PROPERTIES OUTPUT_NAME "vm-js" SUFFIX ".js")
+    set_target_properties(vm-js-esm PROPERTIES OUTPUT_NAME "vm-js.esm" SUFFIX ".mjs")
 
     configure_file(
         "${PROJECT_SOURCE_DIR}/cmake/package.json.in"

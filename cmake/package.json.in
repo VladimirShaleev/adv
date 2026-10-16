@@ -1,23 +1,21 @@
 {
-  "name": "adv-vm",
+  "name": "vm-js",
   "version": "@PROJECT_VERSION@",
   "description": "The Adv virtual machine for JavaScript and WebAssembly",
-  "main": "./adv-vm.js",
-  "module": "./adv-vm.esm.mjs",
-  "types": "./adv-vm.d.ts",
+  "main": "./vm-js.js",
+  "module": "./vm-js.esm.mjs",
+  "types": "./vm-js.d.ts",
   "exports": {
     ".": {
-      "types": "./adv-vm.d.ts",
-      "import": "./adv-vm.esm.mjs",
-      "require": "./adv-vm.js"
+      "types": "./vm-js.d.ts",
+      "import": "./vm-js.esm.mjs",
+      "require": "./vm-js.js"
     }
   },
   "files": [
-    "adv-vm.js",
-    "adv-vm.wasm",
-    "adv-vm.esm.mjs",
-    "adv-vm.esm.wasm",
-    "adv-vm.d.ts",
-    "adv-vm.esm.d.ts"
+    @VM_JS_WASM@"vm-js.js",
+    "vm-js.esm.mjs",
+    "vm-js.d.ts",
+    "vm-js.esm.d.ts"
   ]
 }
