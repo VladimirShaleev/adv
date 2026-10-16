@@ -219,6 +219,9 @@ vm_tick(vm_t vm,
  * @brief      Loads a script from a file and starts its execution.
  * @details    The input may contain compiled binary data or supported text
  *             script data.
+ * @note       File loading is unavailable in WebAssembly builds. Use
+ *             ::vm_load_script_from_memory after loading the bytes in the
+ *             host environment.
  * @param[in]  vm VM instance that will execute the script.
  * @param[in]  file UTF-8 path to the script file.
  * @return     Handle of the loaded script, or an invalid handle on failure.

@@ -41,6 +41,7 @@ public:
         }
     }
 
+#if !defined(__EMSCRIPTEN__)
     [[nodiscard]] vm_script_h loadScriptFromFile(vm_utf8_t file) noexcept {
         try {
             auto [script, loaded] = _moduleManager.loadScript(file, _importDirs);
@@ -49,6 +50,7 @@ public:
             return Undefined;
         }
     }
+#endif
 
     [[nodiscard]] vm_thread_h createThread(vm_script_h script) noexcept {
         try {
@@ -555,9 +557,11 @@ private:
                 }
             }
         }
+#if !defined(__EMSCRIPTEN__)
         if (script == Undefined) {
             script = loadScriptFromFile(moduleName.data());
         }
+#endif
         if (script == Undefined) {
             const auto message = fmt::format("Module '{}' not found", moduleName);
             log(message.c_str());
@@ -891,7 +895,13 @@ void vm_tick(vm_t vm, vm_uint32_t elapsed_ms) {
 }
 
 vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
+#if defined(__EMSCRIPTEN__)
+    (void)vm;
+    (void)file;
+    return Undefined;
+#else
     return vm ? vm->as<vm::VM>()->loadScriptFromFile(file) : Undefined;
+#endif
 }
 
 vm_script_h vm_load_script_from_memory(vm_t vm, const vm_char_t* code, vm_uint32_t code_size) {

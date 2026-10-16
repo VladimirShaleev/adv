@@ -106,15 +106,16 @@ endif()
 
 if(EMSCRIPTEN)
     file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
-    target_compile_options(utils PRIVATE -fexceptions)
-    target_compile_options(vm PRIVATE -fexceptions)
+    target_compile_options(utils PRIVATE -fwasm-exceptions)
+    target_compile_options(vm PRIVATE -fwasm-exceptions)
 
     set(VM_JS_LINK_OPTIONS
         -sWASM=1
         -sMODULARIZE=1
         -sALLOW_MEMORY_GROWTH=1
         -sEXPORT_NAME=VM
-        -sDISABLE_EXCEPTION_CATCHING=0)
+        -fwasm-exceptions
+        --bind)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=0")
     else()
@@ -123,9 +124,9 @@ if(EMSCRIPTEN)
 
     foreach(VM_JS_TARGET IN ITEMS adv-vm adv-vm-esm)
         add_executable(${VM_JS_TARGET} src/vm/vm.js.cpp)
-        target_link_libraries(${VM_JS_TARGET} PRIVATE vm fmt::fmt embind)
+        target_link_libraries(${VM_JS_TARGET} PRIVATE vm fmt::fmt)
         set_default_properties(TARGET ${VM_JS_TARGET})
-        target_compile_options(${VM_JS_TARGET} PRIVATE -fexceptions)
+        target_compile_options(${VM_JS_TARGET} PRIVATE -fwasm-exceptions)
         target_link_options(${VM_JS_TARGET} PRIVATE ${VM_JS_LINK_OPTIONS})
         set_target_properties(${VM_JS_TARGET} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/dist")

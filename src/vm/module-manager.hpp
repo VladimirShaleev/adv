@@ -39,7 +39,9 @@ public:
     [[nodiscard]] Module* getModule(vm_script_h script) noexcept;
     [[nodiscard]] const Module* getModule(vm_script_h script) const noexcept;
 
+#if !defined(__EMSCRIPTEN__)
     [[nodiscard]] std::pair<vm_script_h, bool> loadScript(vm_utf8_t file, std::span<const std::filesystem::path> dirs);
+#endif
     [[nodiscard]] std::pair<vm_script_h, bool>
     loadScript(std::span<const vm_char_t> code, std::string_view moduleName = {});
 

@@ -67,6 +67,7 @@ Module* ModuleManager::getModule(vm_script_h script) noexcept { return _modules.
 
 const Module* ModuleManager::getModule(vm_script_h script) const noexcept { return _modules.get(script); }
 
+#if !defined(__EMSCRIPTEN__)
 std::pair<vm_script_h, bool> ModuleManager::loadScript(vm_utf8_t file, std::span<const std::filesystem::path> dirs) {
     const auto fullpath = utils::findFile(file, dirs);
     std::ifstream stream(fullpath, std::ios::binary);
@@ -86,6 +87,7 @@ std::pair<vm_script_h, bool> ModuleManager::loadScript(vm_utf8_t file, std::span
     const auto name = utils::getModuleName(fullpath);
     return loadScript({bytes.data(), bytes.size()}, name);
 }
+#endif
 
 std::pair<vm_script_h, bool> ModuleManager::loadScript(std::span<const vm_char_t> code, std::string_view moduleName) {
     auto needValidateChecksum = true;
