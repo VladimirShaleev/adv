@@ -16,12 +16,14 @@ FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR DOXYGEN_CSS)
 file(GLOB ADV_DOC_SOURCES CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/include/vm/*"
     "${PROJECT_SOURCE_DIR}/include/adv/*")
+file(GLOB ADV_DOC_ICONS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_LIST_DIR}/icons/*")
 set(ADV_DOC_MARKDOWN
     "${CMAKE_CURRENT_LIST_DIR}/introduction.md")
 
 set(DOXYGEN_PROJECT_BRIEF "Adventure Scripting Language")
 set(DOXYGEN_PROJECT_LOGO "${CMAKE_CURRENT_LIST_DIR}/logo.svg")
-set(DOXYGEN_PROJECT_ICON "${CMAKE_CURRENT_LIST_DIR}/logo.svg")
+set(DOXYGEN_PROJECT_ICON "${CMAKE_CURRENT_LIST_DIR}/icons/favicon.svg")
 set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set(DOXYGEN_INLINE_INHERITED_MEMB YES)
 set(DOXYGEN_STRIP_FROM_PATH "${PROJECT_SOURCE_DIR}/include/")
@@ -54,7 +56,8 @@ set(DOXYGEN_HTML_EXTRA_FILES
     "${DOXYGEN_CSS}/doxygen-awesome-paragraph-link.js"
     "${DOXYGEN_CSS}/doxygen-awesome-interactive-toc.js"
     "${DOXYGEN_CSS}/doxygen-awesome-tabs.js"
-    "${CMAKE_CURRENT_LIST_DIR}/adv-doc.js")
+    "${CMAKE_CURRENT_LIST_DIR}/adv-doc.js"
+    ${ADV_DOC_ICONS})
 set(DOXYGEN_HTML_COLORSTYLE LIGHT)
 set(DOXYGEN_HTML_COLORSTYLE_HUE 220)
 set(DOXYGEN_HTML_COLORSTYLE_SAT 100)
