@@ -26,7 +26,7 @@ public:
         if (auto module = _moduleManager.getModule(script)) {
             if (forceLoad) {
                 _globalManager.addGlobals(script, module->bytecode());
-                _nativeManager.addNatives(module->bytecode());
+                _nativeManager.addNatives(script, module->bytecode());
             }
         }
         return script;
@@ -93,6 +93,15 @@ public:
             assert(native);
             threadPtr->stack[threadPtr->stackPos + index] = value;
         }
+    }
+
+    [[nodiscard]] const vm_reflect_func_t* reflectNativeFunc(vm_native_h native) {
+        if (auto script = _nativeManager.script(native); script != Undefined) {
+            if (const auto module = _moduleManager.getModule(script)) {
+                return _nativeManager.reflect(native, module->bytecode());
+            }
+        }
+        return nullptr;
     }
 
     [[nodiscard]] std::string_view getString(vm_string_h str) const noexcept { return _cache.pool[str]; }
@@ -969,6 +978,13 @@ void vm_unregister_native(vm_t vm, vm_native_h native) {
     if (vm) {
         vm->as<vm::VM>()->native().unregisterFunc(native);
     }
+}
+
+const vm_reflect_func_t* vm_reflect_native_func(vm_t vm, vm_native_h native) {
+    if (vm) {
+        return vm->as<vm::VM>()->reflectNativeFunc(native);
+    }
+    return nullptr;
 }
 
 void vm_get_import_dirs(vm_t vm, vm_uint32_t* dir_count, vm_utf8_t* dirs) {

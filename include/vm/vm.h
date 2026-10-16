@@ -71,6 +71,33 @@ typedef struct
 } vm_bytecode_t;
 
 /**
+ * @brief   Parameter information for a registered native function.
+ * @details Describes the name and value type of one native function parameter.
+ * @ingroup vm_structs
+ */
+typedef struct
+{
+    vm_utf8_t name;       /**< UTF-8 parameter name. */
+    vm_value_type_t type; /**< Type of the parameter value. */
+} vm_reflect_param_t;
+
+/**
+ * @brief   Reflection information for a registered native function.
+ * @details Describes the function name, its parameters, and its return value
+ *          types. The arrays referenced by @p params and @p returns contain
+ *          @p param_count and @p return_count entries, respectively.
+ * @ingroup vm_structs
+ */
+typedef struct
+{
+    vm_utf8_t                 name;         /**< UTF-8 function name. */
+    const vm_reflect_param_t* params;       /**< Function parameter information. */
+    const vm_value_type_t*    returns;      /**< Return value types. */
+    vm_uint16_t               param_count;  /**< Number of parameters. */
+    vm_uint16_t               return_count; /**< Number of return values. */
+} vm_reflect_func_t;
+
+/**
  * @brief     Native callback invoked by the VM.
  * @details   Called when a registered native function is executed from script
  *            bytecode. The implementation receives the active VM instance, the
@@ -379,6 +406,22 @@ vm_register_native(vm_t vm,
 VM_API void
 vm_unregister_native(vm_t vm,
                      vm_native_h native);
+
+/**
+ * @brief     Retrieves reflection information for a native function.
+ * @details   Returns the function's name, parameters, and return types. The VM
+ *            caches reflection results, so repeated calls incur no additional
+ *            reflection cost.
+ * @param[in] vm VM instance owning the native.
+ * @param[in] native Native function handle.
+ * @return    Reflection information, or `NULL` if the script module has not
+ *            been loaded yet. A non-`NULL` result is guaranteed when called
+ *            from the native's ::vm_native_callback_t callback.
+ * @ingroup   vm_functions
+ */
+VM_API const vm_reflect_func_t*
+vm_reflect_native_func(vm_t vm,
+                       vm_native_h native);
 
 /**
  * @brief      Retrieves import directories configured for the VM.

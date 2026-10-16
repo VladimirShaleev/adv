@@ -127,8 +127,10 @@ private:
         }
         const auto result = val::global("Reflect").call<val>("apply", callback, val::undefined(), args);
         if (!result.isUndefined()) {
-            const auto value = fromJsValue(vm, result);
-            vm_thread_set_result(vm, thread, 0, &value);
+            if (const auto func = vm_reflect_native_func(vm, native); func && func->return_count == 1) {
+                const auto value = fromJsValue(vm, result, func->returns[0]);
+                vm_thread_set_result(vm, thread, 0, &value);
+            }
         }
     }
 
@@ -207,7 +209,7 @@ private:
         }
     }
 
-    [[nodiscard]] static vm_value_t fromJsValue(vm_t vm, const val& value) {
+    [[nodiscard]] static vm_value_t fromJsValue(vm_t vm, const val& value, vm_value_type_t targetType) {
         if (value.isUndefined()) {
             return {};
         }
@@ -216,12 +218,10 @@ private:
         }
         if (value.isNumber()) {
             const auto number = value.as<double>();
-            if (std::isfinite(number) && std::trunc(number) == number &&
-                number >= std::numeric_limits<vm_sint32_t>::min() &&
-                number <= std::numeric_limits<vm_sint32_t>::max()) {
-                return vm_value_t{.type = VM_VALUE_TYPE_INT, .i32 = static_cast<vm_sint32_t>(number)};
+            if (targetType == VM_VALUE_TYPE_FLOAT) {
+                return vm_value_t{.type = VM_VALUE_TYPE_FLOAT, .f32 = static_cast<vm_float32_t>(number)};
             }
-            return vm_value_t{.type = VM_VALUE_TYPE_FLOAT, .f32 = static_cast<vm_float32_t>(number)};
+            return vm_value_t{.type = VM_VALUE_TYPE_INT, .i32 = static_cast<vm_sint32_t>(number)};
         }
         if (value.isString()) {
             const auto text = value.as<std::string>();
