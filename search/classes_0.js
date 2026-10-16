@@ -1,11 +1,19 @@
 var searchData=
 [
-  ['adv_5flocation_5ft_0',['adv_location_t',['../structadv__location__t.html',1,'']]],
-  ['adv_5fmessage_5ft_1',['adv_message_t',['../structadv__message__t.html',1,'']]],
-  ['adv_5fnode_5ft_2',['adv_node_t',['../structadv__node__t.html',1,'']]],
-  ['adv_5fscope_5fh_3',['adv_scope_h',['../structadv__scope__h.html',1,'']]],
-  ['adv_5fscope_5ft_4',['adv_scope_t',['../structadv__scope__t.html',1,'']]],
-  ['adv_5fsource_5ft_5',['adv_source_t',['../structadv__source__t.html',1,'']]],
-  ['adv_5fsymbol_5fh_6',['adv_symbol_h',['../structadv__symbol__h.html',1,'']]],
-  ['adv_5fsymbol_5ft_7',['adv_symbol_t',['../structadv__symbol__t.html',1,'']]]
+  ['_5bstruct_5d_2eunnamed_2eassign_5fexpr_0',['[struct].unnamed.assign_expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8assign__expr.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2ebinary_5fexpr_1',['[struct].unnamed.binary_expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8binary__expr.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2ecall_5fexpr_2',['[struct].unnamed.call_expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8call__expr.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2ecast_5fexpr_3',['[struct].unnamed.cast_expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8cast__expr.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2eexpr_5fstmt_4',['[struct].unnamed.expr_stmt',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8expr__stmt.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2efunc_5fdecl_5',['[struct].unnamed.func_decl',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8func__decl.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2eid_5fexpr_6',['[struct].unnamed.id_expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8id__expr.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2eif_5fstmt_7',['[struct].unnamed.if_stmt',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8if__stmt.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2eimport_5fstmt_8',['[struct].unnamed.import_stmt',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8import__stmt.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2emember_5faccess_9',['[struct].unnamed.member_access',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8member__access.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2eparam_5fdecl_10',['[struct].unnamed.param_decl',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8param__decl.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2estmts_11',['[struct].unnamed.stmts',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8stmts.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2eunary_5fexpr_12',['[struct].unnamed.unary_expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8unary__expr.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2evar_5fdecl_13',['[struct].unnamed.var_decl',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8var__decl.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bstruct_5d_2eunnamed_2ewhile_5fstmt_14',['[struct].unnamed.while_stmt',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8while__stmt.html',1,'adv_node_t::[union].unnamed']]],
+  ['_5bunion_5d_2eunnamed_15',['[union].unnamed',['../unionadv__node__t_1_1_0funion_0e_8unnamed.html',1,'adv_node_t::[union].unnamed'],['../unionvm__value__t_1_1_0funion_0e_8unnamed.html',1,'vm_value_t::[union].unnamed']]]
 ];

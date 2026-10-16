@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['checksum_0',['checksum',['../structvm__script__header__t.html#aef5193fb4495ca0beca21d1089a4e342',1,'vm_script_header_t']]],
-  ['child_5fcount_1',['child_count',['../structadv__scope__t.html#a57415e9ce2924379097a536e4f41e55c',1,'adv_scope_t']]],
-  ['children_2',['children',['../structadv__scope__t.html#aa576cdcd973f9cf1753cb1177ae45263',1,'adv_scope_t']]],
-  ['column_3',['column',['../structadv__location__t.html#a670e5e36612a1d8521b7244a805069b5',1,'adv_location_t::column'],['../structadv__message__t.html#a670e5e36612a1d8521b7244a805069b5',1,'adv_message_t::column']]]
+  ['arg_5fcount_0',['arg_count',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8call__expr.html#a82b4812848091b871c9dfdf1e3918e7f',1,'adv_node_t::[struct].unnamed.call_expr']]],
+  ['assign_5fexpr_1',['assign_expr',['../unionadv__node__t_1_1_0funion_0e_8unnamed.html#a2e294279561fe4a2e75cac130444e46e',1,'adv_node_t::[union].unnamed']]]
 ];

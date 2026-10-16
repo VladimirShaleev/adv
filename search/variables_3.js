@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['filename_0',['filename',['../structadv__location__t.html#a502e83cb5b5b26b2eaaac918e5c113b1',1,'adv_location_t::filename'],['../structadv__message__t.html#a605b0732b353b54c9b7994ba782b858c',1,'adv_message_t::filename']]],
-  ['frame_5fslot_5fcount_1',['frame_slot_count',['../structadv__symbol__t.html#a38df295ca565afd47de7b709ec93a0a8',1,'adv_symbol_t::frame_slot_count'],['../structvm__script__export__func__t.html#a3af2f83b0207183598dbf39a78118612',1,'vm_script_export_func_t::frame_slot_count']]],
-  ['func_5fcount_2',['func_count',['../structvm__script__export__t.html#ad9b7990b4ff4c641839d6083dbc1f045',1,'vm_script_export_t']]],
-  ['func_5fsize_3',['func_size',['../structvm__script__export__t.html#a65dd02db6904818269472ae48b951410',1,'vm_script_export_t']]]
+  ['data_0',['data',['../structadv__source__t.html#a78190b98896765e985eef76db8ecfcc7',1,'adv_source_t::data'],['../structvm__bytecode__t.html#aaa2a62d082fc75edeac4f5a9bb3ba7d3',1,'vm_bytecode_t::data']]],
+  ['data_5foffset_1',['data_offset',['../structvm__script__table__t.html#a2ad422703a42b21b89173842b3ff3ea2',1,'vm_script_table_t']]],
+  ['data_5fsize_2',['data_size',['../structvm__script__table__t.html#a664f67f8db857947c89d475240271191',1,'vm_script_table_t']]]
 ];

@@ -158,6 +158,54 @@
     <loc>https://vladimirshaleev.github.io/adv/structadv__node__t.html</loc>
   </url>
   <url>
+    <loc>https://vladimirshaleev.github.io/adv/unionadv__node__t_1_1_0funion_0e_8unnamed.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8stmts.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8var__decl.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8func__decl.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8param__decl.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8import__stmt.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8if__stmt.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8while__stmt.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8expr__stmt.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8cast__expr.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8id__expr.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8assign__expr.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8binary__expr.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8unary__expr.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8call__expr.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8member__access.html</loc>
+  </url>
+  <url>
     <loc>https://vladimirshaleev.github.io/adv/structadv__scope__h.html</loc>
   </url>
   <url>
@@ -216,6 +264,9 @@
   </url>
   <url>
     <loc>https://vladimirshaleev.github.io/adv/structvm__value__t.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/unionvm__value__t_1_1_0funion_0e_8unnamed.html</loc>
   </url>
   <url>
     <loc>https://vladimirshaleev.github.io/adv/graph_legend.html</loc>

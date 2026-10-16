@@ -1,4 +1,8 @@
 var searchData=
 [
-  ['handle_0',['handle',['../group__adv__types.html#ga133504a99cd8110638a7cc1673d05afb',1,'adv_symbol_h::handle'],['../group__adv__types.html#ga133504a99cd8110638a7cc1673d05afb',1,'adv_scope_h::handle'],['../group__vm__types.html#ga6ff0ad58e06af85331464a058218bcdd',1,'vm_string_h::handle'],['../group__vm__types.html#ga6ff0ad58e06af85331464a058218bcdd',1,'vm_script_h::handle'],['../group__vm__types.html#ga6ff0ad58e06af85331464a058218bcdd',1,'vm_thread_h::handle'],['../group__vm__types.html#ga6ff0ad58e06af85331464a058218bcdd',1,'vm_native_h::handle']]]
+  ['else_5fbranch_0',['else_branch',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8if__stmt.html#af4344d76eb49dfa464960ace5527a714',1,'adv_node_t::[struct].unnamed.if_stmt']]],
+  ['export_5foffset_1',['export_offset',['../structvm__script__table__t.html#a565bae32ef4a2812667a51f7895ed0d7',1,'vm_script_table_t']]],
+  ['export_5fsize_2',['export_size',['../structvm__script__table__t.html#aa4707384ee3a9576e8c4a891c4da32a5',1,'vm_script_table_t']]],
+  ['expr_3',['expr',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8expr__stmt.html#a1530886848b678d25ffa2c6600f5c523',1,'adv_node_t::[struct].unnamed.expr_stmt']]],
+  ['expr_5fstmt_4',['expr_stmt',['../unionadv__node__t_1_1_0funion_0e_8unnamed.html#a396485fe4b44ae04ccc4d27212120d2f',1,'adv_node_t::[union].unnamed']]]
 ];

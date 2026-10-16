@@ -191,25 +191,32 @@ document.addEventListener('DOMContentLoaded',() => { initNavTree('vm-value_8h_so
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="structvm__value__t.html">   39</a></span><span class="keyword">typedef</span> <span class="keyword">struct</span></div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>{</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="structvm__value__t.html#ae038179d9817dbeb7c34fed9a08b22c6">   41</a></span>    vm_value_type_t <a class="code hl_variable" href="structvm__value__t.html#ae038179d9817dbeb7c34fed9a08b22c6">type</a>; <span class="comment">/**&lt; Type identifier of the stored value. */</span></div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keyword">union</span></div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    {</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        <a class="code hl_typedef" href="group__vm__types.html#gaa078fece790fe1c3f658a06761dc5d02">vm_bool_t</a>    b;   <span class="comment">/**&lt; Boolean payload representation. */</span></div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        <a class="code hl_typedef" href="group__vm__types.html#gafb0ccf68441907001c51fb529ad61ba3">vm_sint32_t</a>  i32; <span class="comment">/**&lt; Signed 32-bit integer payload representation. */</span></div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <a class="code hl_typedef" href="group__vm__types.html#ga9ae6179e7c573f1d6064d642995d4932">vm_float32_t</a> f32; <span class="comment">/**&lt; 32-bit floating-point payload representation. */</span></div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        vm_string_h  str; <span class="comment">/**&lt; String handle payload representation. */</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    }</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="preprocessor">#</span><span class="preprocessor">ifdef</span> <span class="preprocessor">DOXYGEN</span></div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno"><a class="line" href="structvm__value__t.html#a326e5daacc2ba93752462152888a99b0">   50</a></span>    val; <span class="comment">/**&lt; Value payload. */</span></div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span><span class="preprocessor">#</span><span class="preprocessor">endif</span></div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    ;</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>} vm_value_t;</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="comment">/**</span></div>
+<div class="line"><span class="lineno">   44</span><span class="comment">     * @brief   Payload data for the value.</span></div>
+<div class="line"><span class="lineno">   45</span><span class="comment">     * @details Stores the payload corresponding to the value&#39;s type tag.</span></div>
+<div class="line"><span class="lineno">   46</span><span class="comment">     */</span></div>
+<div class="foldopen" id="foldopen00047" data-start="{" data-end="};">
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno"><a class="line" href="unionvm__value__t_1_1_0funion_0e_8unnamed.html">   47</a></span>    <span class="keyword">union</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    {</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <a class="code hl_typedef" href="group__vm__types.html#gaa078fece790fe1c3f658a06761dc5d02">vm_bool_t</a>    b;   <span class="comment">/**&lt; Boolean payload representation. */</span></div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        <a class="code hl_typedef" href="group__vm__types.html#gafb0ccf68441907001c51fb529ad61ba3">vm_sint32_t</a>  i32; <span class="comment">/**&lt; Signed 32-bit integer payload representation. */</span></div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        <a class="code hl_typedef" href="group__vm__types.html#ga9ae6179e7c573f1d6064d642995d4932">vm_float32_t</a> f32; <span class="comment">/**&lt; 32-bit floating-point payload representation. */</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        vm_string_h  str; <span class="comment">/**&lt; String handle payload representation. */</span></div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    }</div>
 </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span><span class="preprocessor">#</span><span class="preprocessor">ifdef</span> __cplusplus</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>}</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="preprocessor">#</span><span class="preprocessor">endif</span></div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span><span class="preprocessor">#</span><span class="preprocessor">endif</span> <span class="comment">/* VM_VALUE_H */</span></div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="preprocessor">#</span><span class="preprocessor">ifdef</span> <span class="preprocessor">DOXYGEN</span></div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="structvm__value__t.html#ad379e0d63b9d5edcd57102e803c8e5ca">   55</a></span>    unnamed; <span class="comment">/**&lt; Value payload. */</span></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="preprocessor">#</span><span class="preprocessor">endif</span></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    ;</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>} vm_value_t;</div>
+</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span><span class="preprocessor">#</span><span class="preprocessor">ifdef</span> __cplusplus</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>}</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span><span class="preprocessor">#</span><span class="preprocessor">endif</span></div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="preprocessor">#</span><span class="preprocessor">endif</span> <span class="comment">/* VM_VALUE_H */</span></div>
 <div class="ttc" id="agroup__vm__enums_html_gga207d08b1012e0b7db1081f714dae32a9a0e377cbf6e369f363e697d89b128f5ec"><div class="ttname"><a href="group__vm__enums.html#gga207d08b1012e0b7db1081f714dae32a9a0e377cbf6e369f363e697d89b128f5ec">VM_VALUE_TYPE_COUNT_ENUMS</a></div><div class="ttdeci">@ VM_VALUE_TYPE_COUNT_ENUMS</div><div class="ttdoc">Count of constants in the enumeration.</div><div class="ttdef"><b>Definition</b> vm-value.h:30</div></div>
 <div class="ttc" id="agroup__vm__enums_html_gga207d08b1012e0b7db1081f714dae32a9a0e4afe065293bf50ebb7bc9507698ce3"><div class="ttname"><a href="group__vm__enums.html#gga207d08b1012e0b7db1081f714dae32a9a0e4afe065293bf50ebb7bc9507698ce3">VM_VALUE_TYPE_INT</a></div><div class="ttdeci">@ VM_VALUE_TYPE_INT</div><div class="ttdoc">32-bit signed integer value type.</div><div class="ttdef"><b>Definition</b> vm-value.h:27</div></div>
 <div class="ttc" id="agroup__vm__enums_html_gga207d08b1012e0b7db1081f714dae32a9a2ae69e34c9cdc034a681c668d85240aa"><div class="ttname"><a href="group__vm__enums.html#gga207d08b1012e0b7db1081f714dae32a9a2ae69e34c9cdc034a681c668d85240aa">VM_VALUE_TYPE_FLOAT</a></div><div class="ttdeci">@ VM_VALUE_TYPE_FLOAT</div><div class="ttdoc">32-bit single-precision floating-point value type.</div><div class="ttdef"><b>Definition</b> vm-value.h:28</div></div>
