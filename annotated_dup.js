@@ -1,0 +1,26 @@
+var annotated_dup =
+[
+    [ "adv_location_t", "structadv__location__t.html", null ],
+    [ "adv_message_t", "structadv__message__t.html", null ],
+    [ "adv_node_t", "structadv__node__t.html", null ],
+    [ "adv_scope_h", "structadv__scope__h.html", null ],
+    [ "adv_scope_t", "structadv__scope__t.html", null ],
+    [ "adv_source_t", "structadv__source__t.html", null ],
+    [ "adv_symbol_h", "structadv__symbol__h.html", null ],
+    [ "adv_symbol_t", "structadv__symbol__t.html", null ],
+    [ "vm_bytecode_t", "structvm__bytecode__t.html", null ],
+    [ "vm_native_h", "structvm__native__h.html", null ],
+    [ "vm_reflect_func_t", "structvm__reflect__func__t.html", null ],
+    [ "vm_reflect_param_t", "structvm__reflect__param__t.html", null ],
+    [ "vm_script_export_func_t", "structvm__script__export__func__t.html", null ],
+    [ "vm_script_export_native_t", "structvm__script__export__native__t.html", null ],
+    [ "vm_script_export_param_t", "structvm__script__export__param__t.html", null ],
+    [ "vm_script_export_t", "structvm__script__export__t.html", null ],
+    [ "vm_script_export_var_t", "structvm__script__export__var__t.html", null ],
+    [ "vm_script_h", "structvm__script__h.html", null ],
+    [ "vm_script_header_t", "structvm__script__header__t.html", null ],
+    [ "vm_script_table_t", "structvm__script__table__t.html", null ],
+    [ "vm_string_h", "structvm__string__h.html", null ],
+    [ "vm_thread_h", "structvm__thread__h.html", null ],
+    [ "vm_value_t", "structvm__value__t.html", null ]
+];
