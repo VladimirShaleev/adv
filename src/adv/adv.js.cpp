@@ -109,6 +109,10 @@ class Options {
 public:
     Options() { check(adv_options_create(&_options)); }
 
+    Options(const Options& options) noexcept : _options(adv_options_reference(options._options)) {}
+
+    Options(Options&& options) noexcept : _options(options._options) { options._options = nullptr; }
+
     ~Options() { adv_options_destroy(_options); }
 
     [[nodiscard]] bool getWarningsAsErrors() const noexcept { return !!adv_options_get_warnings_as_errors(_options); }
@@ -136,28 +140,72 @@ public:
         adv_options_set_release_import(_options, &Options::releaseImportCallbackT, this);
     }
 
+    [[nodiscard]] WriteCallback getWriter() const noexcept { return _writer; }
+
+    void setWriter(WriteCallback callback) {
+        if (callback.isNull() || callback.isUndefined()) {
+            _writer = WriteCallback(val::undefined());
+            adv_options_set_writer(_options, nullptr, nullptr);
+            return;
+        }
+        _writer = std::move(callback);
+        adv_options_set_writer(_options, &Options::writeCallback, this);
+    }
+
     [[nodiscard]] adv_options_t handle() noexcept { return _options; }
 
 private:
     [[nodiscard]] static adv_source_t* importCallback(adv_utf8_t name, adv_uint32_t depth, adv_data_t data) {
         const auto& self = *static_cast<Options*>(data);
         const auto argName = String(val::u8string(name));
-        auto result = self._importer(argName, depth);
-        if (result.isNull() || result.isUndefined()) {
+        auto source = self._importer(argName, depth);
+        if (source.isNull() || source.isUndefined()) {
             return nullptr;
         }
-        const auto source = result.as<Source>();
-        // const auto buffer = readByteBuffer(result);
-        // auto bytecode = new vm_char_t[buffer.size()];
-        // memcpy(bytecode, buffer.data(), buffer.size());
-        // return new vm_bytecode_t{bytecode, static_cast<vm_uint32_t>(buffer.size())};
-        return nullptr;
+        const auto module = source["name"].as<std::string>();
+        const auto buffer = readByteBuffer(source["data"]);
+        auto result = new adv_source_t;
+        result->name = new adv_char_t[module.length() + 1];
+        result->data = new adv_char_t[buffer.size()];
+        result->size = static_cast<adv_uint32_t>(buffer.size());
+        memcpy((void*)result->name, module.c_str(), module.length() + 1);
+        memcpy((void*)result->data, buffer.data(), buffer.size());
+        return result;
     }
 
-    static void releaseImportCallbackT(adv_source_t* source, adv_data_t data) {}
+    static void releaseImportCallbackT(adv_source_t* source, adv_data_t /* data */) {
+        if (source) {
+            delete[] source->data;
+            delete[] source->name;
+            delete source;
+        }
+    }
+
+    static void writeCallback(const adv_source_t* source, adv_data_t data) {
+        const auto& self = *static_cast<Options*>(data);
+        Source jsSource{};
+        jsSource.name = String(val::u8string(source->name));
+        switch (self.getOutputFormat()) {
+        case ADV_FORMAT_BINARY: {
+            val bytes = val::global("Uint8Array").new_(source->size);
+            bytes.call<void>(
+                "set", typed_memory_view(source->size, reinterpret_cast<const adv_uint8_t*>(source->data)));
+            jsSource.data = Data(bytes);
+            break;
+        }
+        case ADV_FORMAT_TEXT:
+            jsSource.data = Data(val::u8string(source->data));
+            break;
+        default:
+            assert(!"unreachable code");
+            break;
+        }
+        self._writer(jsSource);
+    }
 
     adv_options_t _options{};
     ImportCallback _importer{val::undefined()};
+    WriteCallback _writer{val::undefined()};
 };
 
 class Compiler {
@@ -221,6 +269,7 @@ EMSCRIPTEN_BINDINGS(adv) {
     register_type<String>("string");
     register_type<Data>("Data", "ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string");
     register_type<ImportCallback>("ImportCallback", "(name: string, depth: number) => Source");
+    register_type<WriteCallback>("WriteCallback", "(source: Source) => void");
     register_type<ArrMessage>("Message[]");
     register_type<ArrSource>("Source[]");
 
@@ -310,7 +359,7 @@ EMSCRIPTEN_BINDINGS(adv) {
             +[](const adv_message_t& m) { return m.column; },
             +[](adv_message_t& m, const adv_uint32_t& /* column */) { throwReadOnly(); });
 
-    value_object<Source>("Source").field("name", &Source::name).field("size", &Source::data);
+    value_object<Source>("Source").field("name", &Source::name).field("data", &Source::data);
 
     class_<CompilationResult>("CompilationResult")
         .property("hasNotes", &CompilationResult::hasNotes)
@@ -331,8 +380,7 @@ EMSCRIPTEN_BINDINGS(adv) {
         .property("warningsAsErrors", &Options::getWarningsAsErrors, &Options::setWarningsAsErrors)
         .property("outputFormat", &Options::getOutputFormat, &Options::setOutputFormat)
         .property("importer", &Options::getImporter, &Options::setImporter)
-        // .property("writer", )
-        ;
+        .property("writer", &Options::getWriter, &Options::setWriter);
 
     class_<Compiler>("Compiler").constructor<>().function("compile(file, sources, options)", &Compiler::compile);
 }
