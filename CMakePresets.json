@@ -78,7 +78,6 @@
                 "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
                 "ADV_BUILD_DOC": "OFF",
-                "ADV_BUILD_ADV": "OFF",
                 "ADV_BUILD_TOOL": "OFF",
                 "ADV_BUILD_TESTS": "OFF",
                 "ADV_ENABLE_INSTALL": "OFF"

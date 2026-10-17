@@ -7,7 +7,7 @@ if(EMSCRIPTEN)
 else()
     set(ADV_BUILD_DEFAULT ON)
 endif()
-option(ADV_BUILD_ADV "Build the Adv compiler library" ${ADV_BUILD_DEFAULT})
+option(ADV_BUILD_ADV "Build the Adv compiler library" ON)
 option(ADV_BUILD_TOOL "Build the advc compiler tool" ${ADV_BUILD_DEFAULT})
 option(ADV_BUILD_TESTS "Build tests" ${ADV_BUILD_DEFAULT})
 if(ADV_BUILD_TESTS)
@@ -112,9 +112,19 @@ if(EMSCRIPTEN)
         EXPORT_NAME VM
         PACKAGE_NAME @vladimirshaleev/adv-vm
         DIST vm-dist
-        DESCRIPTION "Bytecode virtual machine for the Adv scripting language, compiled to WebAssembly"
+        DESCRIPTION "Bytecode virtual machine for the Adventure scripting language"
         SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/vm.js.cpp"
         DEPS vm fmt::fmt)
+    if(ADV_BUILD_ADV)
+        target_compile_options(adv PRIVATE -fwasm-exceptions)
+        add_emscripten(TARGET adv-js 
+            EXPORT_NAME adv
+            PACKAGE_NAME @vladimirshaleev/adv
+            DIST adv-dist
+            DESCRIPTION "Adventure scripting language"
+            SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/adv.js.cpp"
+            DEPS adv)
+    endif()
 endif()
 
 if(ADV_BUILD_TESTS)
