@@ -68,12 +68,12 @@ public:
             return std::nullopt;
         }
         if (!isFunction(callback)) {
-            throw std::invalid_argument("Native callback must be a function");
+            throwError("TypeError", "Native callback must be a function");
         }
         auto holder = std::make_unique<NativeCallback>(std::move(callback));
         const auto native = vm_register_native(_vm, argName.c_str(), &VM::nativeCallback, holder.get());
         if (native.handle == 0) {
-            throw std::runtime_error("Failed to register VM native function");
+            throwError("Error", "Failed to register VM native function");
         }
         _nativeCallbacks.insert_or_assign(native.handle, std::move(holder));
         return native;
@@ -84,7 +84,7 @@ public:
         _nativeCallbacks.erase(native.handle);
     }
 
-    [[nodiscard]] ImportCallback getImporter() const noexcept { return ImportCallback(val(0)); }
+    [[nodiscard]] ImportCallback getImporter() const noexcept { return _importer; }
 
     void setImporter(ImportCallback callback) {
         if (callback.isNull() || callback.isUndefined()) {
@@ -94,7 +94,7 @@ public:
             return;
         }
         if (!isFunction(callback)) {
-            throw std::invalid_argument("Importer must be a function or undefined");
+            throwError("TypeError", "Importer must be a function or undefined");
         }
         _importer = std::move(callback);
         vm_set_importer(_vm, &VM::importCallback, this);
@@ -110,7 +110,7 @@ public:
             return;
         }
         if (!isFunction(callback)) {
-            throw std::invalid_argument("Logger must be a function or undefined");
+            throwError("TypeError", "Logger must be a function or undefined");
         }
         _logger = std::move(callback);
         vm_set_logger(_vm, &VM::loggerCallback, this);

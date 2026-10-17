@@ -7,7 +7,45 @@
 using namespace emscripten;
 
 EMSCRIPTEN_DECLARE_VAL_TYPE(String);
-EMSCRIPTEN_DECLARE_VAL_TYPE(Bytecode);
+EMSCRIPTEN_DECLARE_VAL_TYPE(Data);
+EMSCRIPTEN_DECLARE_VAL_TYPE(ImportCallback);
+EMSCRIPTEN_DECLARE_VAL_TYPE(WriteCallback);
+EMSCRIPTEN_DECLARE_VAL_TYPE(ArrMessage);
+
+[[noreturn]] static void throwError(const char* err, const char* message) {
+    const auto str = String(val::u8string(message));
+    val jsError = val::global(err);
+    val error_instance = jsError.new_(str);
+    error_instance.throw_();
+}
+
+[[noreturn]] static void throwReadOnly() { throwError("TypeError", "Property is read-only"); }
+
+static void check(adv_result_t result) {
+    if (result != ADV_RESULT_SUCCESS) {
+        const auto message = adv_result_to_string(result);
+        switch (result) {
+        case ADV_RESULT_COMPILATION_FAILED:
+            throwError("SyntaxError", message);
+        case ADV_RESULT_ERROR_OUT_OF_MEMORY:
+            throwError("RangeError", message);
+        case ADV_RESULT_ERROR_INVALID_ARG:
+        case ADV_RESULT_ERROR_SOURCE_NOT_FOUND:
+            throwError("TypeError", message);
+        default:
+            throwError("Error", message);
+        }
+    }
+}
+
+[[nodiscard]] static bool isFunction(const val& value) noexcept {
+    return val::global("Function")["prototype"].call<bool>("isPrototypeOf", value);
+}
+
+struct Source {
+    String name{val::undefined()};
+    Data data{val::undefined()};
+};
 
 class CompilationResult {
 public:
@@ -18,14 +56,70 @@ public:
     [[nodiscard]] bool hasNotes() const noexcept { return !!adv_compilation_result_has_notes(_result); }
     [[nodiscard]] bool hasWarnings() const noexcept { return !!adv_compilation_result_has_warnings(_result); }
     [[nodiscard]] bool hasErrors() const noexcept { return !!adv_compilation_result_has_errors(_result); }
+    [[nodiscard]] ArrMessage getMessages() const {
+        std::vector<adv_message_t> messages{};
+        adv_uint32_t count{};
+        adv_compilation_result_get_messages(_result, &count, nullptr);
+        messages.resize(count);
+        adv_compilation_result_get_messages(_result, &count, messages.data());
+        ArrMessage arr(val::array());
+        for (const auto& message : messages) {
+            arr.call<void>("push", message);
+        }
+        return arr;
+    }
 
 private:
     adv_compilation_result_t _result{};
 };
 
+class Options {
+public:
+    Options() { check(adv_options_create(&_options)); }
+
+    ~Options() { adv_options_destroy(_options); }
+
+    [[nodiscard]] bool getWarningsAsErrors() const noexcept { return !!adv_options_get_warnings_as_errors(_options); }
+
+    void setWarningsAsErrors(bool enable) noexcept { adv_options_set_warnings_as_errors(_options, enable ? 1 : 0); }
+
+    [[nodiscard]] adv_format_t getOutputFormat() const noexcept { return adv_options_get_output_format(_options); }
+
+    void setOutputFormat(adv_format_t format) noexcept { adv_options_set_output_format(_options, format); }
+
+    [[nodiscard]] ImportCallback getImporter() const noexcept { return _importer; }
+
+    void setImporter(ImportCallback callback) {
+        if (callback.isNull() || callback.isUndefined()) {
+            _importer = ImportCallback(val::undefined());
+            adv_options_set_importer(_options, nullptr, nullptr);
+            adv_options_set_release_import(_options, nullptr, nullptr);
+            return;
+        }
+        if (!isFunction(callback)) {
+            throwError("TypeError", "Callback must be a function");
+        }
+        _importer = std::move(callback);
+        adv_options_set_importer(_options, &Options::importCallback, this);
+        adv_options_set_release_import(_options, &Options::releaseImportCallbackT, this);
+    }
+
+private:
+    [[nodiscard]] static adv_source_t* importCallback(adv_utf8_t name, adv_uint32_t depth, adv_data_t data) {
+        return nullptr;
+    }
+
+    static void releaseImportCallbackT(adv_source_t* source, adv_data_t data) {}
+
+    adv_options_t _options{};
+    ImportCallback _importer{val::undefined()};
+};
+
 EMSCRIPTEN_BINDINGS(adv) {
     register_type<String>("string");
-    register_type<Bytecode>("Bytecode", "ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string");
+    register_type<Data>("Data", "ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string");
+    register_type<ImportCallback>("ImportCallback", "(name: string, depth: number) => Source");
+    register_type<ArrMessage>("Message[]");
 
     enum_<adv_status_t>("Status")
         .value("N1001", ADV_STATUS_N1001)
@@ -81,15 +175,54 @@ EMSCRIPTEN_BINDINGS(adv) {
         .value("E3044", ADV_STATUS_E3044)
         .value("E3045", ADV_STATUS_E3045);
 
+    enum_<adv_format_t>("Format").value("BINARY", ADV_FORMAT_BINARY).value("TEXT", ADV_FORMAT_TEXT);
+
     value_object<adv_message_t>("Message")
-        .field("status", &adv_message_t::status)
+        .field(
+            "status",
+            +[](const adv_message_t& m) { return m.status; },
+            +[](adv_message_t& m, adv_status_t /* status */) { throwReadOnly(); })
         .field(
             "isError",
-            +[](const adv_message_t& m) -> bool { return !!m.is_error; },
-            +[](adv_message_t& m, bool err) { m.is_error = err ? 1 : 0; });
+            +[](const adv_message_t& m) { return !!m.is_error; },
+            +[](adv_message_t& m, bool /* isError */) { throwReadOnly(); })
+        .field(
+            "message",
+            +[](const adv_message_t& m) { return String(val::u8string(m.message)); },
+            +[](adv_message_t& m, const String& /* str */) { throwReadOnly(); })
+        .field(
+            "filename",
+            +[](const adv_message_t& m) { return String(val::u8string(m.filename)); },
+            +[](adv_message_t& m, const String& /* str */) { throwReadOnly(); })
+        .field(
+            "line",
+            +[](const adv_message_t& m) { return m.line; },
+            +[](adv_message_t& m, const adv_uint32_t& /* line */) { throwReadOnly(); })
+        .field(
+            "column",
+            +[](const adv_message_t& m) { return m.column; },
+            +[](adv_message_t& m, const adv_uint32_t& /* column */) { throwReadOnly(); });
+
+    value_object<Source>("Source").field("name", &Source::name).field("size", &Source::data);
 
     class_<CompilationResult>("CompilationResult")
         .property("hasNotes", &CompilationResult::hasNotes)
         .property("hasWarnings", &CompilationResult::hasWarnings)
-        .property("hasErrors", &CompilationResult::hasErrors);
+        .property("hasErrors", &CompilationResult::hasErrors)
+        .property("messages", &CompilationResult::getMessages)
+        // .property("rootNode", ...)
+        // .property("globalScope", ...)
+        // .property("globalScope", ...)
+        // .function("lookupSymbol(scope, name)", ...)
+        // .function("getVisibleSymbolsAt(filename, line, column)", ...)
+        // .function("getScope(scope)", ...)
+        // .function("getSymbol(symbol)", ...)
+        ;
+
+    class_<Options>("Options")
+        .property("warningsAsErrors", &Options::getWarningsAsErrors, &Options::setWarningsAsErrors)
+        .property("outputFormat", &Options::getOutputFormat, &Options::setOutputFormat)
+        .property("importer", &Options::getImporter, &Options::setImporter)
+        // .property("writer", )
+        ;
 }
