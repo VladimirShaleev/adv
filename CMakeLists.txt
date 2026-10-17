@@ -81,6 +81,7 @@ if(ADV_BUILD_ADV)
     file(GLOB ADV_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.hpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.cpp")
+    list(FILTER ADV_SOURCES EXCLUDE REGEX "\\.js\\.cpp")
     add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS})
     add_library(${PROJECT_NAME}::adv ALIAS adv)
     set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
@@ -105,51 +106,15 @@ if(ADV_BUILD_ADV)
 endif()
 
 if(EMSCRIPTEN)
-    file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
     target_compile_options(utils PRIVATE -fwasm-exceptions)
     target_compile_options(vm PRIVATE -fwasm-exceptions)
-
-    set(VM_JS_LINK_OPTIONS
-        -sWASM=1
-        -sMODULARIZE=1
-        -sALLOW_MEMORY_GROWTH=1
-        -sEXPORT_NAME=VM
-        -fwasm-exceptions
-        --bind)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(VM_JS_WASM "\"vm-js.wasm\",\n    \"vm-js.esm.wasm\",\n    ")
-        list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=0")
-    else()
-        list(APPEND VM_JS_LINK_OPTIONS "-sSINGLE_FILE=1")
-    endif()
-
-    foreach(VM_JS_TARGET IN ITEMS vm-js vm-js-esm)
-        add_executable(${VM_JS_TARGET} src/vm/vm.js.cpp)
-        target_link_libraries(${VM_JS_TARGET} PRIVATE vm fmt::fmt)
-        set_default_properties(TARGET ${VM_JS_TARGET})
-        target_compile_options(${VM_JS_TARGET} PRIVATE -fwasm-exceptions)
-        target_link_options(${VM_JS_TARGET} PRIVATE ${VM_JS_LINK_OPTIONS})
-        set_target_properties(${VM_JS_TARGET} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
-    endforeach()
-
-    target_link_options(vm-js PRIVATE --emit-tsd "${PROJECT_BINARY_DIR}/dist/vm-js.d.ts")
-    target_link_options(vm-js-esm PRIVATE -sEXPORT_ES6=1 --emit-tsd "${PROJECT_BINARY_DIR}/dist/vm-js.esm.d.ts")
-    set_target_properties(vm-js PROPERTIES OUTPUT_NAME "vm-js" SUFFIX ".js")
-    set_target_properties(vm-js-esm PROPERTIES OUTPUT_NAME "vm-js.esm" SUFFIX ".mjs")
-
-    configure_file(
-        "${PROJECT_SOURCE_DIR}/cmake/package.json.in"
-        "${PROJECT_BINARY_DIR}/dist/package.json"
-        @ONLY)
-    configure_file(
-        "${PROJECT_SOURCE_DIR}/README.md"
-        "${PROJECT_BINARY_DIR}/dist/README.md"
-        COPYONLY)
-    configure_file(
-        "${PROJECT_SOURCE_DIR}/LICENSE"
-        "${PROJECT_BINARY_DIR}/dist/LICENSE"
-        COPYONLY)
+    add_emscripten(TARGET vm-js 
+        EXPORT_NAME VM
+        PACKAGE_NAME @vladimirshaleev/adv-vm
+        DIST vm-dist
+        DESCRIPTION "Bytecode virtual machine for the Adv scripting language, compiled to WebAssembly"
+        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/vm.js.cpp"
+        DEPS vm fmt::fmt)
 endif()
 
 if(ADV_BUILD_TESTS)

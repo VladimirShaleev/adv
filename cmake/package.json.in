@@ -1,7 +1,7 @@
 {
-  "name": "@vladimirshaleev/adv-vm",
+  "name": "@UTILS_PACKAGE_NAME@",
   "version": "@PROJECT_VERSION@",
-  "description": "Bytecode virtual machine for the Adv scripting language, compiled to WebAssembly",
+  "description": "@UTILS_JS_DESCRIPTION@",
   "keywords": [
     "adv",
     "scripting-language",
@@ -18,17 +18,17 @@
   "bugs": {
     "url": "@PROJECT_HOMEPAGE_URL@/issues"
   },
-  "main": "./vm-js.js",
-  "module": "./vm-js.esm.mjs",
-  "browser": "./vm-js.esm.mjs",
-  "types": "./vm-js.d.ts",
+  "main": "./@UTILS_TARGET@.js",
+  "module": "./@UTILS_TARGET@.esm.mjs",
+  "browser": "./@UTILS_TARGET@.esm.mjs",
+  "types": "./@UTILS_TARGET@.d.ts",
   "exports": {
     ".": {
-      "types": "./vm-js.d.ts",
-      "browser": "./vm-js.esm.mjs",
-      "import": "./vm-js.esm.mjs",
-      "require": "./vm-js.js",
-      "default": "./vm-js.esm.mjs"
+      "types": "./@UTILS_TARGET@.d.ts",
+      "browser": "./@UTILS_TARGET@.esm.mjs",
+      "import": "./@UTILS_TARGET@.esm.mjs",
+      "require": "./@UTILS_TARGET@.js",
+      "default": "./@UTILS_TARGET@.esm.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -36,9 +36,9 @@
     "access": "public"
   },
   "files": [
-    @VM_JS_WASM@"vm-js.js",
-    "vm-js.esm.mjs",
-    "vm-js.d.ts",
-    "vm-js.esm.d.ts"
+    @UTILS_JS_WASM@"@UTILS_TARGET@.js",
+    "@UTILS_TARGET@.esm.mjs",
+    "@UTILS_TARGET@.d.ts",
+    "@UTILS_TARGET@.esm.d.ts"
   ]
 }

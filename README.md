@@ -41,23 +41,24 @@ both module formats initialize asynchronously and provide the same API:
 
 ```js
 // CommonJS
-const createAdvVM = require("@vladimirshaleev/adv-vm");
-createAdvVM().then(({ Vm }) => {
-  const vm = new Vm();
-  // Use vm.loadScript(), vm.runThread(), and vm.tick() here.
+const vmInit = require("@vladimirshaleev/adv-vm");
+vmInit().then(({ VM }) => {
+  const vm = new VM();
+  const script = vm.loadScript(new Uint8Array(compiledBytecode));
+  const thread = vm.runThread(script);
+  vm.tick(16);
   vm.delete();
 });
 ```
 
 ```js
 // ES module
-import createAdvVM from "@vladimirshaleev/adv-vm";
-const { Vm } = await createAdvVM();
-const vm = new Vm();
+import vmInit from "@vladimirshaleev/adv-vm";
+const { VM } = await vmInit();
+const vm = new VM();
 const script = vm.loadScript(new Uint8Array(compiledBytecode));
 const thread = vm.runThread(script);
 vm.tick(16);
-vm.shutdownThread(thread);
 vm.delete();
 ```
 
