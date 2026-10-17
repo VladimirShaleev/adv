@@ -166,8 +166,9 @@ public:
 
     ~Compiler() { adv_compiler_destroy(_compiler); }
 
-    CompilationResult compile(std::optional<ArrSource> sources, std::optional<Options> options) {
-        if (!sources && !options) {
+    CompilationResult
+    compile(std::optional<String> file, std::optional<ArrSource> sources, std::optional<Options> options) {
+        if (!file && !sources && !options) {
             throwError("TypeError", "No sources were specified for compilation");
         }
         std::vector<std::string> strings;
@@ -193,13 +194,19 @@ public:
                 }
             }
         }
+        std::string name{};
+        vm_utf8_t cFile{};
         adv_options_t opts{};
+        if (file && !file->isUndefined() && !file->isNull()) {
+            name = file.value().as<std::string>();
+            cFile = name.c_str();
+        }
         if (options) {
             opts = options.value().handle();
         }
         adv_compilation_result_t result{};
         const auto code = adv_compiler_compile(
-            _compiler, nullptr, static_cast<adv_uint32_t>(cSources.size()), cSources.data(), opts, &result);
+            _compiler, cFile, static_cast<adv_uint32_t>(cSources.size()), cSources.data(), opts, &result);
         if (result == nullptr && code != ADV_RESULT_SUCCESS) {
             check(code);
         }
@@ -217,6 +224,7 @@ EMSCRIPTEN_BINDINGS(adv) {
     register_type<ArrMessage>("Message[]");
     register_type<ArrSource>("Source[]");
 
+    register_optional<String>();
     register_optional<ArrSource>();
     register_optional<Options>();
 
@@ -326,5 +334,5 @@ EMSCRIPTEN_BINDINGS(adv) {
         // .property("writer", )
         ;
 
-    class_<Compiler>("Compiler").constructor<>().function("compile(sources, options)", &Compiler::compile);
+    class_<Compiler>("Compiler").constructor<>().function("compile(file, sources, options)", &Compiler::compile);
 }
