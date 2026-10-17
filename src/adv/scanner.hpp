@@ -174,6 +174,8 @@ private:
             auto sourceName = normalize(source.name, basePath);
             if (moduelName == utils::getModuleName(sourceName)) {
                 return {moduelName, &source, false};
+            } else if (moduelName.empty()) {
+                return {utils::getModuleName(sourceName), &source, false};
             }
         }
 

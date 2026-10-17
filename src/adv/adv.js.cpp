@@ -11,6 +11,7 @@ EMSCRIPTEN_DECLARE_VAL_TYPE(Data);
 EMSCRIPTEN_DECLARE_VAL_TYPE(ImportCallback);
 EMSCRIPTEN_DECLARE_VAL_TYPE(WriteCallback);
 EMSCRIPTEN_DECLARE_VAL_TYPE(ArrMessage);
+EMSCRIPTEN_DECLARE_VAL_TYPE(ArrSource);
 
 [[noreturn]] static void throwError(const char* err, const char* message) {
     const auto str = String(val::u8string(message));
@@ -42,6 +43,32 @@ static void check(adv_result_t result) {
     return val::global("Function")["prototype"].call<bool>("isPrototypeOf", value);
 }
 
+[[nodiscard]] static std::vector<vm_uint8_t> readByteBuffer(const val& input) {
+    if (input.isNull() || input.isUndefined()) {
+        throwError("TypeError", "Input cannot be null or undefined");
+    }
+    val bytes = val::undefined();
+    if (input.isString()) {
+        val encoder = val::global("TextEncoder").new_();
+        bytes = encoder.call<val>("encode", input);
+    } else if (input.instanceof(val::global("ArrayBuffer"))) {
+        bytes = val::global("Uint8Array").new_(input);
+    } else if (!input["buffer"].isUndefined() && input["byteLength"].isNumber()) {
+        bytes = val::global("Uint8Array").new_(input["buffer"], input["byteOffset"], input["byteLength"]);
+    } else {
+        throwError("TypeError", "Expected String, ArrayBuffer, or TypedArray");
+    }
+    double rawLength = bytes["length"].as<double>();
+    if (!std::isfinite(rawLength) || rawLength < 0) {
+        throwError("TypeError", "Invalid byte buffer length");
+    }
+    const auto length = static_cast<size_t>(rawLength);
+    if (length == 0) {
+        return std::vector<vm_uint8_t>();
+    }
+    return emscripten::vecFromJSArray<vm_uint8_t>(bytes);
+}
+
 struct Source {
     String name{val::undefined()};
     Data data{val::undefined()};
@@ -50,6 +77,11 @@ struct Source {
 class CompilationResult {
 public:
     explicit CompilationResult(adv_compilation_result_t result) noexcept : _result(result) {}
+
+    CompilationResult(const CompilationResult& result) noexcept
+        : _result(adv_compilation_result_reference(result._result)) {}
+
+    CompilationResult(CompilationResult&& result) noexcept : _result(result._result) { result._result = nullptr; }
 
     ~CompilationResult() { adv_compilation_result_destroy(_result); }
 
@@ -104,8 +136,21 @@ public:
         adv_options_set_release_import(_options, &Options::releaseImportCallbackT, this);
     }
 
+    [[nodiscard]] adv_options_t handle() noexcept { return _options; }
+
 private:
     [[nodiscard]] static adv_source_t* importCallback(adv_utf8_t name, adv_uint32_t depth, adv_data_t data) {
+        const auto& self = *static_cast<Options*>(data);
+        const auto argName = String(val::u8string(name));
+        auto result = self._importer(argName, depth);
+        if (result.isNull() || result.isUndefined()) {
+            return nullptr;
+        }
+        const auto source = result.as<Source>();
+        // const auto buffer = readByteBuffer(result);
+        // auto bytecode = new vm_char_t[buffer.size()];
+        // memcpy(bytecode, buffer.data(), buffer.size());
+        // return new vm_bytecode_t{bytecode, static_cast<vm_uint32_t>(buffer.size())};
         return nullptr;
     }
 
@@ -115,11 +160,65 @@ private:
     ImportCallback _importer{val::undefined()};
 };
 
+class Compiler {
+public:
+    Compiler() { check(adv_compiler_create(&_compiler)); }
+
+    ~Compiler() { adv_compiler_destroy(_compiler); }
+
+    CompilationResult compile(std::optional<ArrSource> sources, std::optional<Options> options) {
+        if (!sources && !options) {
+            throwError("TypeError", "No sources were specified for compilation");
+        }
+        std::vector<std::string> strings;
+        std::vector<std::vector<adv_uint8_t>> buffers;
+        std::vector<adv_source_t> cSources;
+        if (sources && !sources->isUndefined() && !sources->isNull()) {
+            const auto length = sources.value()["length"].as<adv_sint32_t>();
+            if (length > 0) {
+                strings.reserve(length);
+                buffers.reserve(length);
+                cSources.reserve(length);
+                for (adv_sint32_t i = 0; i < length; ++i) {
+                    val source = sources.value()[i];
+                    strings.push_back(source["name"].as<std::string>());
+                    buffers.push_back(readByteBuffer(source["data"]));
+                    cSources.emplace_back(
+                        nullptr,
+                        (const adv_char_t*)buffers.back().data(),
+                        static_cast<adv_uint32_t>(buffers.back().size()));
+                }
+                for (size_t i = 0; i < cSources.size(); ++i) {
+                    cSources[i].name = strings[i].c_str();
+                }
+            }
+        }
+        adv_options_t opts{};
+        if (options) {
+            opts = options.value().handle();
+        }
+        adv_compilation_result_t result{};
+        const auto code = adv_compiler_compile(
+            _compiler, nullptr, static_cast<adv_uint32_t>(cSources.size()), cSources.data(), opts, &result);
+        if (result == nullptr && code != ADV_RESULT_SUCCESS) {
+            check(code);
+        }
+        return CompilationResult(result);
+    }
+
+private:
+    adv_compiler_t _compiler{};
+};
+
 EMSCRIPTEN_BINDINGS(adv) {
     register_type<String>("string");
     register_type<Data>("Data", "ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string");
     register_type<ImportCallback>("ImportCallback", "(name: string, depth: number) => Source");
     register_type<ArrMessage>("Message[]");
+    register_type<ArrSource>("Source[]");
+
+    register_optional<ArrSource>();
+    register_optional<Options>();
 
     enum_<adv_status_t>("Status")
         .value("N1001", ADV_STATUS_N1001)
@@ -220,9 +319,12 @@ EMSCRIPTEN_BINDINGS(adv) {
         ;
 
     class_<Options>("Options")
+        .constructor<>()
         .property("warningsAsErrors", &Options::getWarningsAsErrors, &Options::setWarningsAsErrors)
         .property("outputFormat", &Options::getOutputFormat, &Options::setOutputFormat)
         .property("importer", &Options::getImporter, &Options::setImporter)
         // .property("writer", )
         ;
+
+    class_<Compiler>("Compiler").constructor<>().function("compile(sources, options)", &Compiler::compile);
 }
