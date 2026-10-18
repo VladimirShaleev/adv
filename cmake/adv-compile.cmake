@@ -1,4 +1,4 @@
-function(advc_compile)
+function(adv_compile)
     set(options WARN_AS_ERRORS TEXT)
     set(one_value NAME OUT_DIR)
     set(multi_value IMPORT_DIRS SOURCES DEPENDENCIES)
@@ -40,10 +40,10 @@ function(advc_compile)
         list(APPEND ADVC_GENERATED_ALL ${ADVC_GENERATED_FILE})
         add_custom_command(
             OUTPUT ${ADVC_GENERATED_FILE}
-            COMMAND @PROJECT_NAME@::@PROJECT_NAME@ ${ADVC_ARG_CMD} -o ${ADVC_GENERATED_FILE} ${SOURCE}
+            COMMAND adv::advc ${ADVC_ARG_CMD} -o ${ADVC_GENERATED_FILE} ${SOURCE}
             VERBATIM
             DEPENDS ${SOURCE} ${ADVC_ARG_DEPENDENCIES}
-            COMMENT "[advc] Building ADV '${MODULE_NAME}'")
+            COMMENT "[advc] Building ADV ${MODULE_NAME}")
     endforeach()
     set_source_files_properties(${ADVC_GENERATED_ALL} PROPERTIES GENERATED TRUE)
     if(ADVC_ARG_NAME)

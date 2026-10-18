@@ -49,14 +49,15 @@ file(GLOB UTILS_SOURCES CONFIGURE_DEPENDS
 add_library(utils OBJECT ${UTILS_SOURCES})
 set_default_properties(TARGET utils)
 target_link_libraries(utils PRIVATE fmt::fmt)
+target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils")
-target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(ADV_TARGETS utils)
 
 # include(cmake/advc-compile.cmake)
 # 
 # file(GLOB ADV_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/std/*.adv")
-# advc_compile(NAME STD
+# adv_compile(NAME STD
 #     WARN_AS_ERRORS TEXT
 #     IMPORT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/std"
 #     SOURCES ${ADV_SOURCES})
@@ -72,9 +73,11 @@ target_link_libraries(vm PRIVATE utils)
 target_link_libraries(vm PRIVATE fmt::fmt)
 target_precompile_headers(vm PRIVATE "src/vm/vm.hpp")
 target_include_directories(vm PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/vm")
+target_include_directories(vm PRIVATE $<TARGET_PROPERTY:utils,INCLUDE_DIRECTORIES>)
 target_include_directories(vm PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+list(APPEND ADV_TARGETS vm)
 
 if(ADV_BUILD_ADV)
     include(cmake/flex-install.cmake)
@@ -99,17 +102,20 @@ if(ADV_BUILD_ADV)
     target_precompile_headers(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/compiler.hpp")
     target_compile_definitions(adv PRIVATE $<$<CONFIG:Debug>:YYDEBUG>)
     target_include_directories(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/")
+    target_include_directories(adv PRIVATE $<TARGET_PROPERTY:utils,INCLUDE_DIRECTORIES>)
     target_include_directories(adv PRIVATE "$<$<BOOL:${FLEX_INCLUDE_DIR}>:${FLEX_INCLUDE_DIR}>")
     target_include_directories(adv PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(adv PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>)
+    list(APPEND ADV_TARGETS adv)
     if(ADV_BUILD_TOOL)
         add_executable(advc "${CMAKE_CURRENT_SOURCE_DIR}/src/advc/main.cpp")
         add_executable(${PROJECT_NAME}::advc ALIAS advc)
         set_default_properties(TARGET advc)
         target_link_libraries(advc PRIVATE adv)
         target_link_libraries(advc PRIVATE argparse::argparse)
+        list(APPEND ADV_TARGETS advc)
     endif()
 endif()
 
@@ -142,4 +148,29 @@ endif()
 
 if(ADV_BUILD_DOC)
     add_subdirectory(doc)
+endif()
+
+if(ADV_ENABLE_INSTALL)
+    configure_package_config_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in" 
+        "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+        INSTALL_DESTINATION "${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME}"
+        NO_SET_AND_CHECK_MACRO
+        NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+    write_basic_package_version_file(${PROJECT_NAME}-config-version.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion)
+    
+    install(TARGETS ${ADV_TARGETS} EXPORT ${PROJECT_NAME}-targets)
+    install(EXPORT ${PROJECT_NAME}-targets 
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME}"
+        NAMESPACE ${PROJECT_NAME}::)
+    install(
+        FILES
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/adv-compile.cmake"
+            "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+            "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME})
+    install(DIRECTORY include/ DESTINATION include)
 endif()
