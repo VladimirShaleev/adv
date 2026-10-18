@@ -37,7 +37,7 @@ vm_native_h NativeManager::registerFunc(std::string_view name, vm_native_callbac
         native->data = data;
         return handle;
     } else {
-        auto [resultHandle, _] = _natives.emplace(str, str, Undefined, func, 0, 0, data);
+        auto [resultHandle, _] = _natives.emplace(str, str, vm_script_h{0}, func, 0, 0, data);
         return resultHandle;
     }
     return Undefined;

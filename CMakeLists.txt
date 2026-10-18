@@ -53,11 +53,19 @@ target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(utils PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+# include(cmake/advc-compile.cmake)
+# 
+# file(GLOB ADV_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/std/*.adv")
+# advc_compile(NAME STD
+#     WARN_AS_ERRORS TEXT
+#     IMPORT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/std"
+#     SOURCES ${ADV_SOURCES})
+
 file(GLOB VM_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.cpp")
 list(FILTER VM_SOURCES EXCLUDE REGEX "\\.js\\.cpp")
-add_library(vm ${VM_SOURCES})
+add_library(vm ${VM_SOURCES} ${ADVC_STD_OUTPUTS})
 add_library(${PROJECT_NAME}::vm ALIAS vm)
 set_default_properties(TARGET vm STATIC VM_STATIC_BUILD)
 target_link_libraries(vm PRIVATE utils)
@@ -133,5 +141,5 @@ if(ADV_BUILD_TESTS)
 endif()
 
 if(ADV_BUILD_DOC)
-  add_subdirectory(doc)
+    add_subdirectory(doc)
 endif()

@@ -1,0 +1,2 @@
+native print(str: string);
+native println(str: string);
