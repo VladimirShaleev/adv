@@ -38,7 +38,9 @@ private:
         if (auto writer = options.getWriter(&data)) {
             adv_source_t source{module.data(), (const adv_char_t*)code.data(), static_cast<adv_uint32_t>(code.size())};
             writer(&source, data);
-        } else {
+        }
+#if !defined(__EMSCRIPTEN__)
+        else {
             auto cPath = options.getOutputPath();
             auto outputPath =
                 cPath && cPath[0] != '\0' ? std::filesystem::path(cPath) : std::filesystem::current_path();
@@ -76,6 +78,7 @@ private:
                 return ADV_RESULT_ERROR_FILE_CREATE;
             }
         }
+#endif
         return ADV_RESULT_SUCCESS;
     }
 

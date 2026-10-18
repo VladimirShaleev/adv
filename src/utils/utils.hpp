@@ -35,6 +35,12 @@
 #include <utility>
 #include <vector>
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#include <emscripten/bind.h>
+#include <emscripten/val.h>
+#endif
+
 #include <vm/vm-script.h>
 #include <vm/vm-types.h>
 
@@ -599,6 +605,51 @@ internal::Offset<NativeParam>::offset(std::span<const vm_uint8_t> bytecode, size
     }
     return (b << 16) | a;
 }
+
+#if defined(__EMSCRIPTEN__)
+
+namespace embind {
+
+[[nodiscard]] UTILS_FORCE_INLINE bool isFunction(const emscripten::val& value) noexcept {
+    using namespace emscripten;
+    return val::global("Function")["prototype"].call<bool>("isPrototypeOf", value);
+}
+
+[[noreturn]] UTILS_FORCE_INLINE void throwError(const char* err, const char* message) {
+    using namespace emscripten;
+    val::global(err).new_(val::u8string(message)).throw_();
+}
+
+[[nodiscard]] UTILS_FORCE_INLINE std::vector<vm_uint8_t> readByteBuffer(const emscripten::val& input) {
+    using namespace emscripten;
+    if (input.isNull() || input.isUndefined()) {
+        throwError("TypeError", "Input cannot be null or undefined");
+    }
+    val bytes = val::undefined();
+    if (input.isString()) {
+        val encoder = val::global("TextEncoder").new_();
+        bytes = encoder.call<val>("encode", input);
+    } else if (input.instanceof(val::global("ArrayBuffer"))) {
+        bytes = val::global("Uint8Array").new_(input);
+    } else if (!input["buffer"].isUndefined() && input["byteLength"].isNumber()) {
+        bytes = val::global("Uint8Array").new_(input["buffer"], input["byteOffset"], input["byteLength"]);
+    } else {
+        throwError("TypeError", "Expected String, ArrayBuffer, or TypedArray");
+    }
+    double rawLength = bytes["length"].as<double>();
+    if (!std::isfinite(rawLength) || rawLength < 0) {
+        throwError("TypeError", "Invalid byte buffer length");
+    }
+    const auto length = static_cast<size_t>(rawLength);
+    if (length == 0) {
+        return std::vector<vm_uint8_t>();
+    }
+    return emscripten::vecFromJSArray<vm_uint8_t>(bytes);
+}
+
+} // namespace embind
+
+#endif
 
 } // namespace utils
 

@@ -1,10 +1,8 @@
-#include <emscripten.h>
-#include <emscripten/bind.h>
-#include <emscripten/val.h>
-
 #include <adv/adv.h>
+#include <utils/utils.hpp>
 
 using namespace emscripten;
+using namespace utils::embind;
 
 EMSCRIPTEN_DECLARE_VAL_TYPE(String);
 EMSCRIPTEN_DECLARE_VAL_TYPE(Data);
@@ -12,13 +10,6 @@ EMSCRIPTEN_DECLARE_VAL_TYPE(ImportCallback);
 EMSCRIPTEN_DECLARE_VAL_TYPE(WriteCallback);
 EMSCRIPTEN_DECLARE_VAL_TYPE(ArrMessage);
 EMSCRIPTEN_DECLARE_VAL_TYPE(ArrSource);
-
-[[noreturn]] static void throwError(const char* err, const char* message) {
-    const auto str = String(val::u8string(message));
-    val jsError = val::global(err);
-    val error_instance = jsError.new_(str);
-    error_instance.throw_();
-}
 
 [[noreturn]] static void throwReadOnly() { throwError("TypeError", "Property is read-only"); }
 
@@ -37,36 +28,6 @@ static void check(adv_result_t result) {
             throwError("Error", message);
         }
     }
-}
-
-[[nodiscard]] static bool isFunction(const val& value) noexcept {
-    return val::global("Function")["prototype"].call<bool>("isPrototypeOf", value);
-}
-
-[[nodiscard]] static std::vector<vm_uint8_t> readByteBuffer(const val& input) {
-    if (input.isNull() || input.isUndefined()) {
-        throwError("TypeError", "Input cannot be null or undefined");
-    }
-    val bytes = val::undefined();
-    if (input.isString()) {
-        val encoder = val::global("TextEncoder").new_();
-        bytes = encoder.call<val>("encode", input);
-    } else if (input.instanceof(val::global("ArrayBuffer"))) {
-        bytes = val::global("Uint8Array").new_(input);
-    } else if (!input["buffer"].isUndefined() && input["byteLength"].isNumber()) {
-        bytes = val::global("Uint8Array").new_(input["buffer"], input["byteOffset"], input["byteLength"]);
-    } else {
-        throwError("TypeError", "Expected String, ArrayBuffer, or TypedArray");
-    }
-    double rawLength = bytes["length"].as<double>();
-    if (!std::isfinite(rawLength) || rawLength < 0) {
-        throwError("TypeError", "Invalid byte buffer length");
-    }
-    const auto length = static_cast<size_t>(rawLength);
-    if (length == 0) {
-        return std::vector<vm_uint8_t>();
-    }
-    return emscripten::vecFromJSArray<vm_uint8_t>(bytes);
 }
 
 struct Source {

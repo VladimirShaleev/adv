@@ -132,13 +132,18 @@ private:
             _memBuffer = std::make_unique<MemoryBuffer>(source->data, (size_t)source->size);
             _stream = std::make_unique<std::istream>(_memBuffer.get());
         } else {
+#if !defined(__EMSCRIPTEN__)
             _stream = std::make_unique<std::ifstream>(path);
             if (_stream->fail()) {
                 _stream.reset();
                 _ctx.log<ADV_STATUS_E3038>(_options, loc, file.string());
                 return;
             }
+#else
+            assert(!"unreachable code");
+#endif
         }
+
         _buffer = yy_create_buffer(*_stream.get(), 16384);
         yy_switch_to_buffer(_buffer);
         yylineno = 1;
@@ -179,6 +184,7 @@ private:
             }
         }
 
+#if !defined(__EMSCRIPTEN__)
         std::vector<std::filesystem::path> importDirs{};
         importDirs.push_back(basePath);
         adv_uint32_t dirCount{};
@@ -191,6 +197,9 @@ private:
             importDirs.push_back(dir);
         }
         return {utils::findFile(file, importDirs), nullptr, false};
+#else
+        return {{}, nullptr, false};
+#endif
     }
 
     [[nodiscard]] bool readBytecode(const adv_source_t* source, const std::filesystem::path& filename) noexcept {
@@ -203,6 +212,7 @@ private:
                 return true;
             }
         }
+#if !defined(__EMSCRIPTEN__)
         std::ifstream stream(filename, std::ios::binary);
         if (!stream.is_open()) {
             return false;
@@ -230,6 +240,7 @@ private:
             }
         }
         stream.close();
+#endif
         return false;
     }
 

@@ -114,7 +114,7 @@ if(EMSCRIPTEN)
         DIST vm-dist
         DESCRIPTION "Bytecode virtual machine for the Adventure scripting language"
         SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/vm.js.cpp"
-        DEPS vm fmt::fmt)
+        DEPS utils vm fmt::fmt)
     if(ADV_BUILD_ADV)
         target_compile_options(adv PRIVATE -fwasm-exceptions)
         add_emscripten(TARGET adv-js 
@@ -123,7 +123,7 @@ if(EMSCRIPTEN)
             DIST adv-dist
             DESCRIPTION "Adventure scripting language"
             SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/adv.js.cpp"
-            DEPS adv)
+            DEPS utils adv)
     endif()
 endif()
 

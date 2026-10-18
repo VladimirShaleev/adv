@@ -1,16 +1,10 @@
-#include <emscripten.h>
-#include <emscripten/bind.h>
-#include <emscripten/val.h>
-
 #include <fmt/format.h>
-#include <list>
-#include <optional>
-#include <string>
-#include <vector>
 
+#include <utils/utils.hpp>
 #include <vm/vm.h>
 
 using namespace emscripten;
+using namespace utils::embind;
 
 EMSCRIPTEN_DECLARE_VAL_TYPE(String);
 EMSCRIPTEN_DECLARE_VAL_TYPE(Bytecode);
@@ -18,7 +12,7 @@ EMSCRIPTEN_DECLARE_VAL_TYPE(NativeCallback);
 EMSCRIPTEN_DECLARE_VAL_TYPE(ImportCallback);
 EMSCRIPTEN_DECLARE_VAL_TYPE(LoggerCallback);
 
-static String version() {
+[[nodiscard]] static String version() {
     const auto version = vm_version();
     const auto major = (version >> 24) & 0xFF;
     const auto minor = (version >> 16) & 0xFF;
@@ -163,36 +157,6 @@ private:
         self._logger(thread, instructionPos, str);
     }
 
-    [[nodiscard]] static bool isFunction(const val& value) noexcept {
-        return val::global("Function")["prototype"].call<bool>("isPrototypeOf", value);
-    }
-
-    [[nodiscard]] static std::vector<vm_uint8_t> readByteBuffer(const val& input) {
-        if (input.isNull() || input.isUndefined()) {
-            throwError("TypeError", "Input cannot be null or undefined");
-        }
-        val bytes = val::undefined();
-        if (input.isString()) {
-            val encoder = val::global("TextEncoder").new_();
-            bytes = encoder.call<val>("encode", input);
-        } else if (input.instanceof(val::global("ArrayBuffer"))) {
-            bytes = val::global("Uint8Array").new_(input);
-        } else if (!input["buffer"].isUndefined() && input["byteLength"].isNumber()) {
-            bytes = val::global("Uint8Array").new_(input["buffer"], input["byteOffset"], input["byteLength"]);
-        } else {
-            throwError("TypeError", "Expected String, ArrayBuffer, or TypedArray");
-        }
-        double rawLength = bytes["length"].as<double>();
-        if (!std::isfinite(rawLength) || rawLength < 0) {
-            throwError("TypeError", "Invalid byte buffer length");
-        }
-        const auto length = static_cast<size_t>(rawLength);
-        if (length == 0) {
-            return std::vector<vm_uint8_t>();
-        }
-        return emscripten::vecFromJSArray<vm_uint8_t>(bytes);
-    }
-
     [[nodiscard]] static val valueToJs(vm_t vm, const vm_value_t& value) {
         switch (value.type) {
         case VM_VALUE_TYPE_BOOL:
@@ -232,13 +196,6 @@ private:
             return vm_value_t{.type = VM_VALUE_TYPE_STRING, .str = string};
         }
         throwError("TypeError", "Native callbacks must return a boolean, number, string, or undefined");
-    }
-
-    [[noreturn]] static void throwError(const char* err, const char* message) {
-        const auto str = String(val::u8string(message));
-        val jsError = val::global(err);
-        val error_instance = jsError.new_(str);
-        error_instance.throw_();
     }
 
     vm_t _vm{};
