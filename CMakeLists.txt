@@ -34,8 +34,8 @@ include(cmake/update-version.cmake)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(ADV_MSVC_DYNAMIC_RUNTIME "Link dynamic runtime library instead of static" OFF)
-cmake_dependent_option(ADV_BUILD_DOC "Build doc" ON "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 cmake_dependent_option(ADV_ENABLE_INSTALL "Enable installation" ON "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
+cmake_dependent_option(ADV_BUILD_DOC "Build doc" ON "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 cmake_dependent_option(ADV_BUILD_PACKAGES "Build packages" ON "ADV_ENABLE_INSTALL" OFF)
 
 find_package(fmt CONFIG REQUIRED)
@@ -173,4 +173,8 @@ if(ADV_ENABLE_INSTALL)
             "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
         DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME})
     install(DIRECTORY include/ DESTINATION include)
+endif()
+
+if(ADV_BUILD_PACKAGES)
+    include(cmake/package.cmake)
 endif()

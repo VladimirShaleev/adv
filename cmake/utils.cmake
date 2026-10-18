@@ -15,12 +15,16 @@ function(set_default_properties)
         VISIBILITY_INLINES_HIDDEN ON)
     if(MSVC)
         target_compile_options(${ARG_TARGET} PRIVATE /Zc:preprocessor)
-        if(ADVENTURE_MSVC_DYNAMIC_RUNTIME)
-            set_target_properties(${ARG_TARGET} PROPERTIES
-                MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-        else()
-            set_target_properties(${ARG_TARGET} PROPERTIES
-                MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+    if(WIN32)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+            if(DEFINED ADV_MSVC_DYNAMIC_RUNTIME AND ADV_MSVC_DYNAMIC_RUNTIME)
+                set_target_properties(${ARG_TARGET} PROPERTIES
+                    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+            else()
+                set_target_properties(${ARG_TARGET} PROPERTIES
+                    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+            endif()
         endif()
     endif()
     if(NOT BUILD_SHARED_LIBS AND ARG_STATIC)
