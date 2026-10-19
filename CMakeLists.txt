@@ -115,6 +115,21 @@ if(ADV_BUILD_ADV)
         set_default_properties(TARGET advc)
         target_link_libraries(advc PRIVATE adv)
         target_link_libraries(advc PRIVATE argparse::argparse)
+        if(WIN32)
+            set(ADV_BUILD_NUMBER 0 CACHE STRING "Project build number (increment for each build)")
+            string(TIMESTAMP CURRENT_YEAR "%Y")
+            configure_file(
+                "${CMAKE_CURRENT_SOURCE_DIR}/src/advc/application.rc.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/application.rc"
+                @ONLY)
+            configure_file(
+                "${CMAKE_CURRENT_SOURCE_DIR}/src/advc/icon.ico"
+                "${CMAKE_CURRENT_BINARY_DIR}/icon.ico"
+                COPYONLY)
+            target_sources(advc PRIVATE
+                "${CMAKE_CURRENT_BINARY_DIR}/application.rc"
+                "${CMAKE_CURRENT_SOURCE_DIR}/src/advc/application.manifest")
+        endif()
         list(APPEND ADV_TARGETS advc)
     endif()
 endif()
@@ -151,6 +166,12 @@ if(ADV_BUILD_DOC)
 endif()
 
 if(ADV_ENABLE_INSTALL)
+    get_target_property(LIBRARY_TYPE vm TYPE)
+    set(PROJECT_DEPENDENCIES "")
+    if(LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
+        set(PROJECT_DEPENDENCIES "include(CMakeFindDependencyMacro)\nfind_dependency(fmt REQUIRED)")
+    endif()
+
     configure_package_config_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in" 
         "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
@@ -168,7 +189,7 @@ if(ADV_ENABLE_INSTALL)
         NAMESPACE ${PROJECT_NAME}::)
     install(
         FILES
-            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/adv-compile.cmake"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}-compile.cmake"
             "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
             "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
         DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/${PROJECT_NAME})

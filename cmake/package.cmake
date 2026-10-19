@@ -21,11 +21,8 @@ if(ADV_BUILD_MSI_INSTALLER)
     list(APPEND CPACK_GENERATOR "WIX")
 endif()
 
-set(ADV_BUILD_NUMBER 0 CACHE STRING "Project build number (increment for each build)")
-set(ADV_DISPLAY_NAME "adv" CACHE STRING "Project display name")
-
-set(CPACK_PACKAGE_NAME "${ADV_DISPLAY_NAME}")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "${ADV_DISPLAY_NAME}")
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VENDOR "Vladimir Shaleev")
 set(CPACK_PACKAGE_CONTACT "vladimirshaleev@gmail.com")
 set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}")
@@ -43,10 +40,18 @@ set(CPACK_DEBIAN_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Vladimir Shaleev <vladimirshaleev@gmail.com>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS)
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libfmt-dev")
 
 if(ADV_BUILD_DEB_PACKAGE)
+    configure_file(
+        ${PROJECT_SOURCE_DIR}/cmake/resources/copyright.in
+        ${CMAKE_BINARY_DIR}/copyright
+        @ONLY
+    )
+    install(
+        FILES "${CMAKE_BINARY_DIR}/copyright"
+        DESTINATION "share/doc/${PROJECT_NAME}"
+    )
 endif()
 
 set(CPACK_RPM_PACKAGE_NAME "${PROJECT_NAME}")
@@ -72,7 +77,10 @@ if(ADV_BUILD_MSI_INSTALLER)
     set(CPACK_WIX_VERSION 4)
     set(CPACK_WIX_UPGRADE_GUID "0ED64B29-8343-496D-B44A-D46D83C5D9E4")
     set(CPACK_WIX_CULTURES "en-US;de-DE;ja-JP;it-IT;pt-BR;zh-CN;zh-TW;ru-RU")
-    set(CPACK_WIX_LICENSE_RTF "${PROJECT_SOURCE_DIR}/src/resources/windows/LICENSE.rtf")
+    set(CPACK_WIX_LICENSE_RTF "${PROJECT_SOURCE_DIR}/cmake/resources/LICENSE.rtf")
+    set(CPACK_WIX_PRODUCT_ICON "${PROJECT_SOURCE_DIR}/src/advc/icon.ico")
+    set(CPACK_WIX_UI_BANNER "${PROJECT_SOURCE_DIR}/cmake/resources/banner.png")
+    set(CPACK_WIX_UI_DIALOG "${PROJECT_SOURCE_DIR}/cmake/resources/dialog.png")
 endif()
 
 include(CPack)
