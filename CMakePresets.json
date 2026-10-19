@@ -242,6 +242,16 @@
             "name": "win64-debug",
             "displayName": "Windows x64 (debug)",
             "configurePreset": "win64-debug"
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux (release)",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux (debug)",
+            "configurePreset": "linux-debug"
         }
     ],
     "workflowPresets": [
