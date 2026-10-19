@@ -36,7 +36,7 @@ VM_TYPE(vm) /**< Opaque handle to a virtual machine instance. */
  * @brief   Handle of an interned string.
  * @details Handle identifying an interned string in the VM string pool.
  * @var     vm_string_h::handle
- * Handle, contains the value 0 if not defined.
+ * Handle, contains the value 0 if empty string.
  */
 VM_HANDLE(vm_string)
 
