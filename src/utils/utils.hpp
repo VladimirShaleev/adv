@@ -35,6 +35,13 @@
 #include <utility>
 #include <vector>
 
+#ifdef USE_FMT_LIBRARY
+#include <fmt/format.h>
+#else
+#include <format>
+namespace fmt = std;
+#endif
+
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #include <emscripten/bind.h>

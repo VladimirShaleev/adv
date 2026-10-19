@@ -16,7 +16,6 @@
 #include <charconv>
 #include <compare>
 #include <filesystem>
-#include <fmt/format.h>
 #include <fstream>
 #include <regex>
 #include <span>

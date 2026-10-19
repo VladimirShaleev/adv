@@ -1,7 +1,5 @@
 #include "translator.hpp"
 
-#include <fmt/format.h>
-
 #include <vm/vm-opcode.h>
 #include <vm/vm-script.h>
 #include <vm/vm-value.h>

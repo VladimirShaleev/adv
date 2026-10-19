@@ -40,7 +40,9 @@ set(CPACK_DEBIAN_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Vladimir Shaleev <vladimirshaleev@gmail.com>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libfmt-dev")
+if(ADV_USE_FMT)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libfmt-dev")
+endif()
 
 if(ADV_BUILD_DEB_PACKAGE)
     configure_file(
