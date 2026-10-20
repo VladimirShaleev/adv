@@ -1,0 +1,16 @@
+adv provides CMake targets:
+
+  find_package(adv CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE adv::vm adv::adv>)
+
+and also the CMake function:
+
+  find_package(adv CONFIG REQUIRED)
+  adv_compile(NAME result
+    WARN_AS_ERRORS TEXT
+    IMPORT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src/"
+    SOURCES
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/file.adv"
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/other_file.adv")
+
+output var: ${ADVC_result_OUTPUTS}

@@ -1,0 +1,4 @@
+add_executable(adv::advc IMPORTED)
+
+set_property(TARGET adv::advc APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+set_target_properties(adv::advc PROPERTIES IMPORTED_LOCATION_RELEASE "${ADVC_EXECUTABLE}")
