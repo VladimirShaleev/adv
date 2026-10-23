@@ -8,9 +8,11 @@ else()
     set(ADV_BUILD_DEFAULT ON)
 endif()
 option(ADV_USE_FMT "Use fmt (disabling it is useful for building MSI)" ON)
+option(ADV_BOOTSTRAP "Build host advc compiler for bytecode generation" ON)
 option(ADV_BUILD_ADV "Build the Adv compiler library" ON)
 option(ADV_BUILD_TOOL "Build the advc compiler tool" ${ADV_BUILD_DEFAULT})
 option(ADV_BUILD_TESTS "Build tests" ${ADV_BUILD_DEFAULT})
+
 if(ADV_USE_FMT)
     list(APPEND VCPKG_MANIFEST_FEATURES "fmt")
 endif()
@@ -60,25 +62,19 @@ target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(ADV_TARGETS utils)
 
-# include(cmake/advc-compile.cmake)
-# 
-# file(GLOB ADV_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/std/*.adv")
-# adv_compile(NAME STD
-#     WARN_AS_ERRORS TEXT
-#     IMPORT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/std"
-#     SOURCES ${ADV_SOURCES})
-
+include(cmake/adv-bootstrap.cmake)
 file(GLOB VM_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/vm/*.cpp")
 list(FILTER VM_SOURCES EXCLUDE REGEX "\\.js\\.cpp")
-add_library(vm ${VM_SOURCES} ${ADVC_STD_OUTPUTS})
+add_library(vm ${VM_SOURCES} ${STD_HEADERS})
 add_library(${PROJECT_NAME}::vm ALIAS vm)
 set_default_properties(TARGET vm STATIC VM_STATIC_BUILD)
 target_link_libraries(vm PRIVATE utils)
 target_link_libraries(vm PRIVATE $<$<BOOL:${ADV_USE_FMT}>:fmt::fmt>)
 target_precompile_headers(vm PRIVATE "src/vm/vm.hpp")
 target_include_directories(vm PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/vm")
+target_include_directories(vm PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/std")
 target_include_directories(vm PRIVATE $<TARGET_PROPERTY:utils,INCLUDE_DIRECTORIES>)
 target_include_directories(vm PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -86,24 +82,10 @@ target_include_directories(vm PUBLIC
 list(APPEND ADV_TARGETS vm)
 
 if(ADV_BUILD_ADV)
-    include(cmake/flex-install.cmake)
-    include(cmake/bison-install.cmake)
-    bison_target(parser
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/parser.yy"
-        "${CMAKE_CURRENT_BINARY_DIR}/parser.cpp")
-    flex_target(scanner
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/scanner.ll"
-        "${CMAKE_CURRENT_BINARY_DIR}/scanner.cpp")
-    add_flex_bison_dependency(scanner parser)
-    file(GLOB ADV_SOURCES CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.hpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/*.cpp")
-    list(FILTER ADV_SOURCES EXCLUDE REGEX "\\.js\\.cpp")
-    add_library(adv ${ADV_SOURCES} ${BISON_parser_OUTPUTS} ${FLEX_scanner_OUTPUTS})
+    add_library(adv ${ADV_SOURCES})
     add_library(${PROJECT_NAME}::adv ALIAS adv)
     set_default_properties(TARGET adv STATIC ADV_STATIC_BUILD)
     target_link_libraries(adv PRIVATE utils)
-    target_link_libraries(adv PRIVATE vm)
     target_link_libraries(adv PRIVATE $<$<BOOL:${ADV_USE_FMT}>:fmt::fmt>)
     target_precompile_headers(adv PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/compiler.hpp")
     target_compile_definitions(adv PRIVATE $<$<CONFIG:Debug>:YYDEBUG>)

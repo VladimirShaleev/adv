@@ -1,8 +1,11 @@
 {
   "name": "adv",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "An embeddable bytecode VM and compiler for the Adventure scripting language (vm, adv, and advc CLI)",
   "homepage": "https://github.com/VladimirShaleev/adv",
+  "dependencies": [
+    "argparse"
+  ],
   "features": {
     "fmt": {
       "description": "Build adv by linking it against fmt",
@@ -17,10 +20,7 @@
       ]
     },
     "tool": {
-      "description": "Build the advc compiler tool",
-      "dependencies": [
-        "argparse"
-      ]
+      "description": "Build the advc compiler tool"
     }
   }
 }
