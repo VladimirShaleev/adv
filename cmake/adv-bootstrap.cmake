@@ -71,7 +71,7 @@ if(ADVC_BOOTSTRAP_EXECUTABLE)
                 ${SOURCE}
                 ${STD_SOURCES}
                 ${ADVC_BOOTSTRAP_EXECUTABLE}
-            COMMENT "[bootstrap] Building ${MODULE_NAME}")
+            COMMENT "[advc] Building ${MODULE_NAME}")
     endforeach()
     set_source_files_properties(${STD_HEADERS} PROPERTIES GENERATED TRUE)
 else()

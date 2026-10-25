@@ -7,7 +7,7 @@ string(REGEX REPLACE "^([0-9]*)\\.([0-9]*)\\.([0-9]*)" "\\2" ADV_VERSION_MINOR $
 string(REGEX REPLACE "^([0-9]*)\\.([0-9]*)\\.([0-9]*)" "\\3" ADV_VERSION_MICRO ${ADV_VERSION})
 
 string(REGEX MATCH "\"name\"[ \t\n\r]*:[ \t\n\r]*\"[^\"]*\"" ADV_TMP_NAME_PAIR ${ADV_VCPKG_JSON})
-string(REGEX REPLACE "\"name\"[ \t\n\r]*:[ \t\n\r]*\"([^\"]*)\"" "\\1" ADV_NAME ${ADV_TMP_NAME_PAIR})
+string(REGEX REPLACE "\"name\"[ \t\n\r]*:[ \t\n\r]*\"([^-\"]*)[^\"]*\"" "\\1" ADV_NAME ${ADV_TMP_NAME_PAIR})
 string(REGEX MATCH "\"description\"[ \t\n\r]*:[ \t\n\r]*\"[^\"]*\"" ADV_TMP_DESCRIPTION_PAIR ${ADV_VCPKG_JSON})
 string(REGEX REPLACE "\"description\"[ \t\n\r]*:[ \t\n\r]*\"([^\"]*)\"" "\\1" ADV_DESCRIPTION ${ADV_TMP_DESCRIPTION_PAIR})
 

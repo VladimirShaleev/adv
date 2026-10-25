@@ -1,9 +1,14 @@
 {
-  "name": "adv",
+  "name": "adv-project",
   "version": "0.1.0",
   "description": "An embeddable bytecode VM and compiler for the Adventure scripting language (vm, adv, and advc CLI)",
   "homepage": "https://github.com/VladimirShaleev/adv",
   "dependencies": [
+    {
+      "name": "adv",
+      "host": true,
+      "platform": "!native"
+    },
     "argparse"
   ],
   "features": {

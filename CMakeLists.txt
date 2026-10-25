@@ -44,11 +44,9 @@ cmake_dependent_option(ADV_ENABLE_INSTALL "Enable installation" ON "CMAKE_SOURCE
 cmake_dependent_option(ADV_BUILD_DOC "Build doc" ON "CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR" OFF)
 cmake_dependent_option(ADV_BUILD_PACKAGES "Build packages" ON "ADV_ENABLE_INSTALL" OFF)
 
+find_package(argparse CONFIG REQUIRED)
 if(ADV_USE_FMT)
     find_package(fmt CONFIG REQUIRED)
-endif()
-if(ADV_BUILD_TOOL)
-    find_package(argparse CONFIG REQUIRED)
 endif()
 
 file(GLOB UTILS_SOURCES CONFIGURE_DEPENDS
@@ -60,6 +58,9 @@ target_link_libraries(utils PRIVATE $<$<BOOL:${ADV_USE_FMT}>:fmt::fmt>)
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/utils")
 target_include_directories(utils PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+if(ADV_USE_FMT)
+    target_compile_definitions(utils PUBLIC ADV_USE_FMT)
+endif()
 set(ADV_TARGETS utils)
 
 include(cmake/adv-bootstrap.cmake)

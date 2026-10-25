@@ -35,7 +35,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef USE_FMT_LIBRARY
+#ifdef ADV_USE_FMT
 #include <fmt/format.h>
 #else
 #include <format>

@@ -3,5 +3,16 @@
     "kind": "git",
     "baseline": "41c63ffe465ffa91d73af556b2757a5e78bee5ae",
     "repository": "https://github.com/microsoft/vcpkg"
-  }
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "baseline": "94f78746e68667c2ef0790f2920bcf1274968572",
+      "reference": "vcpkg-registry",
+      "repository": "https://github.com/VladimirShaleev/adv",
+      "packages": [
+        "adv"
+      ]
+    }
+  ]
 }
