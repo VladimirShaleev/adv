@@ -285,7 +285,13 @@ struct CodeGenVisitor {
             code.emitByte(VM_OPCODE_PUSH_GLOBAL_BY_NAME);
             code.emitString(sym->name);
         } else {
-            code.emitByte(VM_OPCODE_PUSH_LOCAL);
+            const auto depth = getLexicalDepth(sym->scope, node);
+            if (depth == 0) {
+                code.emitByte(VM_OPCODE_PUSH_LOCAL);
+            } else {
+                code.emitByte(VM_OPCODE_PUSH_OUTER_LOCAL);
+                code.emitByte(depth);
+            }
             code.emitUint16(sym->slot_index);
         }
     }
@@ -298,7 +304,13 @@ struct CodeGenVisitor {
                 code.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
                 code.emitString(sym->name);
             } else {
-                code.emitByte(VM_OPCODE_POP_LOCAL);
+                const auto depth = getLexicalDepth(sym->scope, node);
+                if (depth == 0) {
+                    code.emitByte(VM_OPCODE_POP_LOCAL);
+                } else {
+                    code.emitByte(VM_OPCODE_POP_OUTER_LOCAL);
+                    code.emitByte(depth);
+                }
                 code.emitUint16(sym->slot_index);
             }
         }
@@ -421,6 +433,23 @@ struct CodeGenVisitor {
             std::ref(exportVar),
             std::ref(exportFunc),
             std::ref(exportNative));
+    }
+    [[nodiscard]] adv_uint8_t getLexicalDepth(adv_scope_h scope, adv_node_t* node) {
+        auto getParentScope = [this, &node]() {
+            if (node) {
+                node = node->parent;
+            }
+            while (node && node->type != ADV_NODE_FUNCTION_DECL) {
+                node = node->parent;
+            }
+            return node ? ctx.symbolTable().getSymbol(node->func_decl.symbol)->scope : adv_scope_h{};
+        };
+        vm_uint8_t depth = 0;
+        scope = ctx.symbolTable().getScope(scope)->parent;
+        while (node && scope != getParentScope()) {
+            ++depth;
+        }
+        return depth;
     }
     const Options& options;
     Context& ctx;
@@ -619,10 +648,14 @@ adv_result_t Generator::text() {
     struct Id {
         std::string_view name;
     };
+    struct Outer {
+        adv_uint8_t frameIndex;
+        adv_uint16_t slot;
+    };
     struct Line {
         size_t index;
         std::string_view op;
-        std::variant<std::monostate, adv_sint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id> val;
+        std::variant<std::monostate, adv_uint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id, Outer> val;
     };
     std::map<std::string_view, std::pair<size_t, std::string>> strings;
     std::vector<Line> codeLines;
@@ -677,6 +710,11 @@ adv_result_t Generator::text() {
             case VM_OPCODE_POP_LOCAL:
                 op = opcode == VM_OPCODE_PUSH_LOCAL ? "push_local"sv : "pop_local"sv;
                 val = utils::readUint16(text, ip);
+                break;
+            case VM_OPCODE_PUSH_OUTER_LOCAL:
+            case VM_OPCODE_POP_OUTER_LOCAL:
+                op = opcode == VM_OPCODE_PUSH_LOCAL ? "push_outer"sv : "pop_outer"sv;
+                val = Outer{text.data()[ip++], utils::readUint16(text, ip)};
                 break;
             case VM_OPCODE_PUSH_GLOBAL:
             case VM_OPCODE_POP_GLOBAL:
@@ -874,8 +912,11 @@ adv_result_t Generator::text() {
                     } else {
                         ss << '"' << utils::escape(str) << '"';
                     }
-                } else if (std::holds_alternative<adv_sint16_t>(val)) {
-                    ss << std::get<adv_sint16_t>(val);
+                } else if (std::holds_alternative<Outer>(val)) {
+                    const auto& outer = std::get<Outer>(val);
+                    ss << (int) outer.frameIndex << ' ' << outer.slot;
+                } else if (std::holds_alternative<adv_uint16_t>(val)) {
+                    ss << std::get<adv_uint16_t>(val);
                 } else if (std::holds_alternative<adv_sint32_t>(val)) {
                     ss << std::get<adv_sint32_t>(val);
                 } else if (std::holds_alternative<adv_float32_t>(val)) {
@@ -891,7 +932,7 @@ adv_result_t Generator::text() {
         }
     }
     const auto textAsm = ss.str();
-    const auto begin = (const uint8_t*) textAsm.data();
+    const auto begin = (const uint8_t*)textAsm.data();
     const auto end = begin + textAsm.length();
     std::vector<adv_uint8_t> result(begin, end);
     _ctx.setBytecode(moduleName, std::move(result), utils::Format::Advt);

@@ -19,6 +19,7 @@ struct CallFrame {
     vm_script_h prevScript;
     vm_uint32_t argCount;
     vm_uint32_t baseStackPos;
+    vm_uint32_t staticFrameIndex;
     bool hasReturnValue;
 };
 

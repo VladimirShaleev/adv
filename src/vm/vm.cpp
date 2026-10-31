@@ -612,6 +612,7 @@ private:
         frame.prevScript = thread->script;
         frame.argCount = func.paramCount;
         frame.baseStackPos = thread->stackPos - func.paramCount;
+        frame.staticFrameIndex = 0;
         frame.hasReturnValue = func.returnType.has_value();
 
         swapScript(thread, func.script, module);
