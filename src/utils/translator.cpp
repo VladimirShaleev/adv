@@ -36,6 +36,7 @@ struct Token {
 struct Instruction {
     vm_opcode_t opcode;
     std::string_view operand;
+    std::string_view operand2;
     std::string_view label;
     vm_uint32_t line;
 };
@@ -412,6 +413,7 @@ private:
                 break;
             }
             auto isPushOp = false;
+            auto requiredOperands = 0;
             Instruction instruction{};
             instruction.line = _currentToken.line;
             if (_currentToken.type == TokenType::Identifier) {
@@ -427,29 +429,48 @@ private:
                     }
                     isPushOp = equals(_currentToken.value, "push");
                     if (!isPushOp) {
-                        instruction.opcode = parseOpcode(_currentToken.value);
+                        const auto [opcode, operands] = parseOpcode(_currentToken.value);
+                        instruction.opcode = opcode;
+                        requiredOperands = operands;
                     }
                     advance();
                 } else {
                     isPushOp = equals(firstToken, "push");
                     if (!isPushOp) {
-                        instruction.opcode = parseOpcode(firstToken);
+                        const auto [opcode, operands] = parseOpcode(firstToken);
+                        instruction.opcode = opcode;
+                        requiredOperands = operands;
                     }
                 }
             } else {
                 error("Expected instruction or label", TranslateResult::ExpectedInstruction);
             }
+            int operandIndex = 0;
             while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
                    _currentToken.type != TokenType::Eof) {
                 if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
-                    instruction.operand = _currentToken.value;
+                    if (operandIndex == 0) {
+                        instruction.operand = _currentToken.value;
+                    } else if (operandIndex == 1) {
+                        instruction.operand2 = _currentToken.value;
+                    } else {
+                        error("Too many operands for instruction", TranslateResult::UnexpectedTokenInOperand);
+                    }
+                    operandIndex++;
                 } else {
                     error("Unexpected token in operands", TranslateResult::UnexpectedTokenInOperand);
                 }
                 advance();
             }
             if (isPushOp) {
-                instruction.opcode = parsePushOpcode(instruction.operand);
+                const auto [opcode, operands] = parsePushOpcode(instruction.operand);
+                instruction.opcode = opcode;
+                requiredOperands = operands;
+            }
+            if (operandIndex != requiredOperands) {
+                error(
+                    fmt::format("Instruction requires {} operands, but got {}", requiredOperands, operandIndex),
+                    TranslateResult::SyntaxError);
             }
             pushInstruction(result, instruction);
         }
@@ -825,178 +846,184 @@ private:
         return bytecode;
     }
 
-    [[nodiscard]] vm_opcode_t parseOpcode(std::string_view str) const {
+    [[nodiscard]] std::pair<vm_opcode_t, int> parseOpcode(std::string_view str) const {
         if (equals(str, "import"sv)) {
-            return VM_OPCODE_IMPORT;
+            return {VM_OPCODE_IMPORT, 1};
         }
         if (equals(str, "push"sv)) {
             assert(!"unreachable code");
-            return VM_OPCODE_NO_OPERATION;
+            return {VM_OPCODE_NO_OPERATION, 0};
         }
         if (equals(str, "push_global"sv)) {
-            return VM_OPCODE_PUSH_GLOBAL_BY_NAME;
+            return {VM_OPCODE_PUSH_GLOBAL_BY_NAME, 1};
         }
         if (equals(str, "pop_global"sv)) {
-            return VM_OPCODE_POP_GLOBAL_BY_NAME;
+            return {VM_OPCODE_POP_GLOBAL_BY_NAME, 1};
         }
         if (equals(str, "push_local"sv)) {
-            return VM_OPCODE_PUSH_LOCAL;
+            return {VM_OPCODE_PUSH_LOCAL, 1};
         }
         if (equals(str, "pop_local"sv)) {
-            return VM_OPCODE_POP_LOCAL;
+            return {VM_OPCODE_POP_LOCAL, 1};
+        }
+        if (equals(str, "push_outer"sv)) {
+            return {VM_OPCODE_PUSH_OUTER_LOCAL, 2};
+        }
+        if (equals(str, "pop_outer"sv)) {
+            return {VM_OPCODE_POP_OUTER_LOCAL, 2};
         }
         if (equals(str, "pop"sv)) {
-            return VM_OPCODE_POP;
+            return {VM_OPCODE_POP, 0};
         }
         if (equals(str, "btoi"sv)) {
-            return VM_OPCODE_BOOL_TO_INT;
+            return {VM_OPCODE_BOOL_TO_INT, 0};
         }
         if (equals(str, "btof"sv)) {
-            return VM_OPCODE_BOOL_TO_FLOAT;
+            return {VM_OPCODE_BOOL_TO_FLOAT, 0};
         }
         if (equals(str, "btos"sv)) {
-            return VM_OPCODE_BOOL_TO_STRING;
+            return {VM_OPCODE_BOOL_TO_STRING, 0};
         }
         if (equals(str, "itob"sv)) {
-            return VM_OPCODE_INT_TO_BOOL;
+            return {VM_OPCODE_INT_TO_BOOL, 0};
         }
         if (equals(str, "itof"sv)) {
-            return VM_OPCODE_INT_TO_FLOAT;
+            return {VM_OPCODE_INT_TO_FLOAT, 0};
         }
         if (equals(str, "itos"sv)) {
-            return VM_OPCODE_INT_TO_STRING;
+            return {VM_OPCODE_INT_TO_STRING, 0};
         }
         if (equals(str, "ftob"sv)) {
-            return VM_OPCODE_FLOAT_TO_BOOL;
+            return {VM_OPCODE_FLOAT_TO_BOOL, 0};
         }
         if (equals(str, "ftoi"sv)) {
-            return VM_OPCODE_FLOAT_TO_INT;
+            return {VM_OPCODE_FLOAT_TO_INT, 0};
         }
         if (equals(str, "ftos"sv)) {
-            return VM_OPCODE_FLOAT_TO_STRING;
+            return {VM_OPCODE_FLOAT_TO_STRING, 0};
         }
         if (equals(str, "stob"sv)) {
-            return VM_OPCODE_STRING_TO_BOOL;
+            return {VM_OPCODE_STRING_TO_BOOL, 0};
         }
         if (equals(str, "stoi"sv)) {
-            return VM_OPCODE_STRING_TO_INT;
+            return {VM_OPCODE_STRING_TO_INT, 0};
         }
         if (equals(str, "stof"sv)) {
-            return VM_OPCODE_STRING_TO_FLOAT;
+            return {VM_OPCODE_STRING_TO_FLOAT, 0};
         }
         if (equals(str, "bits_not"sv)) {
-            return VM_OPCODE_BITWISE_NOT;
+            return {VM_OPCODE_BITWISE_NOT, 0};
         }
         if (equals(str, "logic_not"sv)) {
-            return VM_OPCODE_LOGICAL_NOT;
+            return {VM_OPCODE_LOGICAL_NOT, 0};
         }
         if (equals(str, "neg"sv)) {
-            return VM_OPCODE_NUMERIC_NEGATION;
+            return {VM_OPCODE_NUMERIC_NEGATION, 0};
         }
         if (equals(str, "and"sv)) {
-            return VM_OPCODE_BITWISE_AND;
+            return {VM_OPCODE_BITWISE_AND, 0};
         }
         if (equals(str, "or"sv)) {
-            return VM_OPCODE_BITWISE_OR;
+            return {VM_OPCODE_BITWISE_OR, 0};
         }
         if (equals(str, "xor"sv)) {
-            return VM_OPCODE_BITWISE_XOR;
+            return {VM_OPCODE_BITWISE_XOR, 0};
         }
         if (equals(str, "lsl"sv)) {
-            return VM_OPCODE_LOGIC_SHIFT_LEFT;
+            return {VM_OPCODE_LOGIC_SHIFT_LEFT, 0};
         }
         if (equals(str, "lsr"sv)) {
-            return VM_OPCODE_LOGIC_SHIFT_RIGHT;
+            return {VM_OPCODE_LOGIC_SHIFT_RIGHT, 0};
         }
         if (equals(str, "asl"sv)) {
-            return VM_OPCODE_ARITHMETIC_SHIFT_LEFT;
+            return {VM_OPCODE_ARITHMETIC_SHIFT_LEFT, 0};
         }
         if (equals(str, "asr"sv)) {
-            return VM_OPCODE_ARITHMETIC_SHIFT_RIGHT;
+            return {VM_OPCODE_ARITHMETIC_SHIFT_RIGHT, 0};
         }
         if (equals(str, "add"sv)) {
-            return VM_OPCODE_ADD;
+            return {VM_OPCODE_ADD, 0};
         }
         if (equals(str, "sub"sv)) {
-            return VM_OPCODE_SUBTRACT;
+            return {VM_OPCODE_SUBTRACT, 0};
         }
         if (equals(str, "mul"sv)) {
-            return VM_OPCODE_MULTIPLY;
+            return {VM_OPCODE_MULTIPLY, 0};
         }
         if (equals(str, "div"sv)) {
-            return VM_OPCODE_DIVISION;
+            return {VM_OPCODE_DIVISION, 0};
         }
         if (equals(str, "mod"sv)) {
-            return VM_OPCODE_MOD;
+            return {VM_OPCODE_MOD, 0};
         }
         if (equals(str, "eq"sv)) {
-            return VM_OPCODE_EQUAL;
+            return {VM_OPCODE_EQUAL, 0};
         }
         if (equals(str, "ne"sv)) {
-            return VM_OPCODE_NOT_EQUAL;
+            return {VM_OPCODE_NOT_EQUAL, 0};
         }
         if (equals(str, "less"sv)) {
-            return VM_OPCODE_LESS;
+            return {VM_OPCODE_LESS, 0};
         }
         if (equals(str, "less_equal"sv)) {
-            return VM_OPCODE_LESS_EQUAL;
+            return {VM_OPCODE_LESS_EQUAL, 0};
         }
         if (equals(str, "great"sv)) {
-            return VM_OPCODE_GREAT;
+            return {VM_OPCODE_GREAT, 0};
         }
         if (equals(str, "great_equal"sv)) {
-            return VM_OPCODE_GREAT_EQUAL;
+            return {VM_OPCODE_GREAT_EQUAL, 0};
         }
         if (equals(str, "call"sv)) {
-            return VM_OPCODE_CALL_BY_NAME;
+            return {VM_OPCODE_CALL_BY_NAME, 1};
         }
         if (equals(str, "call_native"sv)) {
-            return VM_OPCODE_CALL_NATIVE_BY_NAME;
+            return {VM_OPCODE_CALL_NATIVE_BY_NAME, 1};
         }
         if (equals(str, "ret"sv)) {
-            return VM_OPCODE_RETURN;
+            return {VM_OPCODE_RETURN, 0};
         }
         if (equals(str, "jump"sv)) {
-            return VM_OPCODE_JUMP;
+            return {VM_OPCODE_JUMP, 1};
         }
         if (equals(str, "jfalse"sv)) {
-            return VM_OPCODE_JUMP_IF_FALSE;
+            return {VM_OPCODE_JUMP_IF_FALSE, 1};
         }
         if (equals(str, "yield"sv)) {
-            return VM_OPCODE_YIELD;
+            return {VM_OPCODE_YIELD, 0};
         }
         if (equals(str, "wait"sv)) {
-            return VM_OPCODE_WAIT;
+            return {VM_OPCODE_WAIT, 0};
         }
         if (equals(str, "halt"sv)) {
-            return VM_OPCODE_HALT;
+            return {VM_OPCODE_HALT, 0};
         }
         error(fmt::format("Unknown opcode '{}'", str), TranslateResult::UnknownOpcode);
     }
 
-    [[nodiscard]] vm_opcode_t parsePushOpcode(std::string_view operand) const noexcept {
+    [[nodiscard]] std::pair<vm_opcode_t, int> parsePushOpcode(std::string_view operand) const noexcept {
         if (!operand.empty() && operand.front() == '"') {
-            return VM_OPCODE_PUSH_STRING_FROM_DATA;
+            return {VM_OPCODE_PUSH_STRING_FROM_DATA, 1};
         }
         if (equals(operand, "true"sv)) {
-            return VM_OPCODE_PUSH_TRUE;
+            return {VM_OPCODE_PUSH_TRUE, 0};
         }
         if (equals(operand, "false"sv)) {
-            return VM_OPCODE_PUSH_FALSE;
+            return {VM_OPCODE_PUSH_FALSE, 0};
         }
         if (const auto pos = operand.find('.'); pos != std::string_view::npos) {
             vm_float32_t floatValue{};
             if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), floatValue);
                 ec == std::errc{}) {
-                return VM_OPCODE_PUSH_FLOAT;
+                return {VM_OPCODE_PUSH_FLOAT, 1};
             }
         }
         vm_sint32_t intValue{};
         if (const auto [_, ec] = std::from_chars(operand.data(), operand.data() + operand.size(), intValue);
             ec == std::errc{}) {
-            return VM_OPCODE_PUSH_INT;
+            return {VM_OPCODE_PUSH_INT, 1};
         }
-        return VM_OPCODE_PUSH_STRING_FROM_DATA;
+        return {VM_OPCODE_PUSH_STRING_FROM_DATA, 1};
     }
 
     [[nodiscard]] static std::optional<vm_uint32_t> parseComponent(std::string_view& str, bool isLast) noexcept {
