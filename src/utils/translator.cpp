@@ -35,8 +35,7 @@ struct Token {
 
 struct Instruction {
     vm_opcode_t opcode;
-    std::string_view operand;
-    std::string_view operand2;
+    std::string_view operands[3];
     std::string_view label;
     vm_uint32_t line;
 };
@@ -449,21 +448,21 @@ private:
             while (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
                    _currentToken.type != TokenType::Eof) {
                 if (_currentToken.type == TokenType::Identifier || _currentToken.type == TokenType::String) {
-                    if (operandIndex == 0) {
-                        instruction.operand = _currentToken.value;
-                    } else if (operandIndex == 1) {
-                        instruction.operand2 = _currentToken.value;
-                    } else {
+                    if (operandIndex >= std::size(instruction.operands)) {
                         error("Too many operands for instruction", TranslateResult::UnexpectedTokenInOperand);
                     }
-                    operandIndex++;
+                    instruction.operands[operandIndex++] = _currentToken.value;
+                    if (operandIndex == 3 && instruction.opcode == VM_OPCODE_CALL_BY_NAME) {
+                        instruction.opcode = VM_OPCODE_CALL;
+                        requiredOperands = 3;
+                    }
                 } else {
                     error("Unexpected token in operands", TranslateResult::UnexpectedTokenInOperand);
                 }
                 advance();
             }
             if (isPushOp) {
-                const auto [opcode, operands] = parsePushOpcode(instruction.operand);
+                const auto [opcode, operands] = parsePushOpcode(instruction.operands[0]);
                 instruction.opcode = opcode;
                 requiredOperands = operands;
             }
@@ -573,7 +572,7 @@ private:
     void pushInstruction(Advt& result, const Instruction& instruction) {
         const auto label = instruction.label;
         const auto opcode = instruction.opcode;
-        const auto operand = instruction.operand;
+        const auto operand = instruction.operands[0];
         if (!label.empty()) {
             if (result.labelMap.contains(label)) {
                 error(fmt::format("Duplicate label identifier '{}'", label), TranslateResult::RedefinedIdentifier);
@@ -585,6 +584,11 @@ private:
         case VM_OPCODE_PUSH_LOCAL:
         case VM_OPCODE_POP_LOCAL:
             pushUint16(parseValue<vm_uint16_t>(operand), result.textSection);
+            break;
+        case VM_OPCODE_PUSH_OUTER_LOCAL:
+        case VM_OPCODE_POP_OUTER_LOCAL:
+            result.textSection.push_back(parseValue<vm_uint8_t>(operand));
+            pushUint16(parseValue<vm_uint16_t>(instruction.operands[1]), result.textSection);
             break;
         case VM_OPCODE_JUMP:
         case VM_OPCODE_JUMP_IF_FALSE:
@@ -640,6 +644,12 @@ private:
         case VM_OPCODE_CALL_BY_NAME:
             result.calls.emplace_back(operand, pollOffset(result.textSection), instruction.line);
             pushUint32(emplaceData(result, operand), result.textSection);
+            break;
+        case VM_OPCODE_CALL:
+            result.calls.emplace_back(operand, pollOffset(result.textSection), instruction.line);
+            pushUint32(0, result.textSection);
+            result.textSection.push_back(parseValue<vm_uint8_t>(instruction.operands[1]));
+            pushUint16(parseValue<vm_uint16_t>(instruction.operands[2]), result.textSection);
             break;
         default:
             break;
@@ -741,6 +751,10 @@ private:
                         false,
                         line);
                 }
+            } else if (auto it = result.labelMap.find(id); it != result.labelMap.end()) {
+                patchUint32(offsetText, it->second, result.textSection);
+            } else {
+                error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
             }
         }
     }

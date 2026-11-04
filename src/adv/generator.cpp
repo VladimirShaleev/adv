@@ -16,7 +16,7 @@ public:
         std::unordered_map<vm_string_h, adv_uint32_t>& strings,
         std::vector<uint8_t>& data,
         std::vector<uint8_t>& code,
-        std::map<adv_symbol_h, adv_uint32_t>* functions = nullptr) noexcept
+        std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>>* functions = nullptr) noexcept
         : ctx(ctx), strings(strings), data(data), code(code), functions(functions) {}
 
     void emitByte(uint8_t byte) { code.push_back(byte); }
@@ -86,7 +86,7 @@ public:
     std::unordered_map<vm_string_h, adv_uint32_t>& strings;
     std::vector<uint8_t>& data;
     std::vector<uint8_t>& code;
-    std::map<adv_symbol_h, adv_uint32_t>* functions;
+    std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>>* functions;
     adv_uint16_t count{};
 
 private:
@@ -216,7 +216,7 @@ struct CodeGenVisitor {
             }
             ++exportFunc.count;
         } else {
-            (*exportFunc.functions)[node->func_decl.symbol] = entryIp;
+            (*exportFunc.functions)[node->func_decl.symbol] = {entryIp, node};
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
@@ -399,8 +399,19 @@ struct CodeGenVisitor {
                 code.emitByte(VM_OPCODE_CALL_BY_NAME);
                 code.emitString(sym->name);
             } else {
+                const auto [entryIp, funcNode] = (*exportFunc.functions)[node->call_expr.symbol];
+                adv_uint8_t lexicalDepth = 0;
+                auto parentNode = funcNode->parent;
+                while (parentNode && parentNode != funcNode) {
+                    if (parentNode->type == ADV_NODE_FUNCTION_DECL) {
+                        ++lexicalDepth;
+                    }
+                    parentNode = parentNode->parent;
+                }
                 code.emitByte(VM_OPCODE_CALL);
-                code.emitUint32((*exportFunc.functions)[node->call_expr.symbol]);
+                code.emitUint32(entryIp);
+                code.emitByte(lexicalDepth);
+                code.emitUint16(sym->frame_slot_count);
             }
         } else {
             code.emitByte(VM_OPCODE_CALL_NATIVE_BY_NAME);
@@ -468,7 +479,7 @@ adv_result_t Generator::gen() {
     if (_ctx.bytecode().empty()) {
         std::set<vm_string_h> modules;
         std::unordered_map<vm_string_h, adv_uint32_t> strings;
-        std::map<adv_symbol_h, adv_uint32_t> functions;
+        std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>> functions;
         std::vector<uint8_t> exportTable;
         std::vector<uint8_t> exportVar;
         std::vector<uint8_t> exportFunc;
@@ -648,6 +659,11 @@ adv_result_t Generator::text() {
     struct Id {
         std::string_view name;
     };
+    struct InnerFunc {
+        std::string_view name;
+        adv_uint8_t lexicalDepth;
+        adv_uint16_t frameSlotCount;
+    };
     struct Outer {
         adv_uint8_t frameIndex;
         adv_uint16_t slot;
@@ -655,7 +671,8 @@ adv_result_t Generator::text() {
     struct Line {
         size_t index;
         std::string_view op;
-        std::variant<std::monostate, adv_uint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id, Outer> val;
+        std::variant<std::monostate, adv_uint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id, InnerFunc, Outer>
+            val;
     };
     std::map<std::string_view, std::pair<size_t, std::string>> strings;
     std::vector<Line> codeLines;
@@ -833,12 +850,14 @@ adv_result_t Generator::text() {
             case VM_OPCODE_CALL: {
                 op = "call"sv;
                 const auto address = utils::readUint32(text, ip);
+                const auto depth = text[ip++];
+                const auto slots = utils::readUint16(text, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
-                    val = Id{it->second.first};
+                    val = InnerFunc{it->second.first, depth, slots};
                 } else {
                     const auto label = genIdentifier("@function", 15);
                     auto [newIt, _] = labels.try_emplace(address, label, false);
-                    val = Id{newIt->second.first};
+                    val = InnerFunc{newIt->second.first, depth, slots};
                 }
                 break;
             }
@@ -866,6 +885,9 @@ adv_result_t Generator::text() {
                 break;
             case VM_OPCODE_HALT:
                 op = "halt"sv;
+                break;
+            case VM_OPCODE_NO_OPERATION:
+                op = "nop"sv;
                 break;
             default:
                 break;
@@ -912,9 +934,12 @@ adv_result_t Generator::text() {
                     } else {
                         ss << '"' << utils::escape(str) << '"';
                     }
+                } else if (std::holds_alternative<InnerFunc>(val)) {
+                    const auto& inner = std::get<InnerFunc>(val);
+                    ss << inner.name << ' ' << (int)inner.lexicalDepth << ' ' << inner.frameSlotCount;
                 } else if (std::holds_alternative<Outer>(val)) {
                     const auto& outer = std::get<Outer>(val);
-                    ss << (int) outer.frameIndex << ' ' << outer.slot;
+                    ss << (int)outer.frameIndex << ' ' << outer.slot;
                 } else if (std::holds_alternative<adv_uint16_t>(val)) {
                     ss << std::get<adv_uint16_t>(val);
                 } else if (std::holds_alternative<adv_sint32_t>(val)) {
