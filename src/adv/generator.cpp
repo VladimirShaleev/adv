@@ -952,8 +952,27 @@ adv_result_t Generator::text() {
                 ss << it->second.name;
                 if (it->second.isFunction) {
                     const auto& func = std::get<Function>(val);
-                    ss << " (slots: "sv << func.frameSlotCount << ", depth: "sv << (int)func.lexicalDepth
-                       << ", params: "sv << (int)func.paramCount << ", rets: "sv << (int)func.returnCount << ')';
+                    const auto hasOperands =
+                        func.lexicalDepth > 0 || func.frameSlotCount > 0 || func.paramCount > 0 || func.returnCount > 0;
+                    if (hasOperands) {
+                        auto hasPrev = false;
+                        std::array<std::pair<std::string_view, adv_uint32_t>, 4> counts{
+                            std::make_pair("depth: "sv, static_cast<adv_uint32_t>(func.lexicalDepth)),
+                            std::make_pair("slots: "sv, static_cast<adv_uint32_t>(func.frameSlotCount)),
+                            std::make_pair("params: "sv, static_cast<adv_uint32_t>(func.paramCount)),
+                            std::make_pair("rets: "sv, static_cast<adv_uint32_t>(func.returnCount))};
+                        ss << " ("sv;
+                        for (const auto& [label, count] : counts) {
+                            if (count > 0) {
+                                if (hasPrev) {
+                                    ss << ", "sv;
+                                }
+                                ss << label << count;
+                                hasPrev = true;
+                            }
+                        }
+                        ss << ')';
+                    }
                 }
                 ss << ':' << std::endl;
                 if (it->second.isFunction) {

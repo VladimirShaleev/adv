@@ -80,6 +80,46 @@ TEST(Translator, TranslatesNasmlikeSectionsAndInstructions) {
     EXPECT_FALSE(bytecode.empty());
 }
 
+TEST(Translator, ParsesFunctionProloguesAsLabels) {
+    const std::string source =
+        ".header\n"
+        "    format: ADVT\n"
+        "    version: 1.0.0\n"
+        ".export\n"
+        "    module test 0\n"
+        "    function func(): bool\n"
+        ".text\n"
+        "    call func\n"
+        "    halt\n"
+        ".function func (rets: 0, depth: 0, slots: 1, params: 0):\n"
+        "    ret\n"
+        ".function @inner:\n"
+        "    ret\n";
+
+    utils::TranslateResult result{};
+    const auto bytecode = utils::translateTextToBinary(source, result);
+
+    EXPECT_EQ(result.errorCode, utils::TranslateResult::NoError) << result.message;
+    EXPECT_FALSE(bytecode.empty());
+    EXPECT_EQ(utils::read<vm_script_export_func_t>(bytecode, 0).text_offset, 6);
+}
+
+TEST(Translator, RejectsNegativeFunctionPrologueValues) {
+    const std::string source =
+        ".header\n"
+        "    format: ADVT\n"
+        "    version: 1.0.0\n"
+        ".text\n"
+        ".function func (slots: -1):\n"
+        "    ret\n";
+
+    utils::TranslateResult result{};
+    utils::translateTextToBinary(source, result);
+
+    EXPECT_EQ(result.errorCode, utils::TranslateResult::SyntaxError);
+    EXPECT_EQ(result.line, 5);
+}
+
 TEST(Translator, ResolvesUncalledExportedFunctionOffset) {
     const std::string source =
         ".header\n"
@@ -89,12 +129,12 @@ TEST(Translator, ResolvesUncalledExportedFunctionOffset) {
         "    module other_module 0\n"
         "    var g_test: int\n"
         "    native export_native(value: bool)\n"
-        "    function sum(a: int, b: int): int 2\n"
+        "    function sum(a: int, b: int): int\n"
         ".text\n"
         "    push 2\n"
         "    pop_global g_test\n"
         "    jump label\n"
-        "sum:\n"
+        ".function sum (slots: 2):\n"
         "    push_local 0\n"
         "    push_local 1\n"
         "    add\n"
@@ -120,9 +160,9 @@ TEST(Translator, SerializesExportSymbols) {
         "    var ok: int\n"
         "    var cret: string\n"
         "    native c_func(a: float, b: string): string\n"
-        "    function myfunc(a: int, b: float): float 3\n"
+        "    function myfunc(a: int, b: float): float\n"
         ".text\n"
-        "myfunc:\n"
+        ".function myfunc (slots: 3):\n"
         "    halt\n";
 
     utils::TranslateResult result{};
@@ -158,7 +198,6 @@ TEST(Translator, SerializesExportSymbols) {
     const auto function = utils::read<vm_script_export_func_t>(bytecode, 0);
     EXPECT_EQ(utils::readString(function.name, data), "myfunc");
     EXPECT_EQ(function.text_offset, 0);
-    EXPECT_EQ(function.frame_slot_count, 3);
     EXPECT_EQ(function.return_type, VM_VALUE_TYPE_FLOAT);
     ASSERT_EQ(function.param_count, 2);
     const auto firstFunctionParam = utils::read<vm_script_export_param_t>(bytecode, 0, 0);

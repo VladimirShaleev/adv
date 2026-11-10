@@ -35,7 +35,7 @@ struct Token {
 
 struct Instruction {
     vm_opcode_t opcode;
-    std::string_view operands[3];
+    std::string_view operands[4];
     std::string_view label;
     vm_uint32_t line;
 };
@@ -62,7 +62,6 @@ struct Symbol {
     SymbolKind kind;
     std::string_view name;
     vm_value_type_t type{VM_VALUE_TYPE_UNKNOWN};
-    vm_uint16_t frameSlotCount{0};
     std::vector<SymbolParameter> parameters;
     vm_uint32_t offset{};
     vm_uint32_t line{0};
@@ -343,11 +342,6 @@ private:
                     advance();
                     symbol.type = parseExportType();
                 }
-                if (isFunction) {
-                    expect(TokenType::Identifier, "Expected function frame slot count");
-                    symbol.frameSlotCount = parseValue<vm_uint16_t>(_currentToken.value);
-                    advance();
-                }
             } else {
                 error(
                     fmt::format("Unknown export declaration '{}'", declaration),
@@ -408,14 +402,20 @@ private:
         }
         while (_currentToken.type != TokenType::Eof) {
             skipNewlinesAndComments();
-            if (_currentToken.type == TokenType::Section || _currentToken.type == TokenType::Eof) {
+            if (_currentToken.type == TokenType::Eof ||
+                (_currentToken.type == TokenType::Section && !equals(_currentToken.value, ".function"sv))) {
                 break;
             }
             auto isPushOp = false;
             auto requiredOperands = 0;
             Instruction instruction{};
             instruction.line = _currentToken.line;
-            if (_currentToken.type == TokenType::Identifier) {
+            if (_currentToken.type == TokenType::Section && equals(_currentToken.value, ".function"sv)) {
+                advance();
+                parseFunctionPrologue(instruction);
+                pushInstruction(result, instruction);
+                continue;
+            } else if (_currentToken.type == TokenType::Identifier) {
                 auto firstToken(_currentToken.value);
                 advance();
                 if (_currentToken.type == TokenType::Colon) {
@@ -452,10 +452,6 @@ private:
                         error("Too many operands for instruction", TranslateResult::UnexpectedTokenInOperand);
                     }
                     instruction.operands[operandIndex++] = _currentToken.value;
-                    if (operandIndex == 3 && instruction.opcode == VM_OPCODE_CALL_BY_NAME) {
-                        instruction.opcode = VM_OPCODE_CALL;
-                        requiredOperands = 3;
-                    }
                 } else {
                     error("Unexpected token in operands", TranslateResult::UnexpectedTokenInOperand);
                 }
@@ -472,6 +468,89 @@ private:
                     TranslateResult::SyntaxError);
             }
             pushInstruction(result, instruction);
+        }
+    }
+
+    void parseFunctionPrologue(Instruction& instruction) {
+        expect(TokenType::Identifier, "Expected function label");
+        instruction.opcode = VM_OPCODE_FUNCTION_PROLOGUE;
+        instruction.label = _currentToken.value;
+        instruction.line = _currentToken.line;
+        advance();
+
+        for (auto& operand : instruction.operands) {
+            operand = "0"sv;
+        }
+
+        if (_currentToken.type == TokenType::LParen) {
+            advance();
+            std::array<bool, 4> seen{};
+            if (_currentToken.type != TokenType::RParen) {
+                while (true) {
+                    expect(TokenType::Identifier, "Expected function prologue field");
+                    const auto field = _currentToken.value;
+                    const auto fieldLine = _currentToken.line;
+                    size_t operandIndex = 0;
+                    vm_uint64_t maxValue = std::numeric_limits<vm_uint8_t>::max();
+                    if (equals(field, "depth"sv)) {
+                        operandIndex = 0;
+                    } else if (equals(field, "slots"sv)) {
+                        operandIndex = 1;
+                        maxValue = std::numeric_limits<vm_uint16_t>::max();
+                    } else if (equals(field, "params"sv)) {
+                        operandIndex = 2;
+                    } else if (equals(field, "rets"sv)) {
+                        operandIndex = 3;
+                    } else {
+                        error(fmt::format("Unknown function prologue field '{}'", field), TranslateResult::SyntaxError);
+                    }
+                    if (seen[operandIndex]) {
+                        error(
+                            fmt::format("Duplicate function prologue field '{}'", field),
+                            TranslateResult::SyntaxError,
+                            false,
+                            fieldLine);
+                    }
+                    seen[operandIndex] = true;
+                    advance();
+                    expect(TokenType::Colon, "Expected ':' after function prologue field");
+                    advance();
+                    expect(TokenType::Identifier, "Expected non-negative function prologue value");
+                    const auto value = _currentToken.value;
+                    const auto valueLine = _currentToken.line;
+                    const auto parsedValue = parseValue<vm_sint64_t>(value);
+                    if (parsedValue < 0) {
+                        error(
+                            "Function prologue values must be non-negative",
+                            TranslateResult::SyntaxError,
+                            false,
+                            valueLine);
+                    }
+                    if (static_cast<vm_uint64_t>(parsedValue) > maxValue) {
+                        error(
+                            fmt::format("Function prologue value out of range '{}'", value),
+                            TranslateResult::ValueOutOfRange,
+                            false,
+                            valueLine);
+                    }
+                    instruction.operands[operandIndex] = value;
+                    advance();
+                    if (_currentToken.type == TokenType::RParen) {
+                        break;
+                    }
+                    expect(TokenType::Comma, "Expected ',' or ')' after function prologue field");
+                    advance();
+                }
+            }
+            expect(TokenType::RParen, "Expected ')' after function prologue fields");
+            advance();
+        }
+
+        expect(TokenType::Colon, "Expected ':' after function prologue");
+        advance();
+        if (_currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
+            _currentToken.type != TokenType::Section && _currentToken.type != TokenType::Eof) {
+            error("Unexpected token after function prologue", TranslateResult::SyntaxError);
         }
     }
 
@@ -559,8 +638,8 @@ private:
     [[nodiscard]] T parseValue(std::string_view str) const {
         static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>);
         T val{};
-        const auto [_, ec] = std::from_chars(str.data(), str.data() + str.length(), val);
-        if (ec == std::errc()) {
+        const auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), val);
+        if (ec == std::errc() && ptr == str.data() + str.length()) {
             return val;
         } else if (ec == std::errc::result_out_of_range) {
             error(fmt::format("Value out of range '{}'", str), TranslateResult::ValueOutOfRange);
@@ -639,6 +718,12 @@ private:
                 result.variables.emplace_back(operand, pollOffset(result.textSection), instruction.line);
             }
             pushUint32(emplaceData(result, operand), result.textSection);
+            break;
+        case VM_OPCODE_FUNCTION_PROLOGUE:
+            result.textSection.push_back(parseValue<vm_uint8_t>(instruction.operands[0]));
+            pushUint16(parseValue<vm_uint16_t>(instruction.operands[1]), result.textSection);
+            result.textSection.push_back(parseValue<vm_uint8_t>(instruction.operands[2]));
+            result.textSection.push_back(parseValue<vm_uint8_t>(instruction.operands[3]));
             break;
         case VM_OPCODE_CALL_NATIVE_BY_NAME:
         case VM_OPCODE_CALL_BY_NAME:
@@ -752,6 +837,7 @@ private:
                         line);
                 }
             } else if (auto it = result.labelMap.find(id); it != result.labelMap.end()) {
+                result.textSection[offsetText - 1] = VM_OPCODE_CALL;
                 patchUint32(offsetText, it->second, result.textSection);
             } else {
                 error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
@@ -788,8 +874,7 @@ private:
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Function) {
                 params.clear();
-                vm_script_export_func_t func{
-                    emplaceData(result, symbol.name), symbol.offset, (vm_uint8_t)symbol.type};
+                vm_script_export_func_t func{emplaceData(result, symbol.name), symbol.offset, (vm_uint8_t)symbol.type};
                 exports.func_count++;
                 exports.func_size += sizeof(func);
                 for (const auto& param : symbol.parameters) {
