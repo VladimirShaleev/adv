@@ -280,7 +280,6 @@ template <typename AliasedType, typename Type>
     auto result = exportFunc;
     result.name = swapBytes(result.name);
     result.text_offset = swapBytes(result.text_offset);
-    result.frame_slot_count = swapBytes(result.frame_slot_count);
     return result;
 }
 

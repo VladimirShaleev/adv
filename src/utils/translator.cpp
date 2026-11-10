@@ -789,7 +789,7 @@ private:
             if (symbol.kind == SymbolKind::Function) {
                 params.clear();
                 vm_script_export_func_t func{
-                    emplaceData(result, symbol.name), symbol.offset, symbol.frameSlotCount, (vm_uint8_t)symbol.type};
+                    emplaceData(result, symbol.name), symbol.offset, (vm_uint8_t)symbol.type};
                 exports.func_count++;
                 exports.func_size += sizeof(func);
                 for (const auto& param : symbol.parameters) {

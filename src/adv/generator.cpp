@@ -195,9 +195,23 @@ struct CodeGenVisitor {
     void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
         const auto jumpOverBody = code.emitJump(VM_OPCODE_JUMP);
         const auto entryIp = static_cast<uint32_t>(code.offset());
-
-        acceptNode(node->func_decl.body);
         const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
+
+        adv_uint8_t lexicalDepth = 0;
+        auto parentNode = node->parent;
+        while (parentNode) {
+            if (parentNode->type == ADV_NODE_FUNCTION_DECL) {
+                ++lexicalDepth;
+            }
+            parentNode = parentNode->parent;
+        }
+
+        code.emitByte(VM_OPCODE_FUNCTION_PROLOGUE);
+        code.emitByte(lexicalDepth);
+        code.emitUint16(sym->frame_slot_count);
+        code.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
+        code.emitByte(static_cast<adv_uint8_t>(sym->type == VM_VALUE_TYPE_VOID ? 0 : 1));
+        acceptNode(node->func_decl.body);
         if (sym->type == VM_VALUE_TYPE_VOID) {
             code.emitByte(VM_OPCODE_RETURN);
         }
@@ -400,18 +414,8 @@ struct CodeGenVisitor {
                 code.emitString(sym->name);
             } else {
                 const auto [entryIp, funcNode] = (*exportFunc.functions)[node->call_expr.symbol];
-                adv_uint8_t lexicalDepth = 0;
-                auto parentNode = funcNode->parent;
-                while (parentNode && parentNode != funcNode) {
-                    if (parentNode->type == ADV_NODE_FUNCTION_DECL) {
-                        ++lexicalDepth;
-                    }
-                    parentNode = parentNode->parent;
-                }
                 code.emitByte(VM_OPCODE_CALL);
                 code.emitUint32(entryIp);
-                code.emitByte(lexicalDepth);
-                code.emitUint16(sym->frame_slot_count);
             }
         } else {
             code.emitByte(VM_OPCODE_CALL_NATIVE_BY_NAME);
@@ -557,7 +561,7 @@ adv_result_t Generator::text() {
     std::set<std::string> identifiers;
     identifiers.insert("true");
     identifiers.insert("false");
-    auto genIdentifier = [&identifiers](std::string_view str, size_t maxNameLength = 7) {
+    auto genIdentifier = [&identifiers](std::string_view str, size_t maxNameLength = 7) -> std::string_view {
         std::string base;
         if (str.empty() || !std::isalpha(static_cast<unsigned char>(str.front()))) {
             if (str.front() != '@') {
@@ -572,21 +576,28 @@ adv_result_t Generator::text() {
                 break;
             }
         }
-        if (const auto [_, inserted] = identifiers.insert(base); inserted) {
-            return base;
+        if (const auto [it, inserted] = identifiers.insert(base); inserted) {
+            return *it;
         }
         for (size_t suffix = 2;; ++suffix) {
             auto name = base + std::to_string(suffix);
-            if (identifiers.insert(name).second) {
-                return name;
+            if (auto [it, inserted] = identifiers.insert(name); inserted) {
+                return *it;
             }
         }
     };
+    auto genLabelIdentifier = [&]() { return genIdentifier("label"); };
+    auto getFuncIdentifier = [&]() { return genIdentifier("@function", 15); };
 
+    struct Label {
+        std::string_view name;
+        bool isGlobal;
+        bool isFunction;
+    };
     std::unordered_map<std::string_view, adv_uint32_t> functions;
     const auto exports = utils::read<vm_script_export_t>(bytecode);
     const auto moduleName = utils::readString(exports.module_name, data);
-    std::map<adv_uint32_t, std::pair<std::string, bool>> labels;
+    std::map<adv_uint32_t, Label> labels;
     ss << std::endl << ".export"sv << std::endl;
     ss << tab << "module "sv << moduleName << " "sv << exports.root_frame_slots << std::endl;
     for (size_t i = 0; i < exports.var_count; ++i) {
@@ -648,21 +659,22 @@ adv_result_t Generator::text() {
         if (!ret.empty()) {
             ss << ": "sv << ret;
         }
-        ss << ' ' << fun.frame_slot_count << std::endl;
+        ss << std::endl;
         if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
         functions[name] = fun.text_offset;
-        labels.try_emplace(fun.text_offset, name, true);
+        labels.try_emplace(fun.text_offset, name, true, true);
     }
 
     struct Id {
         std::string_view name;
     };
-    struct InnerFunc {
-        std::string_view name;
+    struct Function {
         adv_uint8_t lexicalDepth;
         adv_uint16_t frameSlotCount;
+        adv_uint8_t paramCount;
+        adv_uint8_t returnCount;
     };
     struct Outer {
         adv_uint8_t frameIndex;
@@ -671,10 +683,10 @@ adv_result_t Generator::text() {
     struct Line {
         size_t index;
         std::string_view op;
-        std::variant<std::monostate, adv_uint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id, InnerFunc, Outer>
+        std::variant<std::monostate, adv_uint16_t, adv_sint32_t, adv_float32_t, std::string_view, Id, Function, Outer>
             val;
     };
-    std::map<std::string_view, std::pair<size_t, std::string>> strings;
+    std::map<std::string_view, std::pair<size_t, std::string_view>> strings;
     std::vector<Line> codeLines;
     codeLines.reserve(text.size());
     if (!text.empty()) {
@@ -838,6 +850,20 @@ adv_result_t Generator::text() {
             case VM_OPCODE_GREAT_EQUAL:
                 op = "great_equal"sv;
                 break;
+            case VM_OPCODE_FUNCTION_PROLOGUE: {
+                const auto address = static_cast<adv_uint32_t>(index);
+                const auto lexicalDepth = text.data()[ip++];
+                const auto frameSlotCount = utils::readUint16(text, ip);
+                const auto paramCount = text.data()[ip++];
+                const auto returnCount = text.data()[ip++];
+                if (auto it = labels.find(address); it == labels.end()) {
+                    const auto label = getFuncIdentifier();
+                    labels.try_emplace(address, label, false, true);
+                }
+                val = Function{lexicalDepth, frameSlotCount, paramCount, returnCount};
+                op = "@"sv;
+                break;
+            }
             case VM_OPCODE_CALL_NATIVE:
                 return ADV_RESULT_ERROR_INVALID_ARG;
             case VM_OPCODE_CALL_NATIVE_BY_NAME:
@@ -850,14 +876,12 @@ adv_result_t Generator::text() {
             case VM_OPCODE_CALL: {
                 op = "call"sv;
                 const auto address = utils::readUint32(text, ip);
-                const auto depth = text[ip++];
-                const auto slots = utils::readUint16(text, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
-                    val = InnerFunc{it->second.first, depth, slots};
+                    val = Id{it->second.name};
                 } else {
-                    const auto label = genIdentifier("@function", 15);
-                    auto [newIt, _] = labels.try_emplace(address, label, false);
-                    val = InnerFunc{newIt->second.first, depth, slots};
+                    const auto label = getFuncIdentifier();
+                    auto [newIt, _] = labels.try_emplace(address, Label{label, false, true});
+                    val = Id{newIt->second.name};
                 }
                 break;
             }
@@ -869,11 +893,11 @@ adv_result_t Generator::text() {
                 op = opcode == VM_OPCODE_JUMP ? "jump"sv : "jfalse"sv;
                 const auto address = utils::readUint32(text, ip);
                 if (auto it = labels.find(address); it != labels.end()) {
-                    val = Id{it->second.first};
+                    val = Id{it->second.name};
                 } else {
-                    const auto label = genIdentifier("label");
-                    auto [newIt, _] = labels.try_emplace(address, label, false);
-                    val = Id{newIt->second.first};
+                    const auto label = genLabelIdentifier();
+                    auto [newIt, _] = labels.try_emplace(address, Label{label, false, false});
+                    val = Id{newIt->second.name};
                 }
                 break;
             }
@@ -916,10 +940,25 @@ adv_result_t Generator::text() {
         for (const auto& [index, op, val] : codeLines) {
             std::string label{tab.data(), tab.length()};
             if (auto it = labels.find(index); it != labels.end()) {
-                if (it->second.second || prevOp == "ret"sv) {
+                if (it->second.isGlobal || prevOp == "ret"sv) {
                     ss << std::endl;
                 }
-                ss << it->second.first << ':' << std::endl;
+                if (it->second.isFunction) {
+                    if (op != "@"sv) {
+                        return ADV_RESULT_ERROR_INVALID_ARG;
+                    }
+                    ss << ".function "sv;
+                }
+                ss << it->second.name;
+                if (it->second.isFunction) {
+                    const auto& func = std::get<Function>(val);
+                    ss << " (slots: "sv << func.frameSlotCount << ", depth: "sv << (int)func.lexicalDepth
+                       << ", params: "sv << (int)func.paramCount << ", rets: "sv << (int)func.returnCount << ')';
+                }
+                ss << ':' << std::endl;
+                if (it->second.isFunction) {
+                    continue;
+                }
             }
             ss << label << op;
             if (val.index() != 0) {
@@ -934,9 +973,6 @@ adv_result_t Generator::text() {
                     } else {
                         ss << '"' << utils::escape(str) << '"';
                     }
-                } else if (std::holds_alternative<InnerFunc>(val)) {
-                    const auto& inner = std::get<InnerFunc>(val);
-                    ss << inner.name << ' ' << (int)inner.lexicalDepth << ' ' << inner.frameSlotCount;
                 } else if (std::holds_alternative<Outer>(val)) {
                     const auto& outer = std::get<Outer>(val);
                     ss << (int)outer.frameIndex << ' ' << outer.slot;

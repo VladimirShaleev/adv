@@ -113,7 +113,6 @@ typedef struct
 {
     vm_uint32_t name; /**< Offset or index of the function name in the data block. */
     vm_uint32_t text_offset; /**< Byte offset of the function body in the text block. */
-    vm_uint16_t frame_slot_count; /**< Number of slots reserved for the function frame. */
     vm_uint8_t  return_type; /**< Type code returned by the function. */
     vm_uint8_t  param_count; /**< Number of parameters expected by the function. */
     /* vm_script_export_param_t params[param_count]; */
