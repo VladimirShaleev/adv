@@ -235,6 +235,9 @@ public:
     }
 
 private:
+    static constexpr vm_uint32_t VM_CALL_GLOBAL_FLAG = 0x80000000;
+    static constexpr vm_uint32_t VM_CALL_OFFSET_MASK = ~VM_CALL_GLOBAL_FLAG;
+
     void stepThread(ScriptThread* thread) {
         auto module = _moduleManager.getModule(thread->script);
         auto text = module->text();
@@ -316,6 +319,18 @@ private:
                 push(thread, thread->stack[localSlot], log);
                 break;
             }
+            case VM_OPCODE_PUSH_OUTER_LOCAL: {
+                const auto depth = text[thread->instructionPos++];
+                const auto slot = utils::readUint16(text, thread->instructionPos);
+                vm_uint32_t frameIdx = thread->frameCount - 1;
+                for (vm_uint32_t i = 0; i < depth; ++i) {
+                    frameIdx = thread->frames[frameIdx].staticFrameIndex;
+                }
+                const auto& targetFrame = thread->frames[frameIdx];
+                const auto localSlot = targetFrame.baseStackPos + slot;
+                push(thread, thread->stack[localSlot], log);
+                break;
+            }
             case VM_OPCODE_POP_GLOBAL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveVar(name); slot != Undefined) {
@@ -338,6 +353,18 @@ private:
                 const auto val = pop(thread, log);
                 const auto localSlot = currentFrame.baseStackPos + slot;
                 thread->stack[localSlot] = val;
+                break;
+            }
+            case VM_OPCODE_POP_OUTER_LOCAL: {
+                const auto depth = text[thread->instructionPos++];
+                const auto slot = utils::readUint16(text, thread->instructionPos);
+                vm_uint32_t frameIdx = thread->frameCount - 1;
+                for (vm_uint32_t i = 0; i < depth; ++i) {
+                    frameIdx = thread->frames[frameIdx].staticFrameIndex;
+                }
+                const auto& targetFrame = thread->frames[frameIdx];
+                const auto localSlot = targetFrame.baseStackPos + slot;
+                thread->stack[localSlot] = pop(thread, log);
                 break;
             }
             case VM_OPCODE_POP:
@@ -442,6 +469,40 @@ private:
             case VM_OPCODE_GREAT_EQUAL:
                 operation<GreatEqual>(thread, log);
                 break;
+            case VM_OPCODE_FUNCTION_PROLOGUE: {
+                const auto depth = text[thread->instructionPos++];
+                const auto slots = utils::readUint16(text, thread->instructionPos);
+                const auto params = text[thread->instructionPos++];
+                const auto rets = text[thread->instructionPos++];
+                auto& frame = thread->frames[thread->frameCount - 1];
+                frame.argCount = params;
+                frame.baseStackPos -= params;
+                frame.hasReturnValue = rets != 0;
+                frame.lexicalDepth = depth;
+                thread->stackPos += slots - params;
+                if (depth == 0) {
+                    frame.staticFrameIndex = 0;
+                } else if (thread->frameCount > 1) {
+                    const auto prevIdx = thread->frameCount - 2;
+                    const auto prevDepth = thread->frames[prevIdx].lexicalDepth;
+                    if (prevDepth >= depth) {
+                        frame.staticFrameIndex = thread->frames[prevIdx].staticFrameIndex;
+                    } else if (prevDepth == depth - 1) {
+                        frame.staticFrameIndex = prevIdx;
+                    } else {
+                        vm_uint32_t parentIdx = prevIdx;
+                        const vm_uint32_t targetDepth = depth - 1;
+                        while (parentIdx > 0 && thread->frames[parentIdx].lexicalDepth != targetDepth) {
+                            parentIdx--;
+                        }
+                        frame.staticFrameIndex = parentIdx;
+                    }
+                } else {
+                    const auto message = fmt::format("Function prologue with depth {} is invalid", depth);
+                    log(message.c_str());
+                }
+                break;
+            }
             case VM_OPCODE_CALL_NATIVE_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto native = _nativeManager.find(name); native != Undefined) {
@@ -463,9 +524,9 @@ private:
             case VM_OPCODE_CALL_BY_NAME: {
                 const auto name = utils::readString(text, thread->instructionPos, data);
                 if (auto slot = _globalManager.resolveFunc(name); slot != Undefined) {
-                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL, slot.handle);
+                    module->modifyOpcode(thread->instructionPos - 5, VM_OPCODE_CALL, slot.handle | VM_CALL_GLOBAL_FLAG);
                     const auto& func = _globalManager.getFunc(slot);
-                    call(thread, func, module, log);
+                    call(thread, func.offset, func.script, module, log);
                     text = module->text();
                     data = module->data();
                 } else {
@@ -475,9 +536,14 @@ private:
                 break;
             }
             case VM_OPCODE_CALL: {
-                const auto slot = utils::readUint32(text, thread->instructionPos);
-                const auto& func = _globalManager.getFunc({slot});
-                call(thread, func, module, log);
+                const auto address = utils::readUint32(text, thread->instructionPos);
+                if (address & VM_CALL_GLOBAL_FLAG) {
+                    const auto slot = address & VM_CALL_OFFSET_MASK;
+                    const auto& func = _globalManager.getFunc({slot});
+                    call(thread, func.offset, func.script, module, log);
+                } else {
+                    call(thread, address, thread->script, module, log);
+                }
                 text = module->text();
                 data = module->data();
                 break;
@@ -601,7 +667,7 @@ private:
     }
 
     template <typename Logger>
-    void call(ScriptThread* thread, const GlobalManager::Func& func, Module*& module, Logger&& log) {
+    void call(ScriptThread* thread, vm_uint32_t address, vm_script_h script, Module*& module, Logger&& log) {
         if (thread->frameCount >= MaxFrames) {
             log("Call Stack Overflow in thread");
             thread->state = ThreadState::Dead;
@@ -610,14 +676,11 @@ private:
         auto& frame = thread->frames[thread->frameCount++];
         frame.returnInstructionPos = thread->instructionPos;
         frame.prevScript = thread->script;
-        frame.argCount = func.paramCount;
-        frame.baseStackPos = thread->stackPos - func.paramCount;
-        frame.staticFrameIndex = 0;
-        frame.hasReturnValue = func.returnType.has_value();
+        frame.baseStackPos = thread->stackPos;
 
-        swapScript(thread, func.script, module);
-        thread->stackPos = frame.baseStackPos + func.frameSlotCount;
-        thread->instructionPos = func.offset;
+        swapScript(thread, script, module);
+        thread->stackPos = frame.baseStackPos;
+        thread->instructionPos = address;
     }
 
     void swapScript(ScriptThread* thread, vm_script_h script, Module*& module) noexcept {

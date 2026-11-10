@@ -23,7 +23,7 @@ void GlobalManager::addGlobals(vm_script_h script, std::span<const uint8_t> byte
         if (fun.return_type >= VM_VALUE_TYPE_BOOL && fun.return_type <= VM_VALUE_TYPE_STRING) {
             returnType = static_cast<vm_value_type_t>(fun.return_type);
         }
-        addGlobalFun(name, fun.param_count, fun.frame_slot_count, script, fun.text_offset, returnType);
+        addGlobalFun(name, fun.param_count, script, fun.text_offset, returnType);
     }
 }
 
@@ -57,12 +57,11 @@ void GlobalManager::addGlobalVar(std::string_view name, vm_value_type_t type) {
 void GlobalManager::addGlobalFun(
     std::string_view name,
     vm_uint16_t paramCount,
-    vm_uint16_t frameSlotCount,
     vm_script_h script,
     vm_uint32_t offset,
     std::optional<vm_value_type_t> returnType) {
     const auto str = _cache.pool.insert(name);
-    const auto _ = _funcs.emplace(str, script, offset, paramCount, frameSlotCount, returnType);
+    const auto _ = _funcs.emplace(str, script, offset, paramCount, returnType);
 }
 
 } // namespace vm

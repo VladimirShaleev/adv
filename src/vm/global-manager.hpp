@@ -19,7 +19,6 @@ public:
         vm_script_h script;
         vm_uint32_t offset;
         vm_uint16_t paramCount;
-        vm_uint16_t frameSlotCount;
         std::optional<vm_value_type_t> returnType;
     };
 
@@ -39,7 +38,6 @@ private:
     void addGlobalFun(
         std::string_view name,
         vm_uint16_t paramCount,
-        vm_uint16_t frameSlotCount,
         vm_script_h script,
         vm_uint32_t offset,
         std::optional<vm_value_type_t> returnType);

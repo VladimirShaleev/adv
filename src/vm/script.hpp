@@ -20,6 +20,7 @@ struct CallFrame {
     vm_uint32_t argCount;
     vm_uint32_t baseStackPos;
     vm_uint32_t staticFrameIndex;
+    vm_uint8_t lexicalDepth;
     bool hasReturnValue;
 };
 
