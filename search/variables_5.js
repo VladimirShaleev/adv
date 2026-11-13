@@ -6,7 +6,7 @@ var searchData=
   ['first_5fparam_3',['first_param',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8func__decl.html#a3ca4735ee7cf648f9e77550e3ec3990e',1,'adv_node_t::[struct].unnamed.func_decl']]],
   ['first_5fstmt_4',['first_stmt',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8stmts.html#a402efe346f91d5da845114c9fcb652a3',1,'adv_node_t::[struct].unnamed.stmts']]],
   ['float_5fval_5',['float_val',['../unionadv__node__t_1_1_0funion_0e_8unnamed.html#ad59c32a93e0c03f987f8784764bec5d7',1,'adv_node_t::[union].unnamed']]],
-  ['frame_5fslot_5fcount_6',['frame_slot_count',['../structadv__symbol__t.html#a38df295ca565afd47de7b709ec93a0a8',1,'adv_symbol_t::frame_slot_count'],['../structvm__script__export__func__t.html#a3af2f83b0207183598dbf39a78118612',1,'vm_script_export_func_t::frame_slot_count']]],
+  ['frame_5fslot_5fcount_6',['frame_slot_count',['../structadv__symbol__t.html#a38df295ca565afd47de7b709ec93a0a8',1,'adv_symbol_t']]],
   ['from_5ftype_7',['from_type',['../structadv__node__t_1_1_0fstruct_0e_8unnamed_8cast__expr.html#a6dfff262f365b94cf5716d6498ac3933',1,'adv_node_t::[struct].unnamed.cast_expr']]],
   ['func_5fcount_8',['func_count',['../structvm__script__export__t.html#ad9b7990b4ff4c641839d6083dbc1f045',1,'vm_script_export_t']]],
   ['func_5fdecl_9',['func_decl',['../unionadv__node__t_1_1_0funion_0e_8unnamed.html#a9fc2445e714fab642d7da0cbbd044e84',1,'adv_node_t::[union].unnamed']]],
