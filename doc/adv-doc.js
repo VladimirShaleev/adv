@@ -112,8 +112,10 @@ var answer: int = fibonacci(8);
       const viewStates = new Map();
       const openFiles = [];
       const compileButton = document.getElementById("adv-editor-compile");
+      const compilerOutput = document.getElementById("adv-compiler-output");
       const compilerMessages = document.getElementById("adv-compiler-messages");
       const compilerAssembly = document.getElementById("adv-compiler-assembly");
+      const compilerPlaceholder = compilerAssembly.firstElementChild.cloneNode(true);
       let activeFile;
       let pendingDelete;
       let editor;
@@ -142,9 +144,16 @@ var answer: int = fibonacci(8);
         });
       }
 
+      function restoreCompilerPlaceholder() {
+        compilerMessages.textContent = "";
+        compilerAssembly.replaceChildren(compilerPlaceholder.cloneNode(true));
+        compilerOutput.hidden = false;
+      }
+
       async function compileActiveFile() {
         compilerAssembly.replaceChildren();
         compilerMessages.textContent = "";
+        compilerOutput.hidden = true;
         if (!activeFile || !models.has(activeFile)) {
           status.textContent = "Open a file before compiling.";
           return;
@@ -183,10 +192,12 @@ var answer: int = fibonacci(8);
           result = compiler.compile(null, sources, options);
           compilerMessages.textContent = result.messages.map(formatCompilerMessage).join("\n");
           if (result.hasErrors) {
+            compilerOutput.hidden = false;
             status.textContent = "Compilation failed.";
             return;
           }
           showCompilerOutput(outputs);
+          compilerOutput.hidden = false;
           const details = [];
           if (result.hasWarnings) {
             details.push("warnings");
@@ -195,12 +206,13 @@ var answer: int = fibonacci(8);
             details.push("notes");
           }
           status.textContent = details.length
-            ? `Compilation succeeded with ${details.join(" and ")}.`
-            : "Compilation succeeded.";
+            ? `Compilation succeeded with ${details.join(" and ")}`
+            : "Compilation succeeded";
         } catch (error) {
           compilerAssembly.replaceChildren();
           compilerMessages.textContent = error instanceof Error ? error.message : String(error);
-          status.textContent = "Compilation failed.";
+          compilerOutput.hidden = false;
+          status.textContent = "Compilation failed";
         } finally {
           if (result) {
             result.delete();
@@ -339,29 +351,28 @@ var answer: int = fibonacci(8);
       }
 
       function createModel(file, contents) {
-        const encodedPath = file.split("/").map(encodeURIComponent).join("/");
-        const uri = monaco.Uri.parse(`file:///adv-playground/${encodedPath}`);
+        const uri = monaco.Uri.parse(`file:///adv-playground/${encodeURIComponent(file)}`);
         const model = monaco.editor.createModel(contents, "adv", uri);
         models.set(file, model);
       }
 
       function createFile(event) {
         event.preventDefault();
-        const path = newFilePath.value.trim().replace(/\\/g, "/");
-        if (!path || !/^[\w./-]+\.adv$/i.test(path) || path.split("/").some(part => !part || part === "." || part === "..")) {
-          status.textContent = "Use a relative .adv path without empty, . or .. path segments.";
+        const file = newFilePath.value;
+        if (!/^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/.test(file)) {
+          status.textContent = "Use a file name containing only letters, digits, _, -, and . (for example, helper.adv).";
           newFilePath.focus();
           return;
         }
-        if (models.has(path)) {
-          openFile(path);
-          status.textContent = `${path} is already in the workspace.`;
+        if (models.has(file)) {
+          openFile(file);
+          status.textContent = `${file} is already in the workspace.`;
           newFileForm.hidden = true;
           return;
         }
-        createModel(path, "");
+        createModel(file, "");
         newFileForm.hidden = true;
-        openFile(path);
+        openFile(file);
       }
 
       function resetWorkspace() {
@@ -379,26 +390,9 @@ var answer: int = fibonacci(8);
         });
         activeFile = undefined;
         openFile("main.adv");
+        restoreCompilerPlaceholder();
         status.textContent = "Example workspace restored.";
         fallback.hidden = true;
-      }
-
-      function exportWorkspace() {
-        const files = Object.fromEntries(
-          [...models.entries()].sort(([first], [second]) => first.localeCompare(second))
-            .map(([file, model]) => [file, model.getValue()])
-        );
-        const blob = new Blob([JSON.stringify(files, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "adv-workspace.json";
-        link.hidden = true;
-        document.body.append(link);
-        link.click();
-        link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        status.textContent = "Workspace downloaded as adv-workspace.json.";
       }
 
       const isDarkMode = document.documentElement.classList.contains("dark-mode");
@@ -439,8 +433,23 @@ var answer: int = fibonacci(8);
 
       document.getElementById("adv-editor-new-file").addEventListener("click", showNewFileForm);
       newFileForm.addEventListener("submit", createFile);
+      newFilePath.addEventListener("beforeinput", event => {
+        if (event.data && /[\\/]/.test(event.data)) {
+          event.preventDefault();
+          status.textContent = "File names cannot contain '/' or '\\'.";
+        }
+      });
+      newFilePath.addEventListener("paste", event => {
+        if (/[\\/]/.test(event.clipboardData.getData("text"))) {
+          event.preventDefault();
+          status.textContent = "File names cannot contain '/' or '\\'.";
+        }
+      });
       newFilePath.addEventListener("keydown", event => {
-        if (event.key === "Escape") {
+        if (event.key === "/" || event.key === "\\") {
+          event.preventDefault();
+          status.textContent = "File names cannot contain '/' or '\\'.";
+        } else if (event.key === "Escape") {
           newFileForm.hidden = true;
         }
       });
@@ -457,17 +466,7 @@ var answer: int = fibonacci(8);
         pendingDelete = undefined;
       });
       document.getElementById("adv-editor-reset").addEventListener("click", resetWorkspace);
-      document.getElementById("adv-editor-export").addEventListener("click", exportWorkspace);
       compileButton.addEventListener("click", compileActiveFile);
-
-      document.getElementById("adv-editor-copy").addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(editor.getValue());
-          status.textContent = `${activeFile} copied to clipboard.`;
-        } catch (error) {
-          status.textContent = "Could not access the clipboard. Select and copy the code manually.";
-        }
-      });
     }, () => {
       status.textContent = "The code editor failed to load. Check your connection and reload the page.";
     });

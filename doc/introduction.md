@@ -9,9 +9,7 @@ virtual machine. Try editing this example in the browser:
     <span class="adv-playground-title">Adv workspace</span>
     <div class="adv-playground-actions">
       <button class="adv-playground-button" id="adv-editor-compile" type="button">Compile</button>
-      <button class="adv-playground-button" id="adv-editor-copy" type="button">Copy file</button>
       <button class="adv-playground-button" id="adv-editor-reset" type="button">Reset</button>
-      <button class="adv-playground-button" id="adv-editor-export" type="button">Export files</button>
     </div>
   </div>
   <div class="adv-workbench">
@@ -22,7 +20,7 @@ virtual machine. Try editing this example in the browser:
       </div>
       <form class="adv-new-file-form" id="adv-new-file-form" hidden>
         <label class="adv-visually-hidden" for="adv-new-file-path">New file path</label>
-        <input id="adv-new-file-path" type="text" placeholder="path/file.adv" autocomplete="off" spellcheck="false">
+        <input id="adv-new-file-path" type="text" placeholder="filename.adv" title="File name (letters, digits, _, -, and . only)" autocomplete="off" spellcheck="false">
         <button class="adv-new-file-submit" type="submit">Add</button>
       </form>
       <ul class="adv-file-tree" id="adv-file-tree">
@@ -41,15 +39,12 @@ var answer: int = fibonacci(8);
 </code></pre>
     </div>
   </div>
-  <div class="adv-compiler-output">
-    <section class="adv-compiler-section" aria-labelledby="adv-compiler-messages-heading">
-      <h2 id="adv-compiler-messages-heading">Compiler messages</h2>
-      <pre id="adv-compiler-messages" class="adv-compiler-messages" role="status" aria-live="polite"></pre>
-    </section>
-    <section class="adv-compiler-section" aria-labelledby="adv-compiler-assembly-heading">
-      <h2 id="adv-compiler-assembly-heading">Text assembly</h2>
-      <div id="adv-compiler-assembly" class="adv-compiler-assembly"></div>
-    </section>
+  <div class="adv-compiler-output" id="adv-compiler-output">
+    <pre id="adv-compiler-messages" class="adv-compiler-messages" role="status" aria-live="polite"></pre>
+    <div id="adv-compiler-assembly" class="adv-compiler-assembly" role="region" aria-label="Compiled text assembly">
+      <pre class="adv-compiler-placeholder" aria-hidden="true">4D 5A 78 00
+0E 1F BA 0E</pre>
+    </div>
   </div>
   <dialog class="adv-confirm-dialog" id="adv-delete-file-dialog" aria-labelledby="adv-delete-file-message">
     <form class="adv-confirm-dialog-form">
