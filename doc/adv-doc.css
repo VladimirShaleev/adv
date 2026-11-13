@@ -341,6 +341,97 @@ table.memberdecls tr.groupHeader + tr td.ititle {
   font-weight: 600;
 }
 
+.adv-compiler-file code {
+  display: inline;
+  padding: 0;
+  overflow: visible;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.adv-compiler-file .asm-section {
+  color: #8a3fa0;
+}
+
+.adv-compiler-file .asm-label {
+  color: #006a8a;
+}
+
+.adv-compiler-file .asm-opcode {
+  color: #795e26;
+}
+
+.adv-compiler-file .asm-keyword {
+  color: #0000ff;
+}
+
+.adv-compiler-file .asm-type {
+  color: #267f99;
+}
+
+.adv-compiler-file .asm-value {
+  color: #267f99;
+}
+
+.adv-compiler-file .asm-property {
+  color: #0451a5;
+}
+
+.adv-compiler-file .asm-number,
+.adv-compiler-file .asm-constant {
+  color: #098658;
+}
+
+.adv-compiler-file .asm-string {
+  color: #a31515;
+}
+
+.adv-compiler-file .asm-punctuation {
+  color: var(--page-foreground-color, #333);
+}
+
+.dark-mode .adv-compiler-file .asm-section {
+  color: #c586c0;
+}
+
+.dark-mode .adv-compiler-file .asm-label {
+  color: #9cdcfe;
+}
+
+.dark-mode .adv-compiler-file .asm-opcode {
+  color: #dcdcaa;
+}
+
+.dark-mode .adv-compiler-file .asm-keyword {
+  color: #569cd6;
+}
+
+.dark-mode .adv-compiler-file .asm-type {
+  color: #4ec9b0;
+}
+
+.dark-mode .adv-compiler-file .asm-value {
+  color: #4ec9b0;
+}
+
+.dark-mode .adv-compiler-file .asm-property {
+  color: #9cdcfe;
+}
+
+.dark-mode .adv-compiler-file .asm-number {
+  color: #b5cea8;
+}
+
+.dark-mode .adv-compiler-file .asm-constant {
+  color: #569cd6;
+}
+
+.dark-mode .adv-compiler-file .asm-string {
+  color: #ce9178;
+}
+
 .adv-playground-note {
   margin: 0;
   padding: 0.5rem 0.9rem;

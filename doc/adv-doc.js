@@ -116,6 +116,7 @@ var answer: int = fibonacci(8);
       const compilerMessages = document.getElementById("adv-compiler-messages");
       const compilerAssembly = document.getElementById("adv-compiler-assembly");
       const compilerPlaceholder = compilerAssembly.firstElementChild.cloneNode(true);
+      const asmSections = new Set([".header", ".export", ".data", ".text"]);
       let activeFile;
       let pendingDelete;
       let editor;
@@ -130,6 +131,123 @@ var answer: int = fibonacci(8);
         return `${location}${severity}: ${message.message}`;
       }
 
+      function appendAsmToken(parent, className, value) {
+        if (!value) {
+          return;
+        }
+        if (!className) {
+          parent.append(document.createTextNode(value));
+          return;
+        }
+        const token = document.createElement("span");
+        token.className = className;
+        token.textContent = value;
+        parent.append(token);
+      }
+
+      function appendAsmTokens(line, text, section) {
+        const pattern = /\s+|[A-Za-z_@$][A-Za-z0-9_.$@]*|-?\d+(?:\.\d+)*|"(?:\\.|[^"\\])*"|[^\s]/gy;
+        let lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(text))) {
+          const value = match[0];
+          if (/^\s+$/.test(value)) {
+            appendAsmToken(line, "", value);
+            lastIndex = pattern.lastIndex;
+            continue;
+          }
+          appendAsmToken(line, "", text.slice(lastIndex, match.index));
+          const next = text.slice(pattern.lastIndex).match(/^\s*:/);
+          let className = "";
+          if (value.startsWith("\"")) {
+            className = "asm-string";
+          } else if (/^-?\d/.test(value)) {
+            className = "asm-number";
+          } else if (/^[A-Za-z_@$]/.test(value)) {
+            if (section === ".export" && value === "module") {
+              className = "asm-keyword";
+            } else if (section === ".export" && ["var", "native", "function"].includes(value)) {
+              className = "asm-keyword";
+            } else if (section === ".export" && ["bool", "int", "float", "string"].includes(value)) {
+              className = "asm-type";
+            } else if (section === ".header") {
+              className = next ? "asm-property" : "asm-value";
+            } else if (/^(depth|slots|params|rets)$/.test(value) && next) {
+              className = "asm-property";
+            } else if (/^(true|false)$/.test(value)) {
+              className = "asm-constant";
+            } else if (next) {
+              className = "asm-property";
+            } else {
+              className = "asm-label";
+            }
+          } else if (/^[,:()]$/.test(value)) {
+            className = "asm-punctuation";
+          }
+          appendAsmToken(line, className, value);
+          lastIndex = pattern.lastIndex;
+        }
+        appendAsmToken(line, "", text.slice(lastIndex));
+      }
+
+      function highlightAssembly(code, text) {
+        let section = "";
+        const fragment = document.createDocumentFragment();
+        text.split("\n").forEach((sourceLine, index, lines) => {
+          const line = document.createElement("span");
+          line.className = "asm-line";
+          const trimmed = sourceLine.trim();
+          if (asmSections.has(trimmed)) {
+            section = trimmed;
+            appendAsmToken(line, "asm-section", sourceLine);
+          } else if (/^\s*\.function\b/.test(sourceLine)) {
+            const match = sourceLine.match(/^(\s*)(\.function)(\s+)([A-Za-z_@$][A-Za-z0-9_.$@]*)(.*)$/);
+            if (match) {
+              appendAsmToken(line, "", match[1]);
+              appendAsmToken(line, "asm-section", match[2]);
+              appendAsmToken(line, "", match[3]);
+              appendAsmToken(line, "asm-label", match[4]);
+              appendAsmTokens(line, match[5], section);
+            } else {
+              appendAsmToken(line, "asm-section", sourceLine);
+            }
+          } else if ([".text", ".data"].includes(section) && /^\s*[A-Za-z_@$][A-Za-z0-9_.$@]*:/.test(sourceLine)) {
+            const match = sourceLine.match(/^(\s*)([A-Za-z_@$][A-Za-z0-9_.$@]*)(:)(.*)$/);
+            appendAsmToken(line, "", match[1]);
+            appendAsmToken(line, "asm-label", match[2]);
+            appendAsmToken(line, "asm-punctuation", match[3]);
+            appendAsmTokens(line, match[4], section);
+          } else if (section === ".export" && /^\s*(var|native|function)\b/.test(sourceLine)) {
+            const match = sourceLine.match(/^(\s*)(var|native|function)(\s+)([A-Za-z_@$][A-Za-z0-9_.$@]*)(.*)$/);
+            if (match) {
+              appendAsmToken(line, "", match[1]);
+              appendAsmToken(line, "asm-keyword", match[2]);
+              appendAsmToken(line, "", match[3]);
+              appendAsmToken(line, "asm-label", match[4]);
+              appendAsmTokens(line, match[5], section);
+            } else {
+              appendAsmTokens(line, sourceLine, section);
+            }
+          } else if (/^\s*module\b/.test(sourceLine) && section === ".export") {
+            appendAsmTokens(line, sourceLine, section);
+          } else if (section === ".header" && /^\s*[A-Za-z_]\w*\s*:/.test(sourceLine)) {
+            appendAsmTokens(line, sourceLine, section);
+          } else if (/^\s+\S/.test(sourceLine)) {
+            const match = sourceLine.match(/^(\s*)(\S+)(.*)$/);
+            appendAsmToken(line, "", match[1]);
+            appendAsmToken(line, "asm-opcode", match[2]);
+            appendAsmTokens(line, match[3], section);
+          } else {
+            appendAsmToken(line, "", sourceLine);
+          }
+          fragment.append(line);
+          if (index < lines.length - 1) {
+            fragment.append(document.createTextNode("\n"));
+          }
+        });
+        code.replaceChildren(fragment);
+      }
+
       function showCompilerOutput(outputs) {
         compilerAssembly.replaceChildren();
         outputs.forEach(output => {
@@ -138,7 +256,10 @@ var answer: int = fibonacci(8);
           const heading = document.createElement("h3");
           heading.textContent = output.name;
           const code = document.createElement("pre");
-          code.textContent = output.text;
+          const highlighted = document.createElement("code");
+          highlighted.className = "language-adv-asm";
+          highlightAssembly(highlighted, output.text);
+          code.append(highlighted);
           section.append(heading, code);
           compilerAssembly.append(section);
         });
