@@ -111,9 +111,106 @@ var answer: int = fibonacci(8);
       const originalContents = new Map(Object.entries(initialFiles));
       const viewStates = new Map();
       const openFiles = [];
+      const compileButton = document.getElementById("adv-editor-compile");
+      const compilerMessages = document.getElementById("adv-compiler-messages");
+      const compilerAssembly = document.getElementById("adv-compiler-assembly");
       let activeFile;
       let pendingDelete;
       let editor;
+      let compilerPromise;
+
+      function formatCompilerMessage(message) {
+        const statusCode = message.status.value;
+        const severity = message.isError ? "Error" : statusCode === 1001 ? "Note" : "Warning";
+        const location = message.filename
+          ? `${message.filename}${message.line ? `:${message.line}` : ""}${message.column ? `:${message.column}` : ""}: `
+          : "";
+        return `${location}${severity}: ${message.message}`;
+      }
+
+      function showCompilerOutput(outputs) {
+        compilerAssembly.replaceChildren();
+        outputs.forEach(output => {
+          const section = document.createElement("section");
+          section.className = "adv-compiler-file";
+          const heading = document.createElement("h3");
+          heading.textContent = output.name;
+          const code = document.createElement("pre");
+          code.textContent = output.text;
+          section.append(heading, code);
+          compilerAssembly.append(section);
+        });
+      }
+
+      async function compileActiveFile() {
+        compilerAssembly.replaceChildren();
+        compilerMessages.textContent = "";
+        if (!activeFile || !models.has(activeFile)) {
+          status.textContent = "Open a file before compiling.";
+          return;
+        }
+
+        compileButton.disabled = true;
+        status.textContent = "Compiling...";
+        let options;
+        let result;
+        try {
+          if (!compilerPromise) {
+            compilerPromise = import("./adv-js.esm.mjs")
+              .then(({ default: initializeCompiler }) => initializeCompiler())
+              .then(module => ({ module, compiler: new module.Compiler() }))
+              .catch(error => {
+                compilerPromise = undefined;
+                throw error;
+              });
+          }
+          const { module, compiler } = await compilerPromise;
+          const sources = [
+            { name: activeFile, data: models.get(activeFile).getValue() },
+            ...[...models.entries()]
+              .filter(([file]) => file !== activeFile)
+              .map(([name, model]) => ({ name, data: model.getValue() }))
+          ];
+          const outputs = [];
+          options = new module.Options();
+          options.outputFormat = module.Format.TEXT;
+          options.writer = source => {
+            const text = typeof source.data === "string"
+              ? source.data
+              : new TextDecoder().decode(source.data);
+            outputs.push({ name: source.name, text });
+          };
+          result = compiler.compile(null, sources, options);
+          compilerMessages.textContent = result.messages.map(formatCompilerMessage).join("\n");
+          if (result.hasErrors) {
+            status.textContent = "Compilation failed.";
+            return;
+          }
+          showCompilerOutput(outputs);
+          const details = [];
+          if (result.hasWarnings) {
+            details.push("warnings");
+          }
+          if (result.hasNotes) {
+            details.push("notes");
+          }
+          status.textContent = details.length
+            ? `Compilation succeeded with ${details.join(" and ")}.`
+            : "Compilation succeeded.";
+        } catch (error) {
+          compilerAssembly.replaceChildren();
+          compilerMessages.textContent = error instanceof Error ? error.message : String(error);
+          status.textContent = "Compilation failed.";
+        } finally {
+          if (result) {
+            result.delete();
+          }
+          if (options) {
+            options.delete();
+          }
+          compileButton.disabled = false;
+        }
+      }
 
       function isDirty(file) {
         return models.get(file).getValue() !== originalContents.get(file);
@@ -361,6 +458,7 @@ var answer: int = fibonacci(8);
       });
       document.getElementById("adv-editor-reset").addEventListener("click", resetWorkspace);
       document.getElementById("adv-editor-export").addEventListener("click", exportWorkspace);
+      compileButton.addEventListener("click", compileActiveFile);
 
       document.getElementById("adv-editor-copy").addEventListener("click", async () => {
         try {

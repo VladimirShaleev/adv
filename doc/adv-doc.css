@@ -298,6 +298,45 @@ table.memberdecls tr.groupHeader + tr td.ititle {
   display: none;
 }
 
+.adv-compiler-output {
+  display: grid;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-top: 1px solid var(--separator-color, #c8ccd1);
+}
+
+.adv-compiler-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.adv-compiler-messages,
+.adv-compiler-file pre {
+  max-height: 18rem;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  background: var(--side-nav-background, #f5f6f7);
+  border-radius: 0.25rem;
+  font: 0.85rem/1.5 SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: pre;
+}
+
+.adv-compiler-messages:empty,
+.adv-compiler-assembly:empty {
+  display: none;
+}
+
+.adv-compiler-file + .adv-compiler-file {
+  margin-top: 0.75rem;
+}
+
+.adv-compiler-file h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .adv-playground-note {
   margin: 0;
   padding: 0.5rem 0.9rem;

@@ -8,6 +8,7 @@ virtual machine. Try editing this example in the browser:
   <div class="adv-playground-toolbar">
     <span class="adv-playground-title">Adv workspace</span>
     <div class="adv-playground-actions">
+      <button class="adv-playground-button" id="adv-editor-compile" type="button">Compile</button>
       <button class="adv-playground-button" id="adv-editor-copy" type="button">Copy file</button>
       <button class="adv-playground-button" id="adv-editor-reset" type="button">Reset</button>
       <button class="adv-playground-button" id="adv-editor-export" type="button">Export files</button>
@@ -39,6 +40,16 @@ virtual machine. Try editing this example in the browser:
 var answer: int = fibonacci(8);
 </code></pre>
     </div>
+  </div>
+  <div class="adv-compiler-output">
+    <section class="adv-compiler-section" aria-labelledby="adv-compiler-messages-heading">
+      <h2 id="adv-compiler-messages-heading">Compiler messages</h2>
+      <pre id="adv-compiler-messages" class="adv-compiler-messages" role="status" aria-live="polite"></pre>
+    </section>
+    <section class="adv-compiler-section" aria-labelledby="adv-compiler-assembly-heading">
+      <h2 id="adv-compiler-assembly-heading">Text assembly</h2>
+      <div id="adv-compiler-assembly" class="adv-compiler-assembly"></div>
+    </section>
   </div>
   <dialog class="adv-confirm-dialog" id="adv-delete-file-dialog" aria-labelledby="adv-delete-file-message">
     <form class="adv-confirm-dialog-form">
