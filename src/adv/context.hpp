@@ -85,7 +85,7 @@ private:
     }
     std::string_view unpackArg(vm_string_h str) const noexcept { return getString(str); }
     std::string unpackArg(adv_location_t loc) const {
-        return std::format("{}:{}:{}", getString(loc.filename), loc.line, loc.column);
+        return fmt::format("{}:{}:{}", getString(loc.filename), loc.line, loc.column);
     }
 
     struct Import {
