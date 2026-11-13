@@ -50,6 +50,20 @@ set(DOXYGEN_HTML_EXTRA_STYLESHEET
     "${DOXYGEN_CSS}/doxygen-awesome-sidebar-only.css"
     "${DOXYGEN_CSS}/doxygen-awesome-sidebar-only-darkmode-toggle.css"
     "${CMAKE_CURRENT_LIST_DIR}/adv-doc.css")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(ADV_DOC_COMPILER_DIR "${PROJECT_SOURCE_DIR}/build/wasm-debug/adv-dist")
+    set(ADV_DOC_COMPILER_EXTENSIONS mjs wasm)
+else()
+    set(ADV_DOC_COMPILER_DIR "${CMAKE_CURRENT_LIST_DIR}")
+    set(ADV_DOC_COMPILER_EXTENSIONS mjs)
+endif()
+set(ADV_DOC_COMPILER_FILES)
+foreach(ADV_DOC_COMPILER_EXTENSION IN LISTS ADV_DOC_COMPILER_EXTENSIONS)
+    set(ADV_DOC_COMPILER_FILE "${ADV_DOC_COMPILER_DIR}/adv-js.esm.${ADV_DOC_COMPILER_EXTENSION}")
+    if(EXISTS "${ADV_DOC_COMPILER_FILE}")
+        list(APPEND ADV_DOC_COMPILER_FILES "${ADV_DOC_COMPILER_FILE}")
+    endif()
+endforeach()
 set(DOXYGEN_HTML_EXTRA_FILES
     "${DOXYGEN_CSS}/doxygen-awesome-darkmode-toggle.js"
     "${DOXYGEN_CSS}/doxygen-awesome-fragment-copy-button.js"
@@ -57,6 +71,7 @@ set(DOXYGEN_HTML_EXTRA_FILES
     "${DOXYGEN_CSS}/doxygen-awesome-interactive-toc.js"
     "${DOXYGEN_CSS}/doxygen-awesome-tabs.js"
     "${CMAKE_CURRENT_LIST_DIR}/adv-doc.js"
+    ${ADV_DOC_COMPILER_FILES}
     ${ADV_DOC_ICONS})
 set(DOXYGEN_HTML_COLORSTYLE LIGHT)
 set(DOXYGEN_HTML_COLORSTYLE_HUE 220)
