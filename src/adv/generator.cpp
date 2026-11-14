@@ -220,7 +220,6 @@ struct CodeGenVisitor {
         if (sym->is_global) {
             exportFunc.emitString(sym->name);
             exportFunc.emitUint32(entryIp);
-            exportFunc.emitUint16(sym->frame_slot_count);
             exportFunc.emitByte(static_cast<adv_uint8_t>(sym->type));
             exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
             for (const auto paramHandle : sym->linearParams) {
