@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sources.hpp"
 #include "utils/utils.hpp"
 #include "vm/vm.h"
 

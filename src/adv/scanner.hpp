@@ -22,6 +22,9 @@ public:
         const std::filesystem::path& basePath,
         adv_uint32_t depth)
         : yyFlexLexer(), _ctx(ctx), _options(options) {
+        for (const auto& [name, bytecode] : std_sources) {
+            _std.try_emplace(name, name.data(), (const adv_char_t*)bytecode.data(), (adv_uint32_t)bytecode.size());
+        }
         import(loc, file, sources, basePath, depth);
     }
 
@@ -100,7 +103,7 @@ private:
         std::span<const adv_source_t> sources,
         const std::filesystem::path& basePath,
         adv_uint32_t depth) {
-        const auto [path, source, needRelease] = findFile(file, sources, basePath, depth, _options);
+        const auto [path, source, needRelease] = findFile(file, _std, sources, basePath, depth, _options);
         if (path.empty()) {
             _ctx.log<ADV_STATUS_E3037>(_options, loc, file.filename().string());
             return;
@@ -161,12 +164,18 @@ private:
 
     [[nodiscard]] static std::tuple<std::filesystem::path, const adv_source_t*, bool> findFile(
         const std::filesystem::path& file,
+        const std::map<std::string_view, adv_source_t>& std,
         std::span<const adv_source_t> sources,
         const std::filesystem::path& basePath,
         adv_uint32_t depth,
         const Options& options) {
         auto filename = normalize(file, basePath);
         auto moduelName = utils::getModuleName(filename);
+
+        std::string_view moduleNameView{moduelName.c_str(), moduelName.length()};
+        if (auto it = std.find(moduleNameView); it != std.end()) {
+            return {filename, &it->second, false};
+        }
 
         adv_data_t data{};
         if (auto importer = options.getImporter(&data)) {
@@ -208,6 +217,7 @@ private:
             if (utils::isBinaryCode({source->data, source->size})) {
                 std::vector<adv_uint8_t> bytecode(
                     (adv_uint8_t*)source->data, (adv_uint8_t*)source->data + source->size);
+                _ctx.addImport(filename);
                 _ctx.setBytecode(moduleName, std::move(bytecode), utils::Format::Advb);
                 return true;
             }
@@ -284,6 +294,7 @@ private:
 
     Context& _ctx;
     const Options& _options;
+    std::map<std::string_view, adv_source_t> _std;
     std::string _filename{};
     const adv_source_t* _source{};
     bool _needRelease{};
