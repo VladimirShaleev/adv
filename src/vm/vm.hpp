@@ -17,6 +17,7 @@
 #include <compare>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <regex>
 #include <span>
 #include <unordered_map>

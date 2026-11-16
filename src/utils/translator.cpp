@@ -813,6 +813,7 @@ private:
             }
         }
         for (const auto& [id, offsetText, line] : result.calls) {
+            const auto opcode = result.textSection[offsetText - 1];
             if (auto it = result.symbolMap.find(id); it != result.symbolMap.end()) {
                 if (it->second.kind != SymbolKind::Function && it->second.kind != SymbolKind::Native) {
                     error(
@@ -820,9 +821,7 @@ private:
                         TranslateResult::InvalidIdentifierReference,
                         false,
                         line);
-                }
-                const auto opcode = result.textSection[offsetText - 1];
-                if (opcode == VM_OPCODE_CALL_NATIVE_BY_NAME && it->second.kind != SymbolKind::Native) {
+                } else if (opcode == VM_OPCODE_CALL_NATIVE_BY_NAME && it->second.kind != SymbolKind::Native) {
                     error(
                         fmt::format(
                             "The identifier '{}' does not represent a native function in the export section.", id),
@@ -839,7 +838,7 @@ private:
             } else if (auto it = result.labelMap.find(id); it != result.labelMap.end()) {
                 result.textSection[offsetText - 1] = VM_OPCODE_CALL;
                 patchUint32(offsetText, it->second, result.textSection);
-            } else {
+            } else if (opcode != VM_OPCODE_CALL_BY_NAME && opcode != VM_OPCODE_CALL_NATIVE_BY_NAME) {
                 error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
             }
         }

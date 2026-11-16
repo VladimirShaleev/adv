@@ -20,6 +20,8 @@ public:
             _cache.strInts[i] = _cache.pool.insert(std::to_string(i));
         }
         auto _ = _threads.obtain();
+        auto __ = _nativeManager.registerFunc("print", nativePrint, this);
+        auto ___ = _nativeManager.registerFunc("println", nativePrintLn, this);
     }
 
     [[nodiscard]] vm_script_h loadScript(vm_script_h script, bool forceLoad) noexcept {
@@ -624,7 +626,14 @@ private:
     vm_thread_h import(std::string_view moduleName, Logger&& log) {
         vm_thread_h result = Undefined;
         vm_script_h script = Undefined;
-        if (_importer) {
+        if (auto it = std::find_if(
+                std_sources.begin(),
+                std_sources.end(),
+                [&moduleName, &script](const auto& source) { return source.first == moduleName; });
+            it != std_sources.end()) {
+            script = loadScriptFromMemory({(const vm_char_t*)it->second.data(), it->second.size()});
+        }
+        if (script == Undefined && _importer) {
             if (auto bytecode = _importer(this, moduleName.data(), _importerData)) {
                 script = loadScriptFromMemory({bytecode->data, bytecode->size});
                 if (_releaseImport) {
@@ -657,7 +666,7 @@ private:
                 retVal = thread->stack[thread->stackPos];
             }
             thread->stackPos = thread->stackPos - native.paramCount;
-            if (thread->stackPos - native.paramCount) {
+            if (native.returnCount) {
                 assert(native.returnCount == 1);
                 thread->stack[thread->stackPos++] = retVal;
             }
@@ -760,6 +769,27 @@ private:
         }
         log("The arithmetic operation cannot be performed because the operand types do not match");
         return valueFromInt32(0);
+    }
+
+    void print(vm_thread_h thread, vm_uint16_t argCount, bool nl = false) {
+        if (argCount == 1) {
+            if (const auto arg = getArg(thread, 0); arg && arg->type == VM_VALUE_TYPE_STRING) {
+                std::cout << _cache.pool[arg->str];
+                if (nl) {
+                    std::cout << std::endl;
+                }
+            }
+        }
+    }
+
+    static void
+    nativePrint(vm_t /* vm */, vm_thread_h thread, vm_native_h /* native */, vm_uint16_t argCount, vm_data_t data) {
+        static_cast<VM*>(data)->print(thread, argCount);
+    }
+
+    static void
+    nativePrintLn(vm_t /* vm */, vm_thread_h thread, vm_native_h /* native */, vm_uint16_t argCount, vm_data_t data) {
+        static_cast<VM*>(data)->print(thread, argCount, true);
     }
 
     Cache _cache;

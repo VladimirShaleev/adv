@@ -741,7 +741,7 @@ adv_result_t Generator::text() {
                 break;
             case VM_OPCODE_PUSH_OUTER_LOCAL:
             case VM_OPCODE_POP_OUTER_LOCAL:
-                op = opcode == VM_OPCODE_PUSH_LOCAL ? "push_outer"sv : "pop_outer"sv;
+                op = opcode == VM_OPCODE_PUSH_OUTER_LOCAL ? "push_outer"sv : "pop_outer"sv;
                 val = Outer{text.data()[ip++], utils::readUint16(text, ip)};
                 break;
             case VM_OPCODE_PUSH_GLOBAL:
