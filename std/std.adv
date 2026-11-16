@@ -1,2 +1,2 @@
-import "std_io";
-import "std_math";
+import "std_io.adv";
+import "std_math.adv";
