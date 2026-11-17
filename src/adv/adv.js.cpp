@@ -154,9 +154,11 @@ private:
             jsSource.data = Data(bytes);
             break;
         }
-        case ADV_FORMAT_TEXT:
-            jsSource.data = Data(val::u8string(source->data));
+        case ADV_FORMAT_TEXT: {
+            std::string text(source->data, source->size);
+            jsSource.data = Data(val::u8string(text.c_str()));
             break;
+        }
         default:
             assert(!"unreachable code");
             break;
