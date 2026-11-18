@@ -35,7 +35,7 @@ if(NOT ADVC_BOOTSTRAP_EXECUTABLE)
         set_default_properties(TARGET advc-bootstrap)
         target_precompile_headers(advc-bootstrap PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/compiler.hpp")
         target_link_libraries(advc-bootstrap PRIVATE utils)
-        target_link_libraries(advc-bootstrap PRIVATE $<$<BOOL:${ADV_USE_FMT}>:fmt::fmt>)
+        target_link_libraries(advc-bootstrap PRIVATE $<$<BOOL:${ADV_USE_FMT}>:fmt::fmt-header-only>)
         target_link_libraries(advc-bootstrap PRIVATE argparse::argparse)
         target_include_directories(advc-bootstrap PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/adv/")
         target_include_directories(advc-bootstrap PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/std/")
@@ -65,7 +65,7 @@ if(ADVC_BOOTSTRAP_EXECUTABLE)
         list(APPEND STD_HEADERS ${STD_HEADER_FILE})
         add_custom_command(
             OUTPUT ${STD_HEADER_FILE}
-            COMMAND ${ADVC_BOOTSTRAP_EXECUTABLE} -i "${CMAKE_CURRENT_SOURCE_DIR}/std/" -w -o ${STD_BYTECODE_FILE} ${SOURCE}
+            COMMAND ${ADVC_BOOTSTRAP_EXECUTABLE} -i "${CMAKE_CURRENT_SOURCE_DIR}/std/" --nostd -w -o ${STD_BYTECODE_FILE} ${SOURCE}
             COMMAND ${CMAKE_COMMAND} 
                 -DINPUT_FILE="${STD_BYTECODE_FILE}"
                 -DOUTPUT_FILE="${STD_HEADER_FILE}"
