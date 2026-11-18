@@ -26,8 +26,9 @@ typedef enum
     ADV_SYMBOL_KIND_PARAMETER   = 1, /**< Function parameter symbol. */
     ADV_SYMBOL_KIND_NATIVE      = 2, /**< Native symbol. */
     ADV_SYMBOL_KIND_FUNCTION    = 3, /**< Function symbol. */
-    ADV_SYMBOL_KIND_STRUCT      = 4, /**< Struct symbol. */
-    ADV_SYMBOL_KIND_COUNT_ENUMS = 5, /**< Count of constants in the enumeration. */
+    ADV_SYMBOL_KIND_FIELD       = 4, /**< Field symbol. */
+    ADV_SYMBOL_KIND_STRUCTURE   = 5, /**< Struct symbol. */
+    ADV_SYMBOL_KIND_COUNT_ENUMS = 6, /**< Count of constants in the enumeration. */
     ADV_SYMBOL_KIND_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used). */
 } adv_symbol_kind_t;
 
@@ -39,11 +40,11 @@ typedef enum
 typedef struct
 {
     vm_string_h         name; /**< Interned symbol name string handle. */
-    adv_symbol_kind_t   kind; /**< Symbol kind (variable, parameter, function, struct). */
+    adv_symbol_kind_t   kind; /**< Symbol kind (variable, parameter, function, field, structure). */
     vm_value_type_t     type; /**< Resolved type of the symbol. */
     adv_location_t      location; /**< Source location of the symbol declaration. */
-    const adv_symbol_h* params; /**< Array of parameter symbols (for functions). */
-    adv_uint16_t        param_count; /**< Number of parameters (for functions). */
+    const adv_symbol_h* children; /**< Array of child symbols (function parameters or structure fields). */
+    adv_uint16_t        child_count; /**< Number of child symbols. */
     adv_scope_h         scope; /**< Handle to the scope in which the symbol is defined. */
     adv_uint16_t        slot_index; /**< Index of the symbol in the local frame or global table. */
     adv_uint16_t        frame_slot_count; /**< Number of slots used by the symbol (for functions). */

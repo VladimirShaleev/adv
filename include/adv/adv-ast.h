@@ -148,6 +148,7 @@ struct adv_node_t
             vm_string_h  name;        /**< Structure name string handle. */
             adv_node_t*  first_field; /**< Head of field declarations list. */
             adv_uint32_t field_count; /**< Number of field declarations. */
+            adv_symbol_h symbol;      /**< Handle to associated symbol. */
         } struct_decl; /**< Structure declaration payload. */
 
         /**
@@ -155,8 +156,9 @@ struct adv_node_t
          **/
         struct
         {
-            vm_string_h name;      /**< Field name string handle. */
-            vm_string_h type_hint; /**< Field type annotation handle. */
+            vm_string_h  name;      /**< Field name string handle. */
+            vm_string_h  type_hint; /**< Field type annotation handle. */
+            adv_symbol_h symbol;   /**< Handle to associated symbol. */
         } field_decl; /**< Structure field declaration payload. */
 
         /**
@@ -164,8 +166,8 @@ struct adv_node_t
          **/
         struct
         {
-            vm_string_h name;      /**< Parameter name string handle. */
-            vm_string_h type_hint; /**< Type annotation handle (0 if omitted). */
+            vm_string_h  name;      /**< Parameter name string handle. */
+            vm_string_h  type_hint; /**< Type annotation handle (0 if omitted). */
             adv_symbol_h symbol;   /**< Handle to associated symbol. */
         } param_decl; /**< Function parameter declaration payload. */
 

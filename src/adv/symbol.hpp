@@ -7,7 +7,7 @@ namespace adv {
 
 struct Symbol : adv_symbol_t {
     static constexpr adv_symbol_h Undefined = {0};
-    std::vector<adv_symbol_h> linearParams;
+    std::vector<adv_symbol_h> linearChildren;
 };
 
 struct Scope : adv_scope_t {

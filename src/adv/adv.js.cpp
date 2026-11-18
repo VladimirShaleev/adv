@@ -242,6 +242,7 @@ EMSCRIPTEN_BINDINGS(adv) {
 
     enum_<adv_status_t>("Status")
         .value("N1001", ADV_STATUS_N1001)
+        .value("N1002", ADV_STATUS_N1002)
         .value("W2001", ADV_STATUS_W2001)
         .value("W2002", ADV_STATUS_W2002)
         .value("W2003", ADV_STATUS_W2003)

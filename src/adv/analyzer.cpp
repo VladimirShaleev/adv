@@ -91,13 +91,22 @@ void Analyzer::resolveSymbols() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {
             node->parent = parent;
+            symbolTable.addSymbol(options, ctx, node);
+            if (node->struct_decl.field_count == 0) {
+                ctx.log<ADV_STATUS_N1002>(options, node->location, node->struct_decl.name);
+            }
+            symbolTable.beginScope();
             auto field = node->struct_decl.first_field;
             while (field) {
                 acceptNode(field, node);
                 field = field->next_sibling;
             }
+            symbolTable.endScope();
         }
-        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) { node->parent = parent; }
+        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {
+            node->parent = parent;
+            symbolTable.addSymbol(options, ctx, node);
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             node->parent = parent;
             auto sym = symbolTable.addSymbol(options, ctx, node);
@@ -493,7 +502,7 @@ void Analyzer::resolveTypes() {
             node->resolved_type = sym->type;
 
             adv_node_t** argPtr = &node->call_expr.first_arg;
-            const auto& params = sym->linearParams;
+            const auto& params = sym->linearChildren;
             if (params.size() != node->call_expr.arg_count) {
                 ctx.log<ADV_STATUS_E3022>(
                     options, node->location, node->call_expr.name, params.size(), node->call_expr.arg_count);

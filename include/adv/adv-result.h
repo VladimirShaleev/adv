@@ -43,6 +43,7 @@ typedef enum
 typedef enum
 {
     ADV_STATUS_N1001       = 1001, /**< Symbol name shadowing in an outer scope. */
+    ADV_STATUS_N1002       = 1002, /**< Structure has no fields. */
     ADV_STATUS_W2001       = 2001, /**< Value out of range. */
     ADV_STATUS_W2002       = 2002, /**< Implicit conversion in return statement may lose precision */
     ADV_STATUS_W2003       = 2003, /**< Implicit conversion in binary operation may lose precision. */
@@ -94,7 +95,7 @@ typedef enum
     ADV_STATUS_E3043       = 3043, /**< The checksum did not match. */
     ADV_STATUS_E3044       = 3044, /**< Unsupported version. */
     ADV_STATUS_E3045       = 3045, /**< Unknown return type in declaration of native function. */
-    ADV_STATUS_COUNT_ENUMS = 52, /**< Count of constants in the enumeration. */
+    ADV_STATUS_COUNT_ENUMS = 53, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
 

@@ -183,8 +183,8 @@ struct CodeGenVisitor {
         if (sym->is_global) {
             exportNative.emitString(sym->name);
             exportNative.emitByte(static_cast<adv_uint8_t>(sym->type));
-            exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
-            for (const auto paramHandle : sym->linearParams) {
+            exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
+            for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
                 exportNative.emitString(param->name);
                 exportNative.emitByte(static_cast<adv_uint8_t>(param->type));
@@ -209,7 +209,7 @@ struct CodeGenVisitor {
         code.emitByte(VM_OPCODE_FUNCTION_PROLOGUE);
         code.emitByte(lexicalDepth);
         code.emitUint16(sym->frame_slot_count);
-        code.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
+        code.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
         code.emitByte(static_cast<adv_uint8_t>(sym->type == VM_VALUE_TYPE_VOID ? 0 : 1));
         acceptNode(node->func_decl.body);
         if (sym->type == VM_VALUE_TYPE_VOID) {
@@ -221,8 +221,8 @@ struct CodeGenVisitor {
             exportFunc.emitString(sym->name);
             exportFunc.emitUint32(entryIp);
             exportFunc.emitByte(static_cast<adv_uint8_t>(sym->type));
-            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearParams.size()));
-            for (const auto paramHandle : sym->linearParams) {
+            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
+            for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
                 exportFunc.emitString(param->name);
                 exportFunc.emitByte(static_cast<adv_uint8_t>(param->type));

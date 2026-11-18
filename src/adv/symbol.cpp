@@ -28,8 +28,8 @@ adv_scope_t* SymbolTable::getRawScope(adv_scope_h handle) noexcept {
 adv_symbol_t* SymbolTable::getRawSymbol(adv_symbol_h handle) noexcept {
     auto sym = getSymbol(handle);
     if (sym) {
-        sym->params = sym->linearParams.data();
-        sym->param_count = static_cast<adv_uint16_t>(sym->linearParams.size());
+        sym->children = sym->linearChildren.data();
+        sym->child_count = static_cast<adv_uint16_t>(sym->linearChildren.size());
     }
     return sym;
 }
@@ -85,18 +85,23 @@ Symbol* SymbolTable::addSymbol(const Options& options, Context& ctx, adv_node_t*
         ctx.log<ADV_STATUS_E3008>(options, sym->location, sym->name, location);
         return sym;
     }
-    auto currScope = getScope(scope->parent);
-    while (currScope) {
-        if (auto existsSym = currScope->symbolMap.find(sym->name); existsSym != currScope->symbolMap.end()) {
-            const auto& location = getSymbol(existsSym->second)->location;
-            ctx.log<ADV_STATUS_N1001>(options, sym->location, sym->name, location);
-            break;
+    if (sym->kind != ADV_SYMBOL_KIND_FIELD) {
+        auto currScope = getScope(scope->parent);
+        while (currScope) {
+            if (auto existsSym = currScope->symbolMap.find(sym->name); existsSym != currScope->symbolMap.end()) {
+                const auto& location = getSymbol(existsSym->second)->location;
+                ctx.log<ADV_STATUS_N1001>(options, sym->location, sym->name, location);
+                break;
+            }
+            currScope = getScope(currScope->parent);
         }
-        currScope = getScope(currScope->parent);
     }
     if (sym->kind == ADV_SYMBOL_KIND_PARAMETER) {
         auto fnSym = getSymbol(node->parent->func_decl.symbol);
-        fnSym->linearParams.push_back(handle);
+        fnSym->linearChildren.push_back(handle);
+    } else if (sym->kind == ADV_SYMBOL_KIND_FIELD) {
+        auto structSym = getSymbol(node->parent->struct_decl.symbol);
+        structSym->linearChildren.push_back(handle);
     }
     scope->linearSymbols.push_back(handle);
     scope->symbolMap[sym->name] = handle;
@@ -129,6 +134,12 @@ adv_symbol_h SymbolTable::allocSymbol(adv_node_t* node) {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) noexcept {
             set(ADV_SYMBOL_KIND_FUNCTION, node->func_decl.name, node->func_decl.symbol);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) noexcept {
+            set(ADV_SYMBOL_KIND_STRUCTURE, node->struct_decl.name, node->struct_decl.symbol);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) noexcept {
+            set(ADV_SYMBOL_KIND_FIELD, node->field_decl.name, node->field_decl.symbol);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) noexcept {
             set(ADV_SYMBOL_KIND_PARAMETER, node->param_decl.name, node->param_decl.symbol);

@@ -10,6 +10,8 @@ inline std::string err(Args&&... args) {
     std::string str;
     if constexpr (Status == ADV_STATUS_N1001) {
         str = fmt::format("Symbol '{}' name shadowing in an outer scope (defined at {})", args...);
+    } else if constexpr (Status == ADV_STATUS_N1002) {
+        str = fmt::format("Structure '{}' has no fields", args...);
     } else if constexpr (Status == ADV_STATUS_W2001) {
         str = fmt::format("{} with value {} out of range [{}, {}]", args...);
     } else if constexpr (Status == ADV_STATUS_W2002) {
