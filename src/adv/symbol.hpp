@@ -22,8 +22,7 @@ class Context;
 
 class SymbolTable {
 public:
-    SymbolTable();
-
+    void init(const Options& options, Context& ctx);
     void beginScope();
     void endScope();
     [[nodiscard]] adv_scope_t* getRawScope(adv_scope_h handle) noexcept;
@@ -31,6 +30,8 @@ public:
     [[nodiscard]] adv_scope_h getGlobalScope() const noexcept;
     [[nodiscard]] Scope* getScope(adv_scope_h handle) noexcept;
     [[nodiscard]] Symbol* getSymbol(adv_symbol_h handle) noexcept;
+    [[nodiscard]] adv_symbol_h lookupVoid() noexcept;
+    [[nodiscard]] adv_symbol_h lookup(vm_value_type_t primitiveType) noexcept;
     [[nodiscard]] adv_symbol_h lookup(adv_scope_h scope, vm_string_h name) noexcept;
     [[nodiscard]] std::pair<adv_symbol_h, Symbol*>
     lookup(const Options& options, Context& ctx, const adv_location_t& loc, vm_string_h name) noexcept;
@@ -40,11 +41,14 @@ public:
 private:
     [[nodiscard]] adv_scope_h allocScope(adv_scope_h parent);
     [[nodiscard]] adv_symbol_h allocSymbol(adv_node_t* node);
+    [[nodiscard]] static std::string_view getTypeString(vm_value_type_t type) noexcept;
 
     adv_scope_h _glocalScope{};
     adv_scope_h _scope{};
     std::vector<Scope> _scopePool;
     std::vector<Symbol> _symbolPool;
+    std::array<adv_symbol_h, VM_VALUE_TYPE_COUNT_ENUMS> _primitives;
+    adv_symbol_h _void;
 };
 
 } // namespace adv

@@ -22,13 +22,15 @@ extern "C" {
  */
 typedef enum
 {
-    ADV_SYMBOL_KIND_VARIABLE    = 0, /**< Variable symbol. */
-    ADV_SYMBOL_KIND_PARAMETER   = 1, /**< Function parameter symbol. */
-    ADV_SYMBOL_KIND_NATIVE      = 2, /**< Native symbol. */
-    ADV_SYMBOL_KIND_FUNCTION    = 3, /**< Function symbol. */
-    ADV_SYMBOL_KIND_FIELD       = 4, /**< Field symbol. */
-    ADV_SYMBOL_KIND_STRUCTURE   = 5, /**< Struct symbol. */
-    ADV_SYMBOL_KIND_COUNT_ENUMS = 6, /**< Count of constants in the enumeration. */
+    ADV_SYMBOL_KIND_PRIMITIVE   = 0, /**< Primitive type symbol (e.g., bool, int, float, string). */
+    ADV_SYMBOL_KIND_VOID        = 1, /**< Void type symbol. */
+    ADV_SYMBOL_KIND_VARIABLE    = 2, /**< Variable symbol. */
+    ADV_SYMBOL_KIND_PARAMETER   = 3, /**< Function parameter symbol. */
+    ADV_SYMBOL_KIND_NATIVE      = 4, /**< Native symbol. */
+    ADV_SYMBOL_KIND_FUNCTION    = 5, /**< Function symbol. */
+    ADV_SYMBOL_KIND_FIELD       = 6, /**< Field symbol. */
+    ADV_SYMBOL_KIND_STRUCTURE   = 7, /**< Struct symbol. */
+    ADV_SYMBOL_KIND_COUNT_ENUMS = 8, /**< Count of constants in the enumeration. */
     ADV_SYMBOL_KIND_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used). */
 } adv_symbol_kind_t;
 
@@ -41,7 +43,8 @@ typedef struct
 {
     vm_string_h         name; /**< Interned symbol name string handle. */
     adv_symbol_kind_t   kind; /**< Symbol kind (variable, parameter, function, field, structure). */
-    vm_value_type_t     type; /**< Resolved type of the symbol. */
+    vm_value_type_t     primitive_type; /**< Primitive type of the symbol (for primitive symbols). */
+    adv_symbol_h        type; /**< Resolved type of the symbol. */
     adv_location_t      location; /**< Source location of the symbol declaration. */
     const adv_symbol_h* children; /**< Array of child symbols (function parameters or structure fields). */
     adv_uint16_t        child_count; /**< Number of child symbols. */

@@ -3,11 +3,35 @@
 #include "options.hpp"
 #include "visitor.hpp"
 
+using namespace std::string_view_literals;
+
 namespace adv {
 
-SymbolTable::SymbolTable() {
+void SymbolTable::init(const Options& options, Context& ctx) {
+    auto addBaseType = [&ctx](vm_value_type_t type) {
+        const auto handle = ctx.intern(getTypeString(type)).handle;
+        assert(handle < VM_VALUE_TYPE_COUNT_ENUMS && "the SymbolTable must be initialized before starting the parser.");
+    };
+    for (int i = 1; i < VM_VALUE_TYPE_COUNT_ENUMS; ++i) {
+        addBaseType((vm_value_type_t)i);
+    }
+
     _glocalScope = allocScope(Scope::Undefined);
     _scope = _glocalScope;
+
+    for (int i = 1; i < VM_VALUE_TYPE_COUNT_ENUMS; ++i) {
+        adv_node_t node{ADV_NODE_VAR_DECL};
+        node.var_decl.name = vm_string_h{static_cast<adv_uint32_t>(i)};
+        auto symbol = addSymbol(options, ctx, &node);
+        symbol->kind = ADV_SYMBOL_KIND_PRIMITIVE;
+        symbol->primitive_type = static_cast<vm_value_type_t>(i);
+        _primitives[i] = node.var_decl.symbol;
+    }
+
+    adv_node_t nodeVoid{ADV_NODE_VAR_DECL};
+    auto symbol = addSymbol(options, ctx, &nodeVoid);
+    symbol->kind = ADV_SYMBOL_KIND_VOID;
+    _void = nodeVoid.var_decl.symbol;
 }
 
 void SymbolTable::beginScope() { _scope = allocScope(_scope); }
@@ -52,7 +76,14 @@ Symbol* SymbolTable::getSymbol(adv_symbol_h handle) noexcept {
     return nullptr;
 }
 
+adv_symbol_h SymbolTable::lookupVoid() noexcept { return _void; }
+
+adv_symbol_h SymbolTable::lookup(vm_value_type_t primitiveType) noexcept { return _primitives[primitiveType]; }
+
 adv_symbol_h SymbolTable::lookup(adv_scope_h scope, vm_string_h name) noexcept {
+    if (name.handle > VM_VALUE_TYPE_UNKNOWN && name.handle < VM_VALUE_TYPE_COUNT_ENUMS) {
+        return lookup(static_cast<vm_value_type_t>(name.handle));
+    }
     auto scopePtr = getScope(scope);
     while (scopePtr) {
         if (auto sym = scopePtr->symbolMap.find(name); sym != scopePtr->symbolMap.end()) {
@@ -159,11 +190,27 @@ adv_symbol_h SymbolTable::allocSymbol(adv_node_t* node) {
     auto& sym = _symbolPool.back();
     sym.name = visitor.name;
     sym.kind = visitor.kind;
-    sym.type = VM_VALUE_TYPE_UNKNOWN;
+    sym.primitive_type = VM_VALUE_TYPE_UNKNOWN;
+    sym.type = Undefined;
     sym.location = node->location;
     sym.scope = _scope;
     sym.is_global = _scope == _glocalScope ? 1 : 0;
     return handle;
+}
+
+std::string_view SymbolTable::getTypeString(vm_value_type_t type) noexcept {
+    switch (type) {
+    case VM_VALUE_TYPE_BOOL:
+        return "bool"sv;
+    case VM_VALUE_TYPE_INT:
+        return "int"sv;
+    case VM_VALUE_TYPE_FLOAT:
+        return "float"sv;
+    case VM_VALUE_TYPE_STRING:
+        return "string"sv;
+    default:
+        return "<error>"sv;
+    }
 }
 
 } // namespace adv

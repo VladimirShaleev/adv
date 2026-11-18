@@ -147,10 +147,11 @@ struct CodeGenVisitor {
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
         const auto sym = ctx.symbolTable().getSymbol(node->var_decl.symbol);
+        const auto type = ctx.symbolTable().getSymbol(sym->type);
         if (node->var_decl.init_expr) {
             acceptNode(node->var_decl.init_expr);
-        } else {
-            switch (sym->type) {
+        } else if (type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+            switch (type->primitive_type) {
             case VM_VALUE_TYPE_BOOL:
                 code.emitByte(VM_OPCODE_PUSH_FALSE);
                 break;
@@ -159,35 +160,57 @@ struct CodeGenVisitor {
                 code.emitInt32(0);
                 break;
             case VM_VALUE_TYPE_FLOAT:
+                code.emitByte(VM_OPCODE_PUSH_FLOAT);
+                code.emitFloat(0.0f);
                 break;
             case VM_VALUE_TYPE_STRING:
+                code.emitByte(VM_OPCODE_PUSH_STRING);
+                code.emitString({0});
                 break;
             default:
                 assert(!"unreachable code");
                 break;
             }
         }
-        if (sym->is_global) {
-            code.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
-            code.emitString(sym->name);
-            exportVar.emitString(sym->name);
-            exportVar.emitByte(static_cast<adv_uint8_t>(sym->type));
-            exportVar.count++;
+        if (type && type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+            if (sym->is_global) {
+                code.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
+                code.emitString(sym->name);
+                exportVar.emitString(sym->name);
+                exportVar.emitByte(static_cast<adv_uint8_t>(type->primitive_type));
+                exportVar.count++;
+            } else {
+                code.emitByte(VM_OPCODE_POP_LOCAL);
+                code.emitUint16(sym->slot_index);
+            }
         } else {
-            code.emitByte(VM_OPCODE_POP_LOCAL);
-            code.emitUint16(sym->slot_index);
+            // TODO
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
         const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
+        const auto type = ctx.symbolTable().getSymbol(sym->type);
         if (sym->is_global) {
             exportNative.emitString(sym->name);
-            exportNative.emitByte(static_cast<adv_uint8_t>(sym->type));
+            if (type && type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+                exportNative.emitByte(static_cast<adv_uint8_t>(type->primitive_type));
+            } else if (type && type->kind == ADV_SYMBOL_KIND_VOID) {
+                exportNative.emitByte(static_cast<adv_uint8_t>(VM_VALUE_TYPE_UNKNOWN));
+            } else if (type && type->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                // TODO
+            }
             exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
             for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
+                const auto paramType = ctx.symbolTable().getSymbol(param->type);
                 exportNative.emitString(param->name);
-                exportNative.emitByte(static_cast<adv_uint8_t>(param->type));
+                if (paramType && paramType->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+                    exportNative.emitByte(static_cast<adv_uint8_t>(paramType->primitive_type));
+                } else if (paramType && paramType->kind == ADV_SYMBOL_KIND_VOID) {
+                    exportNative.emitByte(static_cast<adv_uint8_t>(VM_VALUE_TYPE_UNKNOWN));
+                } else if (paramType && paramType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                    // TODO
+                }
             }
             ++exportNative.count;
         }
@@ -196,6 +219,7 @@ struct CodeGenVisitor {
         const auto jumpOverBody = code.emitJump(VM_OPCODE_JUMP);
         const auto entryIp = static_cast<uint32_t>(code.offset());
         const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
+        const auto type = ctx.symbolTable().getSymbol(sym->type);
 
         adv_uint8_t lexicalDepth = 0;
         auto parentNode = node->parent;
@@ -210,22 +234,64 @@ struct CodeGenVisitor {
         code.emitByte(lexicalDepth);
         code.emitUint16(sym->frame_slot_count);
         code.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
-        code.emitByte(static_cast<adv_uint8_t>(sym->type == VM_VALUE_TYPE_VOID ? 0 : 1));
+        switch (type->kind) {
+        case ADV_SYMBOL_KIND_PRIMITIVE:
+            code.emitByte(1);
+            break;
+        case ADV_SYMBOL_KIND_VOID:
+            code.emitByte(0);
+            break;
+        case ADV_SYMBOL_KIND_STRUCTURE:
+            // TODO
+            break;
+        default:
+            assert(!"unreachable code");
+            break;
+        }
         acceptNode(node->func_decl.body);
-        if (sym->type == VM_VALUE_TYPE_VOID) {
+        if (type->kind == ADV_SYMBOL_KIND_VOID) {
             code.emitByte(VM_OPCODE_RETURN);
         }
         code.patchJump(jumpOverBody);
 
         if (sym->is_global) {
+            const auto returnType = ctx.symbolTable().getSymbol(sym->type);
             exportFunc.emitString(sym->name);
             exportFunc.emitUint32(entryIp);
-            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->type));
+            switch (returnType->kind) {
+            case ADV_SYMBOL_KIND_PRIMITIVE:
+                exportFunc.emitByte(static_cast<adv_uint8_t>(returnType->primitive_type));
+                break;
+            case ADV_SYMBOL_KIND_VOID:
+                exportFunc.emitByte(0);
+                break;
+            case ADV_SYMBOL_KIND_STRUCTURE:
+                // TODO
+                break;
+            default:
+                assert(!"unreachable code");
+                break;
+            }
             exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
             for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
+                const auto paramType = ctx.symbolTable().getSymbol(param->type);
                 exportFunc.emitString(param->name);
-                exportFunc.emitByte(static_cast<adv_uint8_t>(param->type));
+                // exportFunc.emitByte(static_cast<adv_uint8_t>(param->type));
+                switch (paramType->kind) {
+                case ADV_SYMBOL_KIND_PRIMITIVE:
+                    exportFunc.emitByte(static_cast<adv_uint8_t>(paramType->primitive_type));
+                    break;
+                case ADV_SYMBOL_KIND_VOID:
+                    exportFunc.emitByte(0);
+                    break;
+                case ADV_SYMBOL_KIND_STRUCTURE:
+                    // TODO
+                    break;
+                default:
+                    assert(!"unreachable code");
+                    break;
+                }
             }
             ++exportFunc.count;
         } else {
@@ -282,17 +348,25 @@ struct CodeGenVisitor {
     void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
         acceptNode(node->expr_stmt.expr);
         if (node->expr_stmt.expr->type != ADV_NODE_ASSIGN_EXPR &&
-            node->expr_stmt.expr->resolved_type != VM_VALUE_TYPE_VOID) {
+            node->expr_stmt.expr->resolved_type != ctx.symbolTable().lookupVoid()) {
             code.emitByte(VM_OPCODE_POP);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) {
-        acceptNode(node->cast_expr.operand);
-        code.emitCast(node->cast_expr.from_type, node->cast_expr.to_type);
+        const auto fromType = ctx.symbolTable().getSymbol(node->cast_expr.from_type);
+        const auto toType = ctx.symbolTable().getSymbol(node->cast_expr.to_type);
+        if (fromType->kind == ADV_SYMBOL_KIND_PRIMITIVE && toType->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+            acceptNode(node->cast_expr.operand);
+            code.emitCast(fromType->primitive_type, toType->primitive_type);
+        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>) {
-        acceptNode(node->cast_expr.operand);
-        code.emitCast(node->cast_expr.from_type, node->cast_expr.to_type);
+        const auto fromType = ctx.symbolTable().getSymbol(node->cast_expr.from_type);
+        const auto toType = ctx.symbolTable().getSymbol(node->cast_expr.to_type);
+        if (fromType->kind == ADV_SYMBOL_KIND_PRIMITIVE && toType->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+            acceptNode(node->cast_expr.operand);
+            code.emitCast(fromType->primitive_type, toType->primitive_type);
+        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
         const auto sym = ctx.symbolTable().getSymbol(node->id_expr.symbol);

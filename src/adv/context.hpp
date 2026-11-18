@@ -84,6 +84,9 @@ private:
         return static_cast<T&&>(arg);
     }
     std::string_view unpackArg(vm_string_h str) const noexcept { return getString(str); }
+    std::string_view unpackArg(adv_symbol_h symbol) noexcept {
+        return symbol != Undefined ? getString(_symbolTable.getSymbol(symbol)->name) : "";
+    }
     std::string unpackArg(adv_location_t loc) const {
         return fmt::format("{}:{}:{}", getString(loc.filename), loc.line, loc.column);
     }

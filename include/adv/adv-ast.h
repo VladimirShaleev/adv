@@ -95,7 +95,7 @@ struct adv_node_t
 {
     adv_node_type_t type;          /**< Type identifier of the AST node. */
     adv_location_t  location;      /**< Source location of the node. */
-    vm_value_type_t resolved_type; /**< Type resolved during semantic pass. */
+    adv_symbol_h    resolved_type; /**< Handle to the resolved type symbol. */
     adv_node_t*     parent;        /**< Pointer to parent AST node. */
     adv_node_t*     next_sibling;  /**< Pointer to next sibling AST node. */
 
@@ -212,10 +212,10 @@ struct adv_node_t
          **/
         struct
         {
-            adv_node_t*     operand;          /**< Expression being converted. */
-            vm_string_h     target_type_hint; /**< Explicit target type string handle. */
-            vm_value_type_t from_type;        /**< Original value type. */
-            vm_value_type_t to_type;          /**< Target converted type. */
+            adv_node_t*  operand;          /**< Expression being converted. */
+            vm_string_h  target_type_hint; /**< Explicit target type string handle. */
+            adv_symbol_h from_type;        /**< Original value type. */
+            adv_symbol_h to_type;          /**< Target converted type. */
         } cast_expr; /**< Type cast expression payload. */
 
         /**

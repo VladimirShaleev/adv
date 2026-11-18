@@ -9,13 +9,7 @@ using namespace std::literals;
 namespace adv {
 
 Analyzer::Analyzer(const Options& options, Context& ctx) noexcept : _options(options), _ctx(ctx) {
-    auto addBaseType = [this](vm_value_type_t type) {
-        const auto handle = _ctx.intern(getTypeString(type)).handle;
-        assert(handle < VM_VALUE_TYPE_COUNT_ENUMS && "the Analyzer must be initialized before starting the parser.");
-    };
-    for (int i = 1; i < VM_VALUE_TYPE_COUNT_ENUMS; ++i) {
-        addBaseType((vm_value_type_t)i);
-    }
+    _ctx.symbolTable().init(options, _ctx);
     pushFrame();
 }
 
@@ -214,36 +208,44 @@ void Analyzer::resolveSymbols() {
             const auto location = adv_location_t{moduleName, 0, 0};
             for (adv_uint32_t i = 0; i < exports.var_count; ++i) {
                 const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
-                adv_node_t node{
-                    ADV_NODE_VAR_DECL,
-                    location,
-                    static_cast<vm_value_type_t>(var.type),
-                };
+                adv_node_t node{ADV_NODE_VAR_DECL, location};
                 node.var_decl.name = ctx.intern(utils::readString(var.name, data));
-                node.var_decl.type_hint = static_cast<vm_string_h>(node.resolved_type);
                 node.var_decl.is_global = 1;
-                symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
+                if (var.type > VM_VALUE_TYPE_UNKNOWN && var.type < VM_VALUE_TYPE_COUNT_ENUMS) {
+                    node.var_decl.type_hint = vm_string_h{var.type};
+                    node.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(var.type));
+                    symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
+                } else {
+                    // TODO:
+                }
             }
             std::vector<adv_node_t> params;
             params.reserve(16);
             for (adv_uint32_t i = 0; i < exports.func_count; ++i) {
                 params.clear();
                 const auto func = utils::read<vm_script_export_func_t>(bytecode, i);
-                adv_node_t node{
-                    ADV_NODE_FUNCTION_DECL,
-                    location,
-                    static_cast<vm_value_type_t>(func.return_type),
-                };
+                adv_node_t node{ADV_NODE_FUNCTION_DECL, location};
                 for (adv_uint32_t j = 0; j < func.param_count; ++j) {
                     const auto param = utils::read<vm_script_export_param_t>(bytecode, i, j);
-                    auto& nodeParam = params.emplace_back(
-                        ADV_NODE_PARAM_DECL, location, static_cast<vm_value_type_t>(param.type), &node);
+                    auto& nodeParam = params.emplace_back(ADV_NODE_PARAM_DECL, location, Undefined, &node);
                     nodeParam.param_decl.name = ctx.intern(utils::readString(param.name, data));
-                    nodeParam.var_decl.type_hint = static_cast<vm_string_h>(nodeParam.resolved_type);
+                    if (param.type > VM_VALUE_TYPE_UNKNOWN && param.type < VM_VALUE_TYPE_COUNT_ENUMS) {
+                        nodeParam.var_decl.type_hint = static_cast<vm_string_h>(param.type);
+                        nodeParam.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(param.type));
+                    } else {
+                        // TODO
+                    }
                 }
                 node.func_decl.name = ctx.intern(utils::readString(func.name, data));
-                node.func_decl.return_type_hint = static_cast<vm_string_h>(node.resolved_type);
                 node.func_decl.param_count = static_cast<adv_uint32_t>(params.size());
+                if (func.return_type > VM_VALUE_TYPE_UNKNOWN && func.return_type < VM_VALUE_TYPE_COUNT_ENUMS) {
+                    node.func_decl.return_type_hint = vm_string_h{func.return_type};
+                    node.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(func.return_type));
+                } else if (func.return_type) {
+                    node.resolved_type = symbolTable.lookupVoid();
+                } else {
+                    // TODO
+                }
                 if (!params.empty()) {
                     node.func_decl.first_param = &params.front();
                     auto prevIt = params.begin();
@@ -262,21 +264,28 @@ void Analyzer::resolveSymbols() {
             for (adv_uint32_t i = 0; i < exports.native_count; ++i) {
                 params.clear();
                 const auto native = utils::read<vm_script_export_native_t>(bytecode, i);
-                adv_node_t node{
-                    ADV_NODE_NATIVE_DECL,
-                    location,
-                    static_cast<vm_value_type_t>(native.return_type),
-                };
+                adv_node_t node{ADV_NODE_NATIVE_DECL, location};
                 for (adv_uint32_t j = 0; j < native.param_count; ++j) {
                     const auto param = utils::read<utils::NativeParam>(bytecode, i, j).param;
-                    auto& nodeParam = params.emplace_back(
-                        ADV_NODE_PARAM_DECL, location, static_cast<vm_value_type_t>(param.type), &node);
+                    auto& nodeParam = params.emplace_back(ADV_NODE_PARAM_DECL, location, Undefined, &node);
                     nodeParam.param_decl.name = ctx.intern(utils::readString(param.name, data));
-                    nodeParam.var_decl.type_hint = static_cast<vm_string_h>(nodeParam.resolved_type);
+                    if (param.type > VM_VALUE_TYPE_UNKNOWN && param.type < VM_VALUE_TYPE_COUNT_ENUMS) {
+                        nodeParam.var_decl.type_hint = static_cast<vm_string_h>(param.type);
+                        nodeParam.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(param.type));
+                    } else {
+                        // TODO
+                    }
                 }
                 node.func_decl.name = ctx.intern(utils::readString(native.name, data));
-                node.func_decl.return_type_hint = static_cast<vm_string_h>(node.resolved_type);
                 node.func_decl.param_count = static_cast<adv_uint32_t>(params.size());
+                if (native.return_type > VM_VALUE_TYPE_UNKNOWN && native.return_type < VM_VALUE_TYPE_COUNT_ENUMS) {
+                    node.func_decl.return_type_hint = vm_string_h{native.return_type};
+                    node.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(native.return_type));
+                } else if (native.return_type) {
+                    node.resolved_type = symbolTable.lookupVoid();
+                } else {
+                    // TODO
+                }
                 if (!params.empty()) {
                     node.func_decl.first_param = &params.front();
                     auto prevIt = params.begin();
@@ -318,17 +327,32 @@ void Analyzer::resolveTypes() {
             : options(options), ctx(ctx), analyzer(analyzer), symbolTable(symbolTable) {}
         void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) { visitChildrens(node); }
         void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) { acceptNode(node->import_stmt.root); }
-        void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {
+            auto field = node->struct_decl.first_field;
+            while (field) {
+                acceptNode(field);
+                field = field->next_sibling;
+            }
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {}
-        void visit(adv_node_t* node, Tag<ADV_NODE_INT_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_INT; }
-        void visit(adv_node_t* node, Tag<ADV_NODE_FLOAT_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_FLOAT; }
-        void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_STRING; }
-        void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_BOOL; }
+        void visit(adv_node_t* node, Tag<ADV_NODE_INT_LITERAL>) {
+            node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_INT);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_FLOAT_LITERAL>) {
+            node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_FLOAT);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) {
+            node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_STRING);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) {
+            node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_BOOL);
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
-            auto returnType = VM_VALUE_TYPE_VOID;
+            auto returnType = symbolTable.lookupVoid();
             if (node->func_decl.return_type_hint.handle != 0) {
-                returnType = analyzer.findBaseType(node->func_decl.return_type_hint);
-                if (returnType == VM_VALUE_TYPE_UNKNOWN) {
+                auto scope = symbolTable.getSymbol(node->func_decl.symbol)->scope;
+                returnType = analyzer.findBaseType(scope, node->func_decl.return_type_hint);
+                if (returnType == Undefined) {
                     ctx.log<ADV_STATUS_E3045>(
                         options, node->location, node->func_decl.return_type_hint, node->func_decl.name);
                     return;
@@ -344,10 +368,11 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_FUNCTION_DECL>) {
-            auto returnType = VM_VALUE_TYPE_VOID;
+            auto returnType = symbolTable.lookupVoid();
             if (node->func_decl.return_type_hint.handle != 0) {
-                returnType = analyzer.findBaseType(node->func_decl.return_type_hint);
-                if (returnType == VM_VALUE_TYPE_UNKNOWN) {
+                auto scope = symbolTable.getSymbol(node->func_decl.symbol)->scope;
+                returnType = analyzer.findBaseType(scope, node->func_decl.return_type_hint);
+                if (returnType == Undefined) {
                     ctx.log<ADV_STATUS_E3011>(
                         options, node->location, node->func_decl.return_type_hint, node->func_decl.name);
                     return;
@@ -363,14 +388,6 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {
-            const bool hasExpr = node->expr_stmt.expr != nullptr;
-            auto retType = VM_VALUE_TYPE_UNKNOWN;
-            if (hasExpr) {
-                retType = acceptNode(node->expr_stmt.expr);
-                if (retType == VM_VALUE_TYPE_UNKNOWN) {
-                    return;
-                }
-            }
             adv_node_t* fn = node->parent;
             while (fn && fn->type != ADV_NODE_FUNCTION_DECL) {
                 fn = fn->parent;
@@ -379,26 +396,30 @@ void Analyzer::resolveTypes() {
                 ctx.log<ADV_STATUS_E3035>(options, node->location);
                 return;
             }
-            if (fn->resolved_type == VM_VALUE_TYPE_VOID && hasExpr) {
+            const bool hasExpr = node->expr_stmt.expr != nullptr;
+            adv_symbol_h retType = Undefined;
+            if (hasExpr) {
+                retType = acceptNode(node->expr_stmt.expr);
+                if (retType == Undefined) {
+                    return;
+                }
+            }
+            const auto resolvedType = symbolTable.getSymbol(fn->resolved_type);
+            if (resolvedType->kind == ADV_SYMBOL_KIND_VOID && hasExpr) {
                 ctx.log<ADV_STATUS_E3013>(options, node->location, fn->func_decl.name);
                 return;
             }
-            if (fn->resolved_type != VM_VALUE_TYPE_VOID && !hasExpr) {
+            if (resolvedType->kind != ADV_SYMBOL_KIND_VOID && !hasExpr) {
                 ctx.log<ADV_STATUS_E3014>(options, node->location, fn->func_decl.name);
                 return;
             }
             if (fn->resolved_type != retType) {
                 auto result = analyzer.getCastResult(retType, fn->resolved_type, false);
                 if (result == CastResult::WarningTruncate) {
-                    ctx.log<ADV_STATUS_W2002>(
-                        options, node->location, analyzer.getTypeString(retType), fn->func_decl.return_type_hint);
+                    ctx.log<ADV_STATUS_W2002>(options, node->location, retType, fn->func_decl.return_type_hint);
                 } else if (result == CastResult::ErrorForbidden) {
                     ctx.log<ADV_STATUS_E3015>(
-                        options,
-                        node->location,
-                        analyzer.getTypeString(retType),
-                        fn->func_decl.return_type_hint,
-                        fn->func_decl.name);
+                        options, node->location, retType, fn->func_decl.return_type_hint, fn->func_decl.name);
                     return;
                 }
                 node->expr_stmt.expr = analyzer.promoteCastNode(node->expr_stmt.expr, fn->resolved_type);
@@ -412,8 +433,9 @@ void Analyzer::resolveTypes() {
                 ctx.log<ADV_STATUS_E3016>(options, node->location, node->param_decl.name);
                 return;
             }
-            const auto paramType = analyzer.findBaseType(node->param_decl.type_hint);
-            if (paramType == VM_VALUE_TYPE_UNKNOWN) {
+            auto scope = symbolTable.getSymbol(node->param_decl.symbol)->scope;
+            const auto paramType = analyzer.findBaseType(scope, node->param_decl.type_hint);
+            if (paramType == Undefined) {
                 ctx.log<ADV_STATUS_E3017>(options, node->location, node->param_decl.type_hint, node->param_decl.name);
                 return;
             }
@@ -423,7 +445,7 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
             const auto sym = symbolTable.getSymbol(node->id_expr.symbol);
             if (sym) {
-                if (sym->type == VM_VALUE_TYPE_UNKNOWN) {
+                if (sym->type == Undefined) {
                     ctx.log<ADV_STATUS_E3018>(options, node->location, node->id_expr.name);
                     return;
                 }
@@ -433,33 +455,39 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_BINARY_EXPR>) {
             const auto leftType = acceptNode(node->binary_expr.left);
             const auto rightType = acceptNode(node->binary_expr.right);
-            if (leftType == VM_VALUE_TYPE_UNKNOWN || rightType == VM_VALUE_TYPE_UNKNOWN) {
+            if (leftType == Undefined || rightType == Undefined) {
                 return;
             }
+            const auto leftSymbol = symbolTable.getSymbol(leftType);
+            const auto rightSymbol = symbolTable.getSymbol(rightType);
+            if (leftSymbol->kind != ADV_SYMBOL_KIND_PRIMITIVE || rightSymbol->kind != ADV_SYMBOL_KIND_PRIMITIVE) {
+                // TODO: err
+                return;
+            }
+            const auto leftPrimitive = leftSymbol->primitive_type;
+            const auto rightPrimitive = rightSymbol->primitive_type;
             const auto op = node->binary_expr.op;
 
             if (isLogicOp(op)) {
-                if (leftType != VM_VALUE_TYPE_BOOL || rightType != VM_VALUE_TYPE_BOOL) {
-                    ctx.log<ADV_STATUS_E3031>(
-                        options, node->location, analyzer.getTypeString(leftType), analyzer.getTypeString(rightType));
+                if (leftPrimitive != VM_VALUE_TYPE_BOOL || rightPrimitive != VM_VALUE_TYPE_BOOL) {
+                    ctx.log<ADV_STATUS_E3031>(options, node->location, leftSymbol->name, rightSymbol->name);
                     return;
                 }
-                node->resolved_type = VM_VALUE_TYPE_BOOL;
+                node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_BOOL);
                 return;
             }
 
             if (isBitwiseOp(op) || op == '%') {
-                if (leftType != VM_VALUE_TYPE_INT || rightType != VM_VALUE_TYPE_INT) {
-                    ctx.log<ADV_STATUS_E3032>(
-                        options, node->location, analyzer.getTypeString(leftType), analyzer.getTypeString(rightType));
+                if (leftPrimitive != VM_VALUE_TYPE_INT || rightPrimitive != VM_VALUE_TYPE_INT) {
+                    ctx.log<ADV_STATUS_E3032>(options, node->location, leftSymbol->name, rightSymbol->name);
                     return;
                 }
-                node->resolved_type = VM_VALUE_TYPE_INT;
+                node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_INT);
                 return;
             }
 
             if (isOrderingOp(op)) {
-                if (leftType == VM_VALUE_TYPE_BOOL || rightType == VM_VALUE_TYPE_BOOL) {
+                if (leftPrimitive == VM_VALUE_TYPE_BOOL || rightPrimitive == VM_VALUE_TYPE_BOOL) {
                     ctx.log<ADV_STATUS_E3033>(options, node->location);
                     return;
                 }
@@ -467,16 +495,14 @@ void Analyzer::resolveTypes() {
 
             auto targetType = leftType;
             if (leftType != rightType) {
-                const auto needSwap = static_cast<int>(rightType) < static_cast<int>(leftType);
+                const auto needSwap = static_cast<int>(rightPrimitive) < static_cast<int>(leftPrimitive);
                 const auto from = needSwap ? rightType : leftType;
                 const auto to = needSwap ? leftType : rightType;
                 const auto result = analyzer.getCastResult(from, to, false);
                 if (result == CastResult::WarningTruncate) {
-                    ctx.log<ADV_STATUS_W2003>(
-                        options, node->location, analyzer.getTypeString(from), analyzer.getTypeString(to));
+                    ctx.log<ADV_STATUS_W2003>(options, node->location, from, to);
                 } else if (result == CastResult::ErrorForbidden) {
-                    ctx.log<ADV_STATUS_E3019>(
-                        options, node->location, analyzer.getTypeString(from), analyzer.getTypeString(to));
+                    ctx.log<ADV_STATUS_E3019>(options, node->location, from, to);
                     return;
                 }
                 if (leftType == from) {
@@ -488,7 +514,7 @@ void Analyzer::resolveTypes() {
             }
 
             if (isComparisonOp(node->binary_expr.op)) {
-                node->resolved_type = VM_VALUE_TYPE_BOOL;
+                node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_BOOL);
             } else {
                 node->resolved_type = targetType;
             }
@@ -519,20 +545,10 @@ void Analyzer::resolveTypes() {
                     const auto result = analyzer.getCastResult(argType, paramType, false);
                     if (result == CastResult::WarningTruncate) {
                         ctx.log<ADV_STATUS_W2004>(
-                            options,
-                            arg->location,
-                            analyzer.getTypeString(argType),
-                            analyzer.getTypeString(paramType),
-                            param->name,
-                            node->call_expr.name);
+                            options, arg->location, argType, paramType, param->name, node->call_expr.name);
                     } else if (result == CastResult::ErrorForbidden) {
                         ctx.log<ADV_STATUS_E3023>(
-                            options,
-                            arg->location,
-                            param->name,
-                            analyzer.getTypeString(argType),
-                            analyzer.getTypeString(paramType),
-                            node->call_expr.name);
+                            options, arg->location, param->name, argType, paramType, node->call_expr.name);
                         continue;
                     }
                     *argPtr = analyzer.promoteCastNode(arg, paramType);
@@ -543,45 +559,50 @@ void Analyzer::resolveTypes() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_UNARY_EXPR>) {
-            auto type = acceptNode(node->unary_expr.operand);
+            auto typeHandle = acceptNode(node->unary_expr.operand);
+            auto typeSymbol = symbolTable.getSymbol(typeHandle);
+            assert(typeSymbol);
+            if (typeSymbol->kind != ADV_SYMBOL_KIND_PRIMITIVE) {
+                // TODO: err
+                return;
+            }
+            const auto type = typeSymbol->primitive_type;
             const auto op = node->unary_expr.op;
             if (op == Parser::token::NOT) {
                 if (type != VM_VALUE_TYPE_BOOL) {
-                    ctx.log<ADV_STATUS_E3028>(options, node->location, analyzer.getTypeString(type));
+                    ctx.log<ADV_STATUS_E3028>(options, node->location, typeSymbol->name);
                     return;
                 }
             } else if (op == '~') {
                 if (type != VM_VALUE_TYPE_INT) {
-                    ctx.log<ADV_STATUS_E3029>(options, node->location, analyzer.getTypeString(type));
+                    ctx.log<ADV_STATUS_E3029>(options, node->location, typeSymbol->name);
                     return;
                 }
             } else if (op == '-') {
                 if (type != VM_VALUE_TYPE_INT && type != VM_VALUE_TYPE_FLOAT) {
-                    ctx.log<ADV_STATUS_E3030>(options, node->location, analyzer.getTypeString(type));
+                    ctx.log<ADV_STATUS_E3030>(options, node->location, typeSymbol->name);
                     return;
                 }
             } else {
                 assert(!"unreachable code");
             }
-            node->resolved_type = type;
+            node->resolved_type = typeHandle;
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
             const auto targetType = acceptNode(node->assign_expr.target);
-            if (targetType == VM_VALUE_TYPE_UNKNOWN) {
+            if (targetType == Undefined) {
                 return;
             }
             const auto valueType = acceptNode(node->assign_expr.val);
-            if (valueType == VM_VALUE_TYPE_UNKNOWN) {
+            if (valueType == Undefined) {
                 return;
             }
             if (targetType != valueType) {
                 auto result = analyzer.getCastResult(valueType, targetType, false);
                 if (result == CastResult::WarningTruncate) {
-                    ctx.log<ADV_STATUS_W2005>(
-                        options, node->location, analyzer.getTypeString(valueType), analyzer.getTypeString(targetType));
+                    ctx.log<ADV_STATUS_W2005>(options, node->location, valueType, targetType);
                 } else if (result == CastResult::ErrorForbidden) {
-                    ctx.log<ADV_STATUS_E3024>(
-                        options, node->location, analyzer.getTypeString(valueType), analyzer.getTypeString(targetType));
+                    ctx.log<ADV_STATUS_E3024>(options, node->location, valueType, targetType);
                     return;
                 }
                 node->assign_expr.val = analyzer.promoteCastNode(node->assign_expr.val, targetType);
@@ -595,37 +616,28 @@ void Analyzer::resolveTypes() {
                 ctx.log<ADV_STATUS_E3025>(options, node->location, node->var_decl.name);
                 return;
             }
-            auto hintType = VM_VALUE_TYPE_UNKNOWN;
-            auto initType = VM_VALUE_TYPE_UNKNOWN;
+            adv_symbol_h hintType = Undefined;
+            adv_symbol_h initType = Undefined;
             if (hasTypeHint) {
-                hintType = analyzer.findBaseType(node->var_decl.type_hint);
-                if (hintType == VM_VALUE_TYPE_UNKNOWN) {
+                auto scope = symbolTable.getSymbol(node->var_decl.symbol)->scope;
+                hintType = analyzer.findBaseType(scope, node->var_decl.type_hint);
+                if (hintType == Undefined) {
                     ctx.log<ADV_STATUS_E3026>(options, node->location, node->var_decl.type_hint, node->var_decl.name);
                     return;
                 }
             }
             if (hasInitExpr) {
                 initType = acceptNode(node->var_decl.init_expr);
-                if (initType == VM_VALUE_TYPE_UNKNOWN) {
+                if (initType == Undefined) {
                     return;
                 }
             }
             if (hasTypeHint && hasInitExpr && hintType != initType) {
                 auto result = analyzer.getCastResult(initType, hintType, false);
                 if (result == CastResult::WarningTruncate) {
-                    ctx.log<ADV_STATUS_W2006>(
-                        options,
-                        node->location,
-                        analyzer.getTypeString(initType),
-                        analyzer.getTypeString(hintType),
-                        node->var_decl.name);
+                    ctx.log<ADV_STATUS_W2006>(options, node->location, initType, hintType, node->var_decl.name);
                 } else if (result == CastResult::ErrorForbidden) {
-                    ctx.log<ADV_STATUS_E3027>(
-                        options,
-                        node->location,
-                        node->var_decl.name,
-                        analyzer.getTypeString(initType),
-                        analyzer.getTypeString(hintType));
+                    ctx.log<ADV_STATUS_E3027>(options, node->location, node->var_decl.name, initType, hintType);
                     return;
                 }
                 node->var_decl.init_expr = analyzer.promoteCastNode(node->var_decl.init_expr, hintType);
@@ -634,49 +646,25 @@ void Analyzer::resolveTypes() {
 
             symbolTable.getSymbol(node->var_decl.symbol)->type = finalType;
             node->resolved_type = finalType;
-
-            if (!hasInitExpr) {
-                adv_node_t* literal{};
-                switch (finalType) {
-                case VM_VALUE_TYPE_BOOL:
-                    literal = ctx.allocNode(node->location, ADV_NODE_BOOL_LITERAL);
-                    literal->bool_val = false;
-                    break;
-                case VM_VALUE_TYPE_INT:
-                    literal = ctx.allocNode(node->location, ADV_NODE_INT_LITERAL);
-                    literal->int_val = 0;
-                    break;
-                case VM_VALUE_TYPE_FLOAT:
-                    literal = ctx.allocNode(node->location, ADV_NODE_FLOAT_LITERAL);
-                    literal->float_val = 0.0f;
-                    break;
-                case VM_VALUE_TYPE_STRING:
-                    literal = ctx.allocNode(node->location, ADV_NODE_STRING_LITERAL);
-                    literal->str_val = {0};
-                    break;
-                default:
-                    assert(!"unreachable code");
-                    break;
-                }
-                literal->parent = node;
-                literal->resolved_type = finalType;
-                node->var_decl.init_expr = literal;
-            }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>) {
             const auto srcType = acceptNode(node->cast_expr.operand);
-            if (srcType == VM_VALUE_TYPE_UNKNOWN) {
+            if (srcType == Undefined) {
                 return;
             }
-            const auto targetType = analyzer.findBaseType(node->cast_expr.target_type_hint);
-            if (targetType == VM_VALUE_TYPE_UNKNOWN) {
+            adv_node_t* fn = node->parent;
+            while (fn && fn->type != ADV_NODE_FUNCTION_DECL) {
+                fn = fn->parent;
+            }
+            auto scope = fn ? symbolTable.getSymbol(fn->func_decl.symbol)->scope : symbolTable.getGlobalScope();
+            const auto targetType = analyzer.findBaseType(scope, node->cast_expr.target_type_hint);
+            if (targetType == Undefined) {
                 ctx.log<ADV_STATUS_E3010>(options, node->location, node->cast_expr.target_type_hint);
                 return;
             }
             const auto result = analyzer.getCastResult(srcType, targetType, true);
             if (result == CastResult::ErrorForbidden) {
-                ctx.log<ADV_STATUS_E3012>(
-                    options, node->location, analyzer.getTypeString(srcType), node->cast_expr.target_type_hint);
+                ctx.log<ADV_STATUS_E3012>(options, node->location, srcType, node->cast_expr.target_type_hint);
                 return;
             }
             node->cast_expr.from_type = srcType;
@@ -686,8 +674,8 @@ void Analyzer::resolveTypes() {
         void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) { visitChildrens(node); }
         void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
             const auto condType = acceptNode(node->if_stmt.cond);
-            if (condType != VM_VALUE_TYPE_UNKNOWN && condType != VM_VALUE_TYPE_BOOL) {
-                ctx.log<ADV_STATUS_E3034>(options, node->if_stmt.cond->location, analyzer.getTypeString(condType));
+            if (condType != Undefined && condType != symbolTable.lookup(VM_VALUE_TYPE_BOOL)) {
+                ctx.log<ADV_STATUS_E3034>(options, node->if_stmt.cond->location, condType);
             }
             if (node->if_stmt.then_branch) {
                 acceptNode(node->if_stmt.then_branch);
@@ -698,8 +686,8 @@ void Analyzer::resolveTypes() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {
             const auto condType = acceptNode(node->while_stmt.cond);
-            if (condType != VM_VALUE_TYPE_UNKNOWN && condType != VM_VALUE_TYPE_BOOL) {
-                ctx.log<ADV_STATUS_E3036>(options, node->while_stmt.cond->location, analyzer.getTypeString(condType));
+            if (condType != Undefined && condType != symbolTable.lookup(VM_VALUE_TYPE_BOOL)) {
+                ctx.log<ADV_STATUS_E3036>(options, node->while_stmt.cond->location, condType);
             }
             if (node->while_stmt.body) {
                 acceptNode(node->while_stmt.body);
@@ -712,11 +700,12 @@ void Analyzer::resolveTypes() {
                 return;
             }
             const auto exprType = acceptNode(node->expr_stmt.expr);
-            if (exprType == VM_VALUE_TYPE_UNKNOWN) {
+            if (exprType == Undefined) {
                 return;
             }
-            if (exprType != VM_VALUE_TYPE_INT && exprType != VM_VALUE_TYPE_FLOAT) {
-                ctx.log<ADV_STATUS_E3040>(options, node->expr_stmt.expr->location, analyzer.getTypeString(exprType));
+            if (exprType != symbolTable.lookup(VM_VALUE_TYPE_INT) &&
+                exprType != symbolTable.lookup(VM_VALUE_TYPE_FLOAT)) {
+                ctx.log<ADV_STATUS_E3040>(options, node->expr_stmt.expr->location, exprType);
                 return;
             }
         }
@@ -725,9 +714,9 @@ void Analyzer::resolveTypes() {
         void visitChildrens(adv_node_t* node) {
             analyzer.visitStmtsWithRules(node, [this](auto node, auto /* parent */) { acceptNode(node); });
         }
-        vm_value_type_t acceptNode(adv_node_t* node) {
+        adv_symbol_h acceptNode(adv_node_t* node) {
             accept<TypeVisitor>(node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable));
-            return node ? node->resolved_type : VM_VALUE_TYPE_UNKNOWN;
+            return node ? node->resolved_type : Undefined;
         }
         const Options& options;
         Context& ctx;
@@ -790,17 +779,49 @@ void Analyzer::saveFrameSlot(Symbol* sym) noexcept {
 
 Analyzer::FunctionFrameState& Analyzer::currFrame() noexcept { return _frameStack.top(); }
 
-adv_node_t* Analyzer::promoteCastNode(adv_node_t* node, vm_value_type_t targetType) {
+adv_node_t* Analyzer::promoteCastNode(adv_node_t* node, adv_symbol_h targetType) {
     if (!node || node->resolved_type == targetType) {
         return node;
     }
     auto castNode = _ctx.allocNode(node->location, ADV_NODE_IMPLICIT_CAST_EXPR);
-
     castNode->cast_expr.operand = node;
     castNode->cast_expr.from_type = node->resolved_type;
     castNode->cast_expr.to_type = targetType;
     castNode->resolved_type = targetType;
     return castNode;
+}
+
+CastResult Analyzer::getCastResult(adv_symbol_h from, adv_symbol_h to, bool isExplicitAs) noexcept {
+    if (from == to) {
+        return CastResult::OK;
+    }
+    const auto symbolFrom = _ctx.symbolTable().getSymbol(from);
+    const auto symbolTo = _ctx.symbolTable().getSymbol(to);
+    assert(symbolFrom);
+    assert(symbolTo);
+    if (symbolFrom->kind != ADV_SYMBOL_KIND_PRIMITIVE || symbolTo->kind != ADV_SYMBOL_KIND_PRIMITIVE) {
+        return CastResult::ErrorForbidden;
+    }
+    if (symbolFrom->primitive_type == VM_VALUE_TYPE_BOOL) {
+        return isExplicitAs ? CastResult::OK : CastResult::ErrorForbidden;
+    }
+    if (symbolFrom->primitive_type == VM_VALUE_TYPE_INT && symbolTo->primitive_type == VM_VALUE_TYPE_FLOAT) {
+        return CastResult::OK;
+    }
+    if (symbolFrom->primitive_type == VM_VALUE_TYPE_FLOAT && symbolTo->primitive_type == VM_VALUE_TYPE_INT) {
+        return isExplicitAs ? CastResult::OK : CastResult::WarningTruncate;
+    }
+    return isExplicitAs ? CastResult::OK : CastResult::ErrorForbidden;
+}
+
+adv_symbol_h Analyzer::findBaseType(adv_scope_h scope, vm_string_h type) const noexcept {
+    if (auto typeSymbol = _ctx.symbolTable().lookup(scope, type); typeSymbol != Undefined) {
+        auto sym = _ctx.symbolTable().getSymbol(typeSymbol);
+        if (sym->kind == ADV_SYMBOL_KIND_PRIMITIVE || sym->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+            return typeSymbol;
+        }
+    }
+    return Undefined;
 }
 
 bool Analyzer::isEqualityOp(adv_uint32_t op) noexcept {
@@ -863,43 +884,6 @@ bool Analyzer::isLogicOp(adv_uint32_t op) noexcept {
     default:
         return false;
     }
-}
-
-CastResult Analyzer::getCastResult(vm_value_type_t from, vm_value_type_t to, bool isExplicitAs) noexcept {
-    if (from == to) {
-        return CastResult::OK;
-    }
-    if (from == VM_VALUE_TYPE_BOOL) {
-        return isExplicitAs ? CastResult::OK : CastResult::ErrorForbidden;
-    }
-    if (from == VM_VALUE_TYPE_INT && to == VM_VALUE_TYPE_FLOAT) {
-        return CastResult::OK;
-    }
-    if (from == VM_VALUE_TYPE_FLOAT && to == VM_VALUE_TYPE_INT) {
-        return isExplicitAs ? CastResult::OK : CastResult::WarningTruncate;
-    }
-    return isExplicitAs ? CastResult::OK : CastResult::ErrorForbidden;
-}
-
-std::string_view Analyzer::getTypeString(vm_value_type_t type) noexcept {
-    switch (type) {
-    case VM_VALUE_TYPE_BOOL:
-        return "bool"sv;
-    case VM_VALUE_TYPE_INT:
-        return "int"sv;
-    case VM_VALUE_TYPE_FLOAT:
-        return "float"sv;
-    case VM_VALUE_TYPE_STRING:
-        return "string"sv;
-    case VM_VALUE_TYPE_VOID:
-        return "void"sv;
-    default:
-        return "<error>"sv;
-    }
-}
-
-vm_value_type_t Analyzer::findBaseType(vm_string_h type) const noexcept {
-    return type.handle < VM_VALUE_TYPE_COUNT_ENUMS ? (vm_value_type_t)type.handle : VM_VALUE_TYPE_UNKNOWN;
 }
 
 } // namespace adv
