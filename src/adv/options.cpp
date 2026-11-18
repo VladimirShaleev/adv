@@ -10,6 +10,10 @@ adv_format_t Options::getOutputFormat() const noexcept { return _outputFormat; }
 
 void Options::setOutputFormat(adv_format_t format) noexcept { _outputFormat = format; }
 
+bool Options::getStandardLibrary() const noexcept { return _standardLibrary; }
+
+void Options::setStandardLibrary(bool useStd) noexcept { _standardLibrary = useStd; }
+
 adv_utf8_t Options::getOutputPath() const noexcept { return _outputPath.c_str(); }
 
 void Options::setOutputPath(adv_utf8_t path) { _outputPath = path; }
@@ -118,6 +122,16 @@ adv_format_t adv_options_get_output_format(adv_options_t options) {
 void adv_options_set_output_format(adv_options_t options, adv_format_t format) {
     if (options) {
         options->as<adv::Options>()->setOutputFormat(format);
+    }
+}
+
+adv_bool_t adv_options_get_standard_library(adv_options_t options) {
+    return options ? options->as<adv::Options>()->getStandardLibrary() : false;
+}
+
+void adv_options_set_standard_library(adv_options_t options, adv_bool_t use_std) {
+    if (options) {
+        options->as<adv::Options>()->setStandardLibrary(!!use_std);
     }
 }
 

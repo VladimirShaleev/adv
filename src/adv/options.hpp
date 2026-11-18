@@ -15,6 +15,9 @@ public:
     [[nodiscard]] adv_format_t getOutputFormat() const noexcept;
     void setOutputFormat(adv_format_t format) noexcept;
 
+    [[nodiscard]] bool getStandardLibrary() const noexcept;
+    void setStandardLibrary(bool useStd) noexcept;
+
     [[nodiscard]] adv_utf8_t getOutputPath() const noexcept;
     void setOutputPath(adv_utf8_t path);
 
@@ -34,6 +37,7 @@ private:
     bool _warningsAsErrors{};
 
     adv_format_t _outputFormat{};
+    bool _standardLibrary{true};
     std::string _outputPath{};
     std::vector<std::string> _importDirs{};
 

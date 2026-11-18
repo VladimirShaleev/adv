@@ -181,6 +181,28 @@ adv_options_get_output_format(adv_options_t options);
 ADV_API void
 adv_options_set_output_format(adv_options_t options,
                               adv_format_t format);
+/**
+ * @brief     Get standard library inclusion setting.
+ * @details   Checks whether the compiler is configured to include the standard library during compilation.
+ * @param[in] options Target options.
+ * @return    ::ADV_TRUE if the standard library is enabled, or ::ADV_FALSE otherwise.
+ * @sa        ::adv_options_set_standard_library
+ * @ingroup   adv_functions
+ */
+ADV_API adv_bool_t
+adv_options_get_standard_library(adv_options_t options);
+
+/**
+ * @brief     Set standard library inclusion setting.
+ * @details   Configure whether the compiler should include the standard library during compilation.
+ * @param[in] options Target options.
+ * @param[in] use_std Boolean flag to enable or disable standard library inclusion.
+ * @sa        ::adv_options_get_standard_library
+ * @ingroup   adv_functions
+ */
+ADV_API void
+adv_options_set_standard_library(adv_options_t options,
+                                 adv_bool_t use_std);
 
 /**
  * @brief     Get output path.

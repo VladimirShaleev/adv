@@ -8,6 +8,7 @@ using namespace std::literals;
 int main(int argc, char* argv[]) {
     auto text = false;
     auto warnAsErr = false;
+    auto noStd = false;
     auto input = std::filesystem::path();
     auto output = std::filesystem::current_path();
     auto imports = std::vector<std::string>();
@@ -18,6 +19,7 @@ int main(int argc, char* argv[]) {
     program.add_argument("-t", "--text").store_into(text).help("write text assembly output");
     program.add_argument("-i", "--imports").append().store_into(imports).help("import directories");
     program.add_argument("-w", "--warnings").store_into(warnAsErr).help("warnings as errors");
+    program.add_argument("--nostd").store_into(noStd).help("do not include standard library");
 
     try {
         program.parse_args(argc, argv);

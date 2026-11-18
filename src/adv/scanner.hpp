@@ -172,9 +172,11 @@ private:
         auto filename = normalize(file, basePath);
         auto moduelName = utils::getModuleName(filename);
 
-        std::string_view moduleNameView{moduelName.c_str(), moduelName.length()};
-        if (auto it = std.find(moduleNameView); it != std.end()) {
-            return {filename, &it->second, false};
+        if (options.getStandardLibrary()) {
+            std::string_view moduleNameView{moduelName.c_str(), moduelName.length()};
+            if (auto it = std.find(moduleNameView); it != std.end()) {
+                return {filename, &it->second, false};
+            }
         }
 
         adv_data_t data{};
