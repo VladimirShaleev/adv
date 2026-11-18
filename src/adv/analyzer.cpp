@@ -89,6 +89,15 @@ void Analyzer::resolveSymbols() {
             node->parent = parent;
             symbolTable.addSymbol(options, ctx, node);
         }
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {
+            node->parent = parent;
+            auto field = node->struct_decl.first_field;
+            while (field) {
+                acceptNode(field, node);
+                field = field->next_sibling;
+            }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) { node->parent = parent; }
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             node->parent = parent;
             auto sym = symbolTable.addSymbol(options, ctx, node);
@@ -300,6 +309,8 @@ void Analyzer::resolveTypes() {
             : options(options), ctx(ctx), analyzer(analyzer), symbolTable(symbolTable) {}
         void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) { visitChildrens(node); }
         void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) { acceptNode(node->import_stmt.root); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {}
         void visit(adv_node_t* node, Tag<ADV_NODE_INT_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_INT; }
         void visit(adv_node_t* node, Tag<ADV_NODE_FLOAT_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_FLOAT; }
         void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) { node->resolved_type = VM_VALUE_TYPE_STRING; }

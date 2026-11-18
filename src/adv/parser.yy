@@ -63,7 +63,7 @@ using namespace std::literals;
 }
 
 /* Keywords */
-%token IMPORT NATIVE FUNCTION VAR AS IF ELSE WHILE YIELD WAIT RETURN
+%token IMPORT NATIVE FUNCTION STRUCT VAR AS IF ELSE WHILE YIELD WAIT RETURN
 
 /* Operators */
 %token EQ NE LE GE AND OR NOT ASHL ASHR LSHL LSHR UNARY
@@ -88,8 +88,11 @@ using namespace std::literals;
 %type <adv_node_t*>  return_stmt
 %type <adv_node_t*>  native_decl
 %type <adv_node_t*>  function_decl
+%type <adv_node_t*>  struct_decl
+%type <adv_node_t*>  field_decl
 %type <adv_node_t*>  param
 %type <NodeList>     param_list
+%type <NodeList>     field_list
 %type <NodeList>     arg_list
 %type <adv_node_t*>  block
 %type <adv_node_t*>  init_expr
@@ -220,6 +223,30 @@ function_decl
     }
     ;
 
+field_decl
+    : IDENTIFIER ':' IDENTIFIER ';' {
+        auto field = alloc_node(@$, FIELD_DECL);
+        field->field_decl.name = intern($1);
+        field->field_decl.type_hint = intern($3);
+        $$ = field;
+    }
+    ;
+
+field_list
+    : /* empty */ { $$ = list_init(nullptr); }
+    | field_list field_decl { $$ = list_add($1, $2); }
+    ;
+
+struct_decl
+    : STRUCT IDENTIFIER '{' field_list '}' {
+        auto node = alloc_node(@$, STRUCT_DECL);
+        node->struct_decl.name = intern($2);
+        node->struct_decl.first_field = $4.first;
+        node->struct_decl.field_count = $4.count;
+        $$ = node;
+    }
+    ;
+
 block
     : '{' statement_list '}' {
         auto blk = alloc_node(@$, BLOCK);
@@ -240,6 +267,7 @@ statement
     | block                        { $$ = $1; }
     | native_decl ';'              { $$ = $1; }
     | function_decl                { $$ = $1; }
+    | struct_decl                  { $$ = $1; }
     | assign_expr ';'              { $$ = $1; }
     | if_stmt                      { $$ = $1; }
     | while_stmt                   { $$ = $1; }
@@ -302,10 +330,18 @@ assign_expr
     : IDENTIFIER '=' expr {
         auto target = alloc_node(@1, IDENTIFIER_EXPR);
         target->id_expr.name = intern($1);
-
         auto assign = alloc_node(@$, ASSIGN_EXPR);
         assign->assign_expr.target = target;
         assign->assign_expr.val = $3;
+        $$ = assign;
+    }
+    | expr '.' IDENTIFIER '=' expr {
+        auto target = alloc_node(@1, MEMBER_ACCESS);
+        target->member_access.target = $1;
+        target->member_access.member = intern($3);
+        auto assign = alloc_node(@$, ASSIGN_EXPR);
+        assign->assign_expr.target = target;
+        assign->assign_expr.val = $5;
         $$ = assign;
     }
     ;
@@ -367,6 +403,12 @@ expr
     | IDENTIFIER {
         auto node = alloc_node(@1, IDENTIFIER_EXPR);
         node->id_expr.name = intern($1);
+        $$ = node;
+    }
+    | expr '.' IDENTIFIER {
+        auto node = alloc_node(@$, MEMBER_ACCESS);
+        node->member_access.target = $1;
+        node->member_access.member = intern($3);
         $$ = node;
     }
     | call_expr { 

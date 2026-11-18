@@ -30,6 +30,12 @@ Visitor accept(adv_node_t* node, Args&&... args) {
         case ADV_NODE_FUNCTION_DECL:
             visitor.visit(node, Tag<ADV_NODE_FUNCTION_DECL>{});
             break;
+        case ADV_NODE_STRUCT_DECL:
+            visitor.visit(node, Tag<ADV_NODE_STRUCT_DECL>{});
+            break;
+        case ADV_NODE_FIELD_DECL:
+            visitor.visit(node, Tag<ADV_NODE_FIELD_DECL>{});
+            break;
         case ADV_NODE_PARAM_DECL:
             visitor.visit(node, Tag<ADV_NODE_PARAM_DECL>{});
             break;

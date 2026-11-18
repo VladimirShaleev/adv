@@ -232,6 +232,8 @@ struct CodeGenVisitor {
             (*exportFunc.functions)[node->func_decl.symbol] = {entryIp, node};
         }
     }
+    void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {
         const auto module = ctx.intern(utils::getModuleName(ctx.getString(node->import_stmt.path)));

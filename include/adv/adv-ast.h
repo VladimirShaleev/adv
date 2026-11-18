@@ -33,33 +33,35 @@ typedef enum
     ADV_NODE_NATIVE_DECL        = 4, /**< `native name(...)`: func_decl. */
     ADV_NODE_FUNCTION_DECL      = 5, /**< `function name(...)`: func_decl. */
     ADV_NODE_PARAM_DECL         = 6, /**< `a: int`: param_decl (used in func_decl). */
+    ADV_NODE_STRUCT_DECL        = 7, /**< `struct Name { ... }`: struct_decl. */
+    ADV_NODE_FIELD_DECL         = 8, /**< `name: type`: field_decl. */
 
     /* Control flow statements */
-    ADV_NODE_IMPORT_STMT        = 7, /**< `import "file"`: import_stmt (path). */
-    ADV_NODE_IF_STMT            = 8, /**< `if (cond) then else`: if_stmt. */
-    ADV_NODE_WHILE_STMT         = 9, /**< `while (cond) body`: while_stmt. */
-    ADV_NODE_RETURN_STMT        = 10, /**< `return expr`: expr_stmt. */
-    ADV_NODE_YIELD_STMT         = 11, /**< `yield`: yield statement (no additional union payload). */
-    ADV_NODE_WAIT_STMT          = 12, /**< `wait expr`: expr_stmt. */
-    ADV_NODE_EXPR_STMT          = 13, /**< Expression statement: expr_stmt. */
+    ADV_NODE_IMPORT_STMT        = 9, /**< `import "file"`: import_stmt (path). */
+    ADV_NODE_IF_STMT            = 10, /**< `if (cond) then else`: if_stmt. */
+    ADV_NODE_WHILE_STMT         = 11, /**< `while (cond) body`: while_stmt. */
+    ADV_NODE_RETURN_STMT        = 12, /**< `return expr`: expr_stmt. */
+    ADV_NODE_YIELD_STMT         = 13, /**< `yield`: yield statement (no additional union payload). */
+    ADV_NODE_WAIT_STMT          = 14, /**< `wait expr`: expr_stmt. */
+    ADV_NODE_EXPR_STMT          = 15, /**< Expression statement: expr_stmt. */
 
     /* Expressions and operations */
-    ADV_NODE_IMPLICIT_CAST_EXPR = 14, /**< Implicit type conversion node inserted during semantic analysis. */
-    ADV_NODE_EXPLICIT_CAST_EXPR = 15, /**< `expr AS type`: explicit cast_expr. */
-    ADV_NODE_IDENTIFIER_EXPR    = 16, /**< Identifier reference expression: id_expr. */
-    ADV_NODE_ASSIGN_EXPR        = 17, /**< `target = val`: assign_expr. */
-    ADV_NODE_BINARY_EXPR        = 18, /**< `a + b`, `a == b`: binary_expr. */
-    ADV_NODE_UNARY_EXPR         = 19, /**< `-a`, `!a`: unary_expr. */
-    ADV_NODE_CALL_EXPR          = 20, /**< `func(a, b)` or `coroutine[a, b]`: call_expr. */
-    ADV_NODE_MEMBER_ACCESS      = 21, /**< `obj.field`: member_access. */
+    ADV_NODE_IMPLICIT_CAST_EXPR = 16, /**< Implicit type conversion node inserted during semantic analysis. */
+    ADV_NODE_EXPLICIT_CAST_EXPR = 17, /**< `expr AS type`: explicit cast_expr. */
+    ADV_NODE_IDENTIFIER_EXPR    = 18, /**< Identifier reference expression: id_expr. */
+    ADV_NODE_ASSIGN_EXPR        = 19, /**< `target = val`: assign_expr. */
+    ADV_NODE_BINARY_EXPR        = 20, /**< `a + b`, `a == b`: binary_expr. */
+    ADV_NODE_UNARY_EXPR         = 21, /**< `-a`, `!a`: unary_expr. */
+    ADV_NODE_CALL_EXPR          = 22, /**< `func(a, b)` or `coroutine[a, b]`: call_expr. */
+    ADV_NODE_MEMBER_ACCESS      = 23, /**< `obj.field`: member_access. */
 
     /* Literals */
-    ADV_NODE_BOOL_LITERAL       = 22, /**< Boolean literal: bool_val. */
-    ADV_NODE_INT_LITERAL        = 23, /**< 32-bit signed integer literal: int_val. */
-    ADV_NODE_FLOAT_LITERAL      = 24, /**< 32-bit floating-point literal: float_val. */
-    ADV_NODE_STRING_LITERAL     = 25, /**< String literal handle: str_val. */
+    ADV_NODE_BOOL_LITERAL       = 24, /**< Boolean literal: bool_val. */
+    ADV_NODE_INT_LITERAL        = 25, /**< 32-bit signed integer literal: int_val. */
+    ADV_NODE_FLOAT_LITERAL      = 26, /**< 32-bit floating-point literal: float_val. */
+    ADV_NODE_STRING_LITERAL     = 27, /**< String literal handle: str_val. */
 
-    ADV_NODE_COUNT_ENUMS        = 26, /**< Count of constants in the enumeration. */
+    ADV_NODE_COUNT_ENUMS        = 28, /**< Count of constants in the enumeration. */
     ADV_NODE_MAX_ENUM           = 0x7FFFFFFF /**< Max value of enum (not used). */
 } adv_node_type_t;
 
@@ -137,6 +139,25 @@ struct adv_node_t
             adv_node_t*  body;             /**< Pointer to BLOCK node. */
             adv_symbol_h symbol;           /**< Handle to associated symbol. */
         } func_decl; /**< Function declaration payload. */
+
+        /**
+         * @brief Payload for a structure declaration.
+         **/
+        struct
+        {
+            vm_string_h  name;        /**< Structure name string handle. */
+            adv_node_t*  first_field; /**< Head of field declarations list. */
+            adv_uint32_t field_count; /**< Number of field declarations. */
+        } struct_decl; /**< Structure declaration payload. */
+
+        /**
+         * @brief Payload for a structure field declaration.
+         **/
+        struct
+        {
+            vm_string_h name;      /**< Field name string handle. */
+            vm_string_h type_hint; /**< Field type annotation handle. */
+        } field_decl; /**< Structure field declaration payload. */
 
         /**
          * @brief Payload for a function parameter declaration.
