@@ -59,7 +59,7 @@ enum class SymbolKind {
 };
 
 struct SymbolType {
-    vm_uint8_t code;
+    vm_uint32_t code;
     std::string_view structureName;
 };
 
@@ -71,7 +71,7 @@ struct SymbolParameter {
 struct Symbol {
     SymbolKind kind;
     std::string_view name;
-    vm_uint8_t type{VM_SCRIPT_TYPE_NONE};
+    vm_uint8_t type{VM_VALUE_TYPE_UNKNOWN};
     std::string_view structureName;
     std::vector<SymbolParameter> parameters;
     std::vector<SymbolParameter> fields;
@@ -709,18 +709,18 @@ private:
         const auto typeName = _currentToken.value;
         advance();
         if (equals(typeName, "bool"sv)) {
-            return {VM_SCRIPT_TYPE_BOOL, {}};
+            return {VM_VALUE_TYPE_BOOL, {}};
         }
         if (equals(typeName, "int"sv)) {
-            return {VM_SCRIPT_TYPE_INT, {}};
+            return {VM_VALUE_TYPE_INT, {}};
         }
         if (equals(typeName, "float"sv)) {
-            return {VM_SCRIPT_TYPE_FLOAT, {}};
+            return {VM_VALUE_TYPE_FLOAT, {}};
         }
         if (equals(typeName, "string"sv)) {
-            return {VM_SCRIPT_TYPE_STRING, {}};
+            return {VM_VALUE_TYPE_STRING, {}};
         }
-        return {VM_SCRIPT_TYPE_STRUCT, typeName};
+        return {utils::ExportTypeStructure, typeName};
     }
 
     [[nodiscard]] std::vector<SymbolParameter> parseExportParameters() {
@@ -928,10 +928,15 @@ private:
             const auto* data = reinterpret_cast<const uint8_t*>(&record);
             result.exportSection.insert(result.exportSection.end(), data, data + sizeof(record));
         };
-        auto appendType = [&](const SymbolType& type) {
-            if (type.code == VM_SCRIPT_TYPE_STRUCT) {
-                pushUint32(emplaceData(result, type.structureName), result.exportSection);
+        auto encodeType = [&](const SymbolType& type, vm_uint32_t line) {
+            if (type.code > VM_VALUE_TYPE_STRING) {
+                const auto dataOffset = emplaceData(result, type.structureName);
+                if (dataOffset > (std::numeric_limits<vm_uint32_t>::max() >> 3)) {
+                    error("Structure type name offset exceeds export type limit", TranslateResult::ValueOutOfRange, false, line);
+                }
+                return utils::encodeExportStructureType(dataOffset);
             }
+            return type.code;
         };
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind != SymbolKind::Structure) {
@@ -944,23 +949,21 @@ private:
             exports.struct_size = checkedUint16(
                 static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_struct_t), structLine);
             for (const auto& field : symbol.fields) {
-                appendRecord(vm_script_export_field_t{emplaceData(result, field.name), field.type.code});
-                appendType(field.type);
+                const auto type = encodeType(field.type, structLine);
+                appendRecord(vm_script_export_field_t{emplaceData(result, field.name), type});
                 exports.struct_size = checkedUint16(
-                    static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_field_t) +
-                        (field.type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                    static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_field_t),
                     structLine);
             }
         }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Variable) {
-                const SymbolType type{static_cast<vm_uint8_t>(symbol.type), symbol.structureName};
-                appendRecord(vm_script_export_var_t{emplaceData(result, symbol.name), type.code});
-                appendType(type);
+                const SymbolType type{symbol.type, symbol.structureName};
+                appendRecord(vm_script_export_var_t{
+                    emplaceData(result, symbol.name), encodeType(type, symbol.line)});
                 exports.var_count = checkedUint16(static_cast<size_t>(exports.var_count) + 1, symbol.line);
                 exports.var_size = checkedUint16(
-                    static_cast<size_t>(exports.var_size) + sizeof(vm_script_export_var_t) +
-                        (type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                    static_cast<size_t>(exports.var_size) + sizeof(vm_script_export_var_t),
                     symbol.line);
             }
         }
@@ -973,11 +976,10 @@ private:
                 exports.func_size = checkedUint16(
                     static_cast<size_t>(exports.func_size) + sizeof(func), symbol.line);
                 for (const auto& param : symbol.parameters) {
-                    appendRecord(vm_script_export_param_t{emplaceData(result, param.name), param.type.code});
-                    appendType(param.type);
+                    appendRecord(vm_script_export_param_t{
+                        emplaceData(result, param.name), encodeType(param.type, symbol.line)});
                     exports.func_size = checkedUint16(
-                        static_cast<size_t>(exports.func_size) + sizeof(vm_script_export_param_t) +
-                            (param.type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                        static_cast<size_t>(exports.func_size) + sizeof(vm_script_export_param_t),
                         symbol.line);
                 }
             }
@@ -991,11 +993,10 @@ private:
                 exports.native_size = checkedUint16(
                     static_cast<size_t>(exports.native_size) + sizeof(native), symbol.line);
                 for (const auto& param : symbol.parameters) {
-                    appendRecord(vm_script_export_param_t{emplaceData(result, param.name), param.type.code});
-                    appendType(param.type);
+                    appendRecord(vm_script_export_param_t{
+                        emplaceData(result, param.name), encodeType(param.type, symbol.line)});
                     exports.native_size = checkedUint16(
-                        static_cast<size_t>(exports.native_size) + sizeof(vm_script_export_param_t) +
-                            (param.type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                        static_cast<size_t>(exports.native_size) + sizeof(vm_script_export_param_t),
                         symbol.line);
                 }
             }

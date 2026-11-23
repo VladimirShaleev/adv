@@ -1,6 +1,8 @@
 #ifndef ADV_GENERATOR_HPP
 #define ADV_GENERATOR_HPP
 
+#include "compiler.hpp"
+
 namespace adv {
 
 class Options;

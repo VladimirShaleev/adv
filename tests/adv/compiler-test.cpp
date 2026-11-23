@@ -13,7 +13,8 @@ void captureOutput(const adv_source_t* source, adv_data_t data) {
 
 TEST(Compiler, ExportsOnlyGlobalStructures) {
     constexpr char sourceText[] =
-        "struct Global { value: int; }\n"
+        "struct Child { value: int; }\n"
+        "struct Global { child: Child; }\n"
         "function func() {\n"
         "    struct Local { value: int; }\n"
         "}\n";
@@ -39,7 +40,7 @@ TEST(Compiler, ExportsOnlyGlobalStructures) {
     adv_options_destroy(options);
 
     ASSERT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
-    EXPECT_NE(output.find("struct Global"), std::string::npos);
+    EXPECT_NE(output.find("struct Global { child: Child; }"), std::string::npos);
     EXPECT_EQ(output.find("struct Local"), std::string::npos);
 }
 

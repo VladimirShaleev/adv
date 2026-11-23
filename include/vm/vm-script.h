@@ -21,24 +21,6 @@ extern "C" {
 VM_PACKED_BEGIN
 
 /**
- * @brief   Types stored in the script export metadata.
- * @details Primitive values use the VM value type codes. Structure types are
- *          followed by a 32-bit string offset naming the referenced structure.
- * @ingroup vm_enums
- */
-typedef enum
-{
-    VM_SCRIPT_TYPE_NONE        = 0, /**< No value type (void). */
-    VM_SCRIPT_TYPE_BOOL        = 1, /**< Boolean primitive. */
-    VM_SCRIPT_TYPE_INT         = 2, /**< Integer primitive. */
-    VM_SCRIPT_TYPE_FLOAT       = 3, /**< Floating-point primitive. */
-    VM_SCRIPT_TYPE_STRING      = 4, /**< String primitive. */
-    VM_SCRIPT_TYPE_STRUCT      = 5, /**< Structure; followed by its name offset. */
-    VM_SCRIPT_TYPE_COUNT_ENUMS = 6, /**< Count of constants in the enumeration. */
-    VM_SCRIPT_TYPE_MAX_ENUM    = 0x7F /**< Max value of enum (not used). */
-} vm_script_type_t;
-
-/**
  * @brief   Header of a compiled VM script.
  * @details The magic field is stored as four raw bytes. The version and
  *          checksum fields are always stored in little-endian byte order.
@@ -97,29 +79,28 @@ typedef struct
 
 /**
  * @brief   Exported variable metadata.
- * @details Describes a single global variable symbol stored in the script
- *          export block. The name field indexes a string in the script data
- *          section, while the type field identifies the variable kind.
+ * @details Describes a global variable. The type field stores a 32-bit packed
+ *          type: the low three bits are the base type and, for composite
+ *          types, the upper bits store the data-section offset of the type name.
  * @ingroup vm_structs
  */
 typedef struct
 {
     vm_uint32_t name; /**< Offset or index of the variable name in the data block. */
-    vm_uint8_t  type; /**< ::vm_script_type_t code of the exported variable. */
-    /* vm_uint32_t base_type[0..1]; Present when type is VM_SCRIPT_TYPE_STRUCT. */
+    vm_uint32_t type; /**< Type code of the exported variable. */
 } VM_PACKED_ATTR vm_script_export_var_t;
 
 /**
  * @brief   Exported structure field metadata.
- * @details The name and type are followed by a structure-name offset when the
- *          type is ::VM_SCRIPT_TYPE_STRUCT.
+ * @details The type field stores a 32-bit packed type. Its low three bits are
+ *          the base type; for composite types, the upper bits store the
+ *          data-section offset of the referenced type name.
  * @ingroup vm_structs
  */
 typedef struct
 {
     vm_uint32_t name; /**< Offset of the field name in the data section. */
-    vm_uint8_t  type; /**< ::vm_script_type_t code of the field. */
-    /* vm_uint32_t base_type[0..1]; Present when type is VM_SCRIPT_TYPE_STRUCT. */
+    vm_uint32_t type; /**< Type code of the field. */
 } VM_PACKED_ATTR vm_script_export_field_t;
 
 /**
@@ -137,16 +118,14 @@ typedef struct
 /**
  * @brief   Exported function parameter metadata.
  * @details Describes a parameter of an exported function or native function.
- *          The name field identifies a string in the script data section. The
- *          type field uses ::vm_script_type_t, followed by a structure-name
- *          offset when the type is ::VM_SCRIPT_TYPE_STRUCT.
+ *          The type field uses the same 32-bit packed representation as
+ *          ::vm_script_export_var_t.
  * @ingroup vm_structs
  */
 typedef struct
 {
     vm_uint32_t name; /**< Offset of the parameter name string in the data section. */
-    vm_uint8_t  type; /**< ::vm_script_type_t code of the parameter. */
-    /* vm_uint32_t base_type[0..1]; Present when type is VM_SCRIPT_TYPE_STRUCT. */
+    vm_uint32_t type; /**< Type code of the parameter. */
 } VM_PACKED_ATTR vm_script_export_param_t;
 
 /**
@@ -161,7 +140,7 @@ typedef struct
 {
     vm_uint32_t name; /**< Offset or index of the function name in the data block. */
     vm_uint32_t text_offset; /**< Byte offset of the function body in the text block. */
-    vm_uint8_t  return_type; /**< Type code returned by the function. */
+    vm_uint32_t return_type; /**< Type code returned by the function. */
     vm_uint8_t  param_count; /**< Number of parameters expected by the function. */
     /* vm_script_export_param_t params[param_count]; */
 } VM_PACKED_ATTR vm_script_export_func_t;
@@ -343,8 +322,6 @@ vm_read_script_export(const vm_char_t* buffer,
  * @param[in]  size Total number of bytes available in @p buffer.
  * @param[in]  var_index  Variable index to read.
  * @param[out] export_var Destination variable descriptor.
- * @param[out] base_type Optional offset of the structure name in the data section,
- *                       or zero when the variable has a primitive type.
  * @return     Pointer to @p export_var on success, or `NULL` on failure.
  * @ingroup    vm_functions
  */
@@ -352,8 +329,7 @@ VM_API vm_script_export_var_t*
 vm_read_script_export_var(const vm_char_t* buffer,
                           vm_uint32_t size,
                           vm_uint32_t var_index,
-                          vm_script_export_var_t* export_var,
-                          vm_uint32_t* base_type);
+                          vm_script_export_var_t* export_var);
 
 /**
  * @brief      Reads one exported structure descriptor.
@@ -379,8 +355,6 @@ vm_read_script_export_struct(const vm_char_t* buffer,
  * @param[in]  struct_index Structure index containing the field.
  * @param[in]  field_index Field index to read.
  * @param[out] field Destination field descriptor.
- * @param[out] base_type Optional offset of the field's structure name in the data
- *                       section, or zero when the field has a primitive type.
  * @return     Pointer to @p field on success, or `NULL` on failure.
  * @ingroup    vm_functions
  */
@@ -389,8 +363,7 @@ vm_read_script_export_struct_field(const vm_char_t* buffer,
                                    vm_uint32_t size,
                                    vm_uint32_t struct_index,
                                    vm_uint32_t field_index,
-                                   vm_script_export_field_t* field,
-                                   vm_uint32_t* base_type);
+                                   vm_script_export_field_t* field);
 
 /**
  * @brief      Reads one exported function descriptor.
@@ -416,8 +389,6 @@ vm_read_script_export_func(const vm_char_t* buffer,
  * @param[in]  func_index Function index whose parameter is being read.
  * @param[in]  param_index Parameter index to read.
  * @param[out] param Destination parameter descriptor.
- * @param[out] base_type Optional offset of the parameter's structure name in the
- *                       data section, or zero for a primitive type.
  * @return     Pointer to @p param on success, or `NULL` on failure.
  * @ingroup    vm_functions
  */
@@ -426,8 +397,7 @@ vm_read_script_export_func_param(const vm_char_t* buffer,
                                  vm_uint32_t size,
                                  vm_uint32_t func_index,
                                  vm_uint32_t param_index,
-                                 vm_script_export_param_t* param,
-                                 vm_uint32_t* base_type);
+                                 vm_script_export_param_t* param);
 
 /**
  * @brief      Reads one exported native function descriptor.
@@ -453,8 +423,6 @@ vm_read_script_export_native(const vm_char_t* buffer,
  * @param[in]  native_index Native function index whose parameter is being read.
  * @param[in]  param_index  Parameter index to read.
  * @param[out] param Destination parameter descriptor.
- * @param[out] base_type Optional offset of the parameter's structure name in the
- *                       data section, or zero for a primitive type.
  * @return     Pointer to @p param on success, or `NULL` on failure.
  * @ingroup    vm_functions
  */
@@ -463,8 +431,7 @@ vm_read_script_export_native_param(const vm_char_t* buffer,
                                    vm_uint32_t size,
                                    vm_uint32_t native_index,
                                    vm_uint32_t param_index,
-                                   vm_script_export_param_t* param,
-                                   vm_uint32_t* base_type);
+                                   vm_script_export_param_t* param);
 
 /** @} */
 

@@ -23,6 +23,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <set>

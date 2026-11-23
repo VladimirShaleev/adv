@@ -223,7 +223,7 @@ TEST(Translator, SerializesExportSymbols) {
 }
 
 TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
-    const std::string source =
+    const auto source = std::string(
         ".header\n"
         "    format: ADVT\n"
         "    version: " VM_VERSION_STRING "\n"
@@ -239,6 +239,9 @@ TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
         "    function zetaRun(count: int): bool\n"
         "    native inspect(value: B)\n"
         "    native zetaNative(enabled: bool)\n"
+        ".data\n"
+        "    padding: \"") +
+                         std::string(300, 'x') + "\"\n"
         ".text\n"
         ".function run (slots: 2):\n"
         "    ret\n"
@@ -251,53 +254,51 @@ TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
 
     const auto exports = utils::read<vm_script_export_t>(bytecode);
     const auto data = utils::read<utils::SectionData>(bytecode).data;
-    auto readBaseTypeName = [&](size_t recordOffset) {
-        return utils::readString(utils::readExportBaseType(bytecode, recordOffset), data);
+    auto readTypeName = [&](vm_uint32_t type) {
+        return utils::readString(utils::exportTypeDataOffset(type), data);
     };
     EXPECT_EQ(exports.struct_count, 2);
-    EXPECT_EQ(exports.struct_size, 31);
-    EXPECT_EQ(exports.var_size, 14);
-    EXPECT_EQ(exports.func_size, 39);
-    EXPECT_EQ(exports.native_size, 26);
+    EXPECT_EQ(exports.struct_size, 36);
+    EXPECT_EQ(exports.var_size, 16);
+    EXPECT_EQ(exports.func_size, 44);
+    EXPECT_EQ(exports.native_size, 28);
 
     const auto structureA = utils::read<vm_script_export_struct_t>(bytecode, 0);
-    const auto fieldChildOffset = utils::internal::Offset<vm_script_export_field_t>::offset(bytecode, 0, 1).first;
     const auto fieldChild = utils::read<vm_script_export_field_t>(bytecode, 0, 1);
     EXPECT_EQ(utils::readString(structureA.name, data), "A");
-    EXPECT_EQ(fieldChild.type, VM_SCRIPT_TYPE_STRUCT);
-    EXPECT_EQ(readBaseTypeName(fieldChildOffset), "B");
+    EXPECT_EQ(utils::exportTypeBase(fieldChild.type), utils::ExportTypeStructure);
+    EXPECT_EQ(readTypeName(fieldChild.type), "B");
 
-    const auto variableOffset = utils::internal::Offset<vm_script_export_var_t>::offset(bytecode, 0, 0).first;
     const auto variable = utils::read<vm_script_export_var_t>(bytecode, 0);
-    EXPECT_EQ(variable.type, VM_SCRIPT_TYPE_STRUCT);
-    EXPECT_EQ(readBaseTypeName(variableOffset), "A");
+    EXPECT_EQ(utils::exportTypeBase(variable.type), utils::ExportTypeStructure);
+    EXPECT_GT(utils::exportTypeDataOffset(variable.type), 0x7Fu);
+    EXPECT_EQ(readTypeName(variable.type), "A");
     const auto secondVariable = utils::read<vm_script_export_var_t>(bytecode, 1);
     EXPECT_EQ(utils::readString(secondVariable.name, data), "zeta");
-    EXPECT_EQ(secondVariable.type, VM_SCRIPT_TYPE_INT);
+    EXPECT_EQ(utils::exportTypeBase(secondVariable.type), VM_VALUE_TYPE_INT);
 
     const auto function = utils::read<vm_script_export_func_t>(bytecode, 0);
-    const auto firstParamOffset = utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, 0, 0).first;
     const auto secondParamOffset = utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, 0, 1).first;
     const auto firstParam = utils::read<vm_script_export_param_t>(bytecode, 0, 0);
     const auto secondParam = utils::read<vm_script_export_param_t>(bytecode, 0, 1);
     EXPECT_EQ(function.param_count, 2);
-    EXPECT_EQ(firstParam.type, VM_SCRIPT_TYPE_STRUCT);
-    EXPECT_EQ(readBaseTypeName(firstParamOffset), "A");
-    EXPECT_EQ(secondParam.type, VM_SCRIPT_TYPE_INT);
-    EXPECT_EQ(secondParamOffset, firstParamOffset + sizeof(firstParam) + sizeof(vm_uint32_t));
+    EXPECT_EQ(utils::exportTypeBase(firstParam.type), utils::ExportTypeStructure);
+    EXPECT_EQ(readTypeName(firstParam.type), "A");
+    EXPECT_EQ(utils::exportTypeBase(secondParam.type), VM_VALUE_TYPE_INT);
+    EXPECT_EQ(secondParamOffset, utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, 0, 0).first +
+                                     sizeof(firstParam));
     const auto secondFunction = utils::read<vm_script_export_func_t>(bytecode, 1);
     EXPECT_EQ(utils::readString(secondFunction.name, data), "zetaRun");
     const auto secondFunctionParam = utils::read<vm_script_export_param_t>(bytecode, 1, 0);
-    EXPECT_EQ(secondFunctionParam.type, VM_SCRIPT_TYPE_INT);
+    EXPECT_EQ(utils::exportTypeBase(secondFunctionParam.type), VM_VALUE_TYPE_INT);
 
-    const auto nativeParamOffset = utils::internal::Offset<utils::NativeParam>::offset(bytecode, 0, 0).first;
     const auto nativeParam = utils::read<utils::NativeParam>(bytecode, 0, 0).param;
-    EXPECT_EQ(nativeParam.type, VM_SCRIPT_TYPE_STRUCT);
-    EXPECT_EQ(readBaseTypeName(nativeParamOffset), "B");
+    EXPECT_EQ(utils::exportTypeBase(nativeParam.type), utils::ExportTypeStructure);
+    EXPECT_EQ(readTypeName(nativeParam.type), "B");
     const auto secondNative = utils::read<vm_script_export_native_t>(bytecode, 1);
     EXPECT_EQ(utils::readString(secondNative.name, data), "zetaNative");
     const auto secondNativeParam = utils::read<utils::NativeParam>(bytecode, 1, 0).param;
-    EXPECT_EQ(secondNativeParam.type, VM_SCRIPT_TYPE_BOOL);
+    EXPECT_EQ(utils::exportTypeBase(secondNativeParam.type), VM_VALUE_TYPE_BOOL);
 
     const auto* rawBuffer = reinterpret_cast<const vm_char_t*>(bytecode.data());
     vm_script_export_var_t apiVariable{};
@@ -306,57 +307,47 @@ TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
     vm_script_export_func_t apiFunction{};
     vm_script_export_native_t apiNative{};
     vm_script_export_param_t apiParam{};
-    vm_uint32_t apiBaseType{};
     EXPECT_EQ(vm_read_script_export_var(
-                  rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, &apiVariable, &apiBaseType),
+                  rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, &apiVariable),
               &apiVariable);
     EXPECT_EQ(utils::readString(apiVariable.name, data), "global");
-    EXPECT_EQ(utils::readString(apiBaseType, data), "A");
+    EXPECT_EQ(readTypeName(apiVariable.type), "A");
     EXPECT_EQ(vm_read_script_export_struct(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, &apiStruct),
               &apiStruct);
     EXPECT_EQ(utils::readString(apiStruct.name, data), "A");
     EXPECT_EQ(
-        vm_read_script_export_struct_field(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 1, &apiField, &apiBaseType),
+        vm_read_script_export_struct_field(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 1, &apiField),
         &apiField);
     EXPECT_EQ(utils::readString(apiField.name, data), "child");
-    EXPECT_EQ(utils::readString(apiBaseType, data), "B");
+    EXPECT_EQ(readTypeName(apiField.type), "B");
     EXPECT_EQ(
-        vm_read_script_export_func_param(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 0, &apiParam, &apiBaseType),
+        vm_read_script_export_func_param(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 0, &apiParam),
         &apiParam);
-    EXPECT_EQ(utils::readString(apiBaseType, data), "A");
+    EXPECT_EQ(readTypeName(apiParam.type), "A");
     EXPECT_EQ(
-        vm_read_script_export_func_param(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 1, &apiParam, &apiBaseType),
+        vm_read_script_export_func_param(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 1, &apiParam),
         &apiParam);
-    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(utils::exportTypeBase(apiParam.type), VM_VALUE_TYPE_INT);
     EXPECT_EQ(
-        vm_read_script_export_func_param(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiParam, &apiBaseType),
+        vm_read_script_export_func_param(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiParam),
         &apiParam);
-    EXPECT_EQ(apiParam.type, VM_SCRIPT_TYPE_INT);
-    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(utils::exportTypeBase(apiParam.type), VM_VALUE_TYPE_INT);
     EXPECT_EQ(
         vm_read_script_export_native_param(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 0, &apiParam, &apiBaseType),
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 0, &apiParam),
         &apiParam);
-    EXPECT_EQ(utils::readString(apiBaseType, data), "B");
+    EXPECT_EQ(readTypeName(apiParam.type), "B");
     EXPECT_EQ(
-        vm_read_script_export_native_param(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiParam, &apiBaseType),
+        vm_read_script_export_native_param(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiParam),
         &apiParam);
-    EXPECT_EQ(apiParam.type, VM_SCRIPT_TYPE_BOOL);
-    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(utils::exportTypeBase(apiParam.type), VM_VALUE_TYPE_BOOL);
     EXPECT_EQ(vm_read_script_export_struct(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, &apiStruct),
               &apiStruct);
     EXPECT_EQ(utils::readString(apiStruct.name, data), "B");
     EXPECT_EQ(
-        vm_read_script_export_struct_field(
-            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiField, &apiBaseType),
+        vm_read_script_export_struct_field(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiField),
         &apiField);
-    EXPECT_EQ(apiField.type, VM_SCRIPT_TYPE_BOOL);
-    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(utils::exportTypeBase(apiField.type), VM_VALUE_TYPE_BOOL);
     EXPECT_EQ(vm_read_script_export_func(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, &apiFunction),
               &apiFunction);
     EXPECT_EQ(vm_read_script_export_native(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, &apiNative),

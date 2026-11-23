@@ -898,53 +898,26 @@ vm_script_export_t* vm_read_script_export(const vm_char_t* buffer, vm_uint32_t s
     return export_table;
 }
 
-namespace {
-
-// TODO: move base type reading to utils
-void readBaseType(
-    std::span<const vm_uint8_t> bytecode, size_t recordOffset, vm_uint8_t type, vm_uint32_t* base_type) noexcept {
-    if (base_type) {
-        *base_type = 0;
-        if (type == VM_SCRIPT_TYPE_STRUCT) {
-            auto offset = static_cast<vm_uint32_t>(recordOffset + sizeof(vm_script_export_var_t));
-            *base_type = utils::readUint32(bytecode, offset);
-        }
-    }
-}
-
-} // namespace
-
 vm_script_export_var_t* vm_read_script_export_var(
-    const vm_char_t* buffer,
-    vm_uint32_t size,
-    vm_uint32_t var_index,
-    vm_script_export_var_t* export_var,
-    vm_uint32_t* base_type) {
+    const vm_char_t* buffer, vm_uint32_t size, vm_uint32_t var_index, vm_script_export_var_t* export_var) {
     if (buffer && export_var) {
         const auto bytecode = std::span{(const vm_uint8_t*)buffer, size};
         const auto maxVars = utils::read<vm_script_export_t>(bytecode).var_count;
-        if (base_type) {
-            *base_type = 0;
-        }
         if (var_index < maxVars) {
-            const auto [offset, _] = utils::internal::Offset<vm_script_export_var_t>::offset(bytecode, var_index, 0);
             *export_var = utils::read<vm_script_export_var_t>(bytecode, var_index);
-            readBaseType(bytecode, offset, export_var->type, base_type);
         }
     }
     return export_var;
 }
 
 vm_script_export_struct_t* vm_read_script_export_struct(
-    const vm_char_t* buffer,
-    vm_uint32_t size,
-    vm_uint32_t struct_index,
-    vm_script_export_struct_t* export_struct) {
+    const vm_char_t* buffer, vm_uint32_t size, vm_uint32_t struct_index, vm_script_export_struct_t* export_struct) {
     if (buffer && export_struct) {
-        const auto bytecode = std::span{(const vm_uint8_t*)buffer, size};
-        const auto maxStructs = utils::read<vm_script_export_t>(bytecode).struct_count;
+        const auto maxStructs =
+            utils::read<vm_script_export_t>(std::span{(const vm_uint8_t*)buffer, size}).struct_count;
         if (struct_index < maxStructs) {
-            *export_struct = utils::read<vm_script_export_struct_t>(bytecode, struct_index);
+            *export_struct =
+                utils::read<vm_script_export_struct_t>(std::span{(const vm_uint8_t*)buffer, size}, struct_index);
         }
     }
     return export_struct;
@@ -955,21 +928,14 @@ vm_script_export_field_t* vm_read_script_export_struct_field(
     vm_uint32_t size,
     vm_uint32_t struct_index,
     vm_uint32_t field_index,
-    vm_script_export_field_t* field,
-    vm_uint32_t* base_type) {
+    vm_script_export_field_t* field) {
     if (buffer && field) {
         const auto bytecode = std::span{(const vm_uint8_t*)buffer, size};
-        const auto exports = utils::read<vm_script_export_t>(bytecode);
-        if (base_type) {
-            *base_type = 0;
-        }
-        if (struct_index < exports.struct_count) {
+        const auto maxStructs = utils::read<vm_script_export_t>(bytecode).struct_count;
+        if (struct_index < maxStructs) {
             const auto structure = utils::read<vm_script_export_struct_t>(bytecode, struct_index);
             if (field_index < structure.field_count) {
-                const auto [offset, _] =
-                    utils::internal::Offset<vm_script_export_field_t>::offset(bytecode, struct_index, field_index);
                 *field = utils::read<vm_script_export_field_t>(bytecode, struct_index, field_index);
-                readBaseType(bytecode, offset, field->type, base_type);
             }
         }
     }
@@ -981,8 +947,7 @@ vm_script_export_func_t* vm_read_script_export_func(
     if (buffer && export_func) {
         const auto maxFuncs = utils::read<vm_script_export_t>(std::span{(const vm_uint8_t*)buffer, size}).func_count;
         if (func_index < maxFuncs) {
-            *export_func =
-                utils::read<vm_script_export_func_t>(std::span{(const vm_uint8_t*)buffer, size}, func_index);
+            *export_func = utils::read<vm_script_export_func_t>(std::span{(const vm_uint8_t*)buffer, size}, func_index);
         }
     }
     return export_func;
@@ -993,21 +958,16 @@ vm_script_export_param_t* vm_read_script_export_func_param(
     vm_uint32_t size,
     vm_uint32_t func_index,
     vm_uint32_t param_index,
-    vm_script_export_param_t* param,
-    vm_uint32_t* base_type) {
+    vm_script_export_param_t* param) {
     if (buffer && param) {
-        const auto bytecode = std::span{(const vm_uint8_t*)buffer, size};
-        const auto maxFuncs = utils::read<vm_script_export_t>(bytecode).func_count;
-        if (base_type) {
-            *base_type = 0;
-        }
+        const auto maxFuncs = utils::read<vm_script_export_t>(std::span{(const vm_uint8_t*)buffer, size}).func_count;
         if (func_index < maxFuncs) {
-            const auto maxParams = utils::read<vm_script_export_func_t>(bytecode, func_index).param_count;
+            const auto maxParams =
+                utils::read<vm_script_export_func_t>(std::span{(const vm_uint8_t*)buffer, size}, func_index)
+                    .param_count;
             if (param_index < maxParams) {
-                const auto [offset, _] =
-                    utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, func_index, param_index);
-                *param = utils::read<vm_script_export_param_t>(bytecode, func_index, param_index);
-                readBaseType(bytecode, offset, param->type, base_type);
+                *param = utils::read<vm_script_export_param_t>(
+                    std::span{(const vm_uint8_t*)buffer, size}, func_index, param_index);
             }
         }
     }
@@ -1032,21 +992,18 @@ vm_script_export_param_t* vm_read_script_export_native_param(
     vm_uint32_t size,
     vm_uint32_t native_index,
     vm_uint32_t param_index,
-    vm_script_export_param_t* param,
-    vm_uint32_t* base_type) {
+    vm_script_export_param_t* param) {
     if (buffer && param) {
-        const auto bytecode = std::span{(const vm_uint8_t*)buffer, size};
-        const auto maxNatives = utils::read<vm_script_export_t>(bytecode).native_count;
-        if (base_type) {
-            *base_type = 0;
-        }
+        const auto maxNatives =
+            utils::read<vm_script_export_t>(std::span{(const vm_uint8_t*)buffer, size}).native_count;
         if (native_index < maxNatives) {
-            const auto maxParams = utils::read<vm_script_export_native_t>(bytecode, native_index).param_count;
+            const auto maxParams =
+                utils::read<vm_script_export_native_t>(std::span{(const vm_uint8_t*)buffer, size}, native_index)
+                    .param_count;
             if (param_index < maxParams) {
-                const auto [offset, _] =
-                    utils::internal::Offset<utils::NativeParam>::offset(bytecode, native_index, param_index);
-                *param = utils::read<utils::NativeParam>(bytecode, native_index, param_index).param;
-                readBaseType(bytecode, offset, param->type, base_type);
+                *param = utils::read<utils::NativeParam>(
+                             std::span{(const vm_uint8_t*)buffer, size}, native_index, param_index)
+                             .param;
             }
         }
     }

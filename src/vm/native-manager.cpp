@@ -72,8 +72,9 @@ const vm_reflect_func_t* NativeManager::reflect(vm_native_h native, std::span<co
                 const auto param = utils::read<utils::NativeParam>(bytecode, i, j).param;
                 const auto paraName = utils::readString(param.name, data);
                 func->linearParamNames.emplace_back(paraName);
-                const auto type = param.type >= VM_SCRIPT_TYPE_BOOL && param.type <= VM_SCRIPT_TYPE_STRING
-                                      ? static_cast<vm_value_type_t>(param.type)
+                const auto baseType = utils::exportTypeBase(param.type);
+                const auto type = baseType >= VM_VALUE_TYPE_BOOL && baseType <= VM_VALUE_TYPE_STRING
+                                      ? static_cast<vm_value_type_t>(baseType)
                                       : VM_VALUE_TYPE_UNKNOWN;
                 func->linearParams.emplace_back(nullptr, type);
             }

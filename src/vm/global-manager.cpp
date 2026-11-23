@@ -13,8 +13,9 @@ void GlobalManager::addGlobals(vm_script_h script, std::span<const uint8_t> byte
     for (size_t i = 0; i < varCount; ++i) {
         const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
         auto name = utils::readString(var.name, data);
-        if (var.type >= VM_SCRIPT_TYPE_BOOL && var.type <= VM_SCRIPT_TYPE_STRING) {
-            addGlobalVar(name, static_cast<vm_value_type_t>(var.type));
+        const auto type = utils::exportTypeBase(var.type);
+        if (type >= VM_VALUE_TYPE_BOOL && type <= VM_VALUE_TYPE_STRING) {
+            addGlobalVar(name, static_cast<vm_value_type_t>(type));
         }
     }
     for (size_t i = 0; i < funCount; ++i) {
