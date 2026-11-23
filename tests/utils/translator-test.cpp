@@ -4,8 +4,11 @@
 
 #include <gtest/gtest.h>
 #include <utils/translator.hpp>
+#include <utils/utils.hpp>
 #include <vm/vm-script.h>
 #include <vm/vm-value.h>
+#include <vm/vm-version.h>
+#include <vm/vm.h>
 
 namespace {
 
@@ -217,4 +220,171 @@ TEST(Translator, SerializesExportSymbols) {
     EXPECT_EQ(firstNativeParam.type, VM_VALUE_TYPE_FLOAT);
     EXPECT_EQ(utils::readString(secondNativeParam.name, data), "b");
     EXPECT_EQ(secondNativeParam.type, VM_VALUE_TYPE_STRING);
+}
+
+TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
+    const std::string source =
+        ".header\n"
+        "    format: ADVT\n"
+        "    version: " VM_VERSION_STRING "\n"
+        ".export\n"
+        "    module test 0\n"
+        "    struct A { count: int; child: B; }\n"
+        "    struct B {\n"
+        "        enabled: bool;\n"
+        "    }\n"
+        "    var global: A\n"
+        "    var zeta: int\n"
+        "    function run(value: A, count: int): bool\n"
+        "    function zetaRun(count: int): bool\n"
+        "    native inspect(value: B)\n"
+        "    native zetaNative(enabled: bool)\n"
+        ".text\n"
+        ".function run (slots: 2):\n"
+        "    ret\n"
+        ".function zetaRun (slots: 1):\n"
+        "    ret\n";
+
+    utils::TranslateResult result{};
+    const auto bytecode = utils::translateTextToBinary(source, result);
+    ASSERT_EQ(result.errorCode, utils::TranslateResult::NoError) << result.message;
+
+    const auto exports = utils::read<vm_script_export_t>(bytecode);
+    const auto data = utils::read<utils::SectionData>(bytecode).data;
+    auto readBaseTypeName = [&](size_t recordOffset) {
+        return utils::readString(utils::readExportBaseType(bytecode, recordOffset), data);
+    };
+    EXPECT_EQ(exports.struct_count, 2);
+    EXPECT_EQ(exports.struct_size, 31);
+    EXPECT_EQ(exports.var_size, 14);
+    EXPECT_EQ(exports.func_size, 39);
+    EXPECT_EQ(exports.native_size, 26);
+
+    const auto structureA = utils::read<vm_script_export_struct_t>(bytecode, 0);
+    const auto fieldChildOffset = utils::internal::Offset<vm_script_export_field_t>::offset(bytecode, 0, 1).first;
+    const auto fieldChild = utils::read<vm_script_export_field_t>(bytecode, 0, 1);
+    EXPECT_EQ(utils::readString(structureA.name, data), "A");
+    EXPECT_EQ(fieldChild.type, VM_SCRIPT_TYPE_STRUCT);
+    EXPECT_EQ(readBaseTypeName(fieldChildOffset), "B");
+
+    const auto variableOffset = utils::internal::Offset<vm_script_export_var_t>::offset(bytecode, 0, 0).first;
+    const auto variable = utils::read<vm_script_export_var_t>(bytecode, 0);
+    EXPECT_EQ(variable.type, VM_SCRIPT_TYPE_STRUCT);
+    EXPECT_EQ(readBaseTypeName(variableOffset), "A");
+    const auto secondVariable = utils::read<vm_script_export_var_t>(bytecode, 1);
+    EXPECT_EQ(utils::readString(secondVariable.name, data), "zeta");
+    EXPECT_EQ(secondVariable.type, VM_SCRIPT_TYPE_INT);
+
+    const auto function = utils::read<vm_script_export_func_t>(bytecode, 0);
+    const auto firstParamOffset = utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, 0, 0).first;
+    const auto secondParamOffset = utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, 0, 1).first;
+    const auto firstParam = utils::read<vm_script_export_param_t>(bytecode, 0, 0);
+    const auto secondParam = utils::read<vm_script_export_param_t>(bytecode, 0, 1);
+    EXPECT_EQ(function.param_count, 2);
+    EXPECT_EQ(firstParam.type, VM_SCRIPT_TYPE_STRUCT);
+    EXPECT_EQ(readBaseTypeName(firstParamOffset), "A");
+    EXPECT_EQ(secondParam.type, VM_SCRIPT_TYPE_INT);
+    EXPECT_EQ(secondParamOffset, firstParamOffset + sizeof(firstParam) + sizeof(vm_uint32_t));
+    const auto secondFunction = utils::read<vm_script_export_func_t>(bytecode, 1);
+    EXPECT_EQ(utils::readString(secondFunction.name, data), "zetaRun");
+    const auto secondFunctionParam = utils::read<vm_script_export_param_t>(bytecode, 1, 0);
+    EXPECT_EQ(secondFunctionParam.type, VM_SCRIPT_TYPE_INT);
+
+    const auto nativeParamOffset = utils::internal::Offset<utils::NativeParam>::offset(bytecode, 0, 0).first;
+    const auto nativeParam = utils::read<utils::NativeParam>(bytecode, 0, 0).param;
+    EXPECT_EQ(nativeParam.type, VM_SCRIPT_TYPE_STRUCT);
+    EXPECT_EQ(readBaseTypeName(nativeParamOffset), "B");
+    const auto secondNative = utils::read<vm_script_export_native_t>(bytecode, 1);
+    EXPECT_EQ(utils::readString(secondNative.name, data), "zetaNative");
+    const auto secondNativeParam = utils::read<utils::NativeParam>(bytecode, 1, 0).param;
+    EXPECT_EQ(secondNativeParam.type, VM_SCRIPT_TYPE_BOOL);
+
+    const auto* rawBuffer = reinterpret_cast<const vm_char_t*>(bytecode.data());
+    vm_script_export_var_t apiVariable{};
+    vm_script_export_struct_t apiStruct{};
+    vm_script_export_field_t apiField{};
+    vm_script_export_func_t apiFunction{};
+    vm_script_export_native_t apiNative{};
+    vm_script_export_param_t apiParam{};
+    vm_uint32_t apiBaseType{};
+    EXPECT_EQ(vm_read_script_export_var(
+                  rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, &apiVariable, &apiBaseType),
+              &apiVariable);
+    EXPECT_EQ(utils::readString(apiVariable.name, data), "global");
+    EXPECT_EQ(utils::readString(apiBaseType, data), "A");
+    EXPECT_EQ(vm_read_script_export_struct(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, &apiStruct),
+              &apiStruct);
+    EXPECT_EQ(utils::readString(apiStruct.name, data), "A");
+    EXPECT_EQ(
+        vm_read_script_export_struct_field(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 1, &apiField, &apiBaseType),
+        &apiField);
+    EXPECT_EQ(utils::readString(apiField.name, data), "child");
+    EXPECT_EQ(utils::readString(apiBaseType, data), "B");
+    EXPECT_EQ(
+        vm_read_script_export_func_param(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 0, &apiParam, &apiBaseType),
+        &apiParam);
+    EXPECT_EQ(utils::readString(apiBaseType, data), "A");
+    EXPECT_EQ(
+        vm_read_script_export_func_param(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 1, &apiParam, &apiBaseType),
+        &apiParam);
+    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(
+        vm_read_script_export_func_param(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiParam, &apiBaseType),
+        &apiParam);
+    EXPECT_EQ(apiParam.type, VM_SCRIPT_TYPE_INT);
+    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(
+        vm_read_script_export_native_param(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 0, 0, &apiParam, &apiBaseType),
+        &apiParam);
+    EXPECT_EQ(utils::readString(apiBaseType, data), "B");
+    EXPECT_EQ(
+        vm_read_script_export_native_param(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiParam, &apiBaseType),
+        &apiParam);
+    EXPECT_EQ(apiParam.type, VM_SCRIPT_TYPE_BOOL);
+    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(vm_read_script_export_struct(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, &apiStruct),
+              &apiStruct);
+    EXPECT_EQ(utils::readString(apiStruct.name, data), "B");
+    EXPECT_EQ(
+        vm_read_script_export_struct_field(
+            rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, 0, &apiField, &apiBaseType),
+        &apiField);
+    EXPECT_EQ(apiField.type, VM_SCRIPT_TYPE_BOOL);
+    EXPECT_EQ(apiBaseType, 0);
+    EXPECT_EQ(vm_read_script_export_func(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, &apiFunction),
+              &apiFunction);
+    EXPECT_EQ(vm_read_script_export_native(rawBuffer, static_cast<vm_uint32_t>(bytecode.size()), 1, &apiNative),
+              &apiNative);
+    EXPECT_EQ(utils::readString(apiFunction.name, data), "zetaRun");
+    EXPECT_EQ(utils::readString(apiNative.name, data), "zetaNative");
+}
+
+TEST(Translator, LeavesExternalTypesAndRuntimeSymbolsUnresolved) {
+    const std::string source =
+        ".header\n"
+        "    format: ADVT\n"
+        "    version: 1.0.0\n"
+        ".export\n"
+        "    module test 0\n"
+        "    struct Box { value: ImportedType; }\n"
+        "    var current: ImportedType\n"
+        "    function run(value: ImportedType)\n"
+        ".text\n"
+        "    push_global run\n"
+        "    call current\n"
+        "    halt\n"
+        ".function run (slots: 1):\n"
+        "    ret\n";
+
+    utils::TranslateResult result{};
+    const auto bytecode = utils::translateTextToBinary(source, result);
+
+    EXPECT_EQ(result.errorCode, utils::TranslateResult::NoError) << result.message;
+    EXPECT_FALSE(bytecode.empty());
 }

@@ -202,19 +202,55 @@ void Analyzer::resolveSymbols() {
             const auto exports = utils::read<vm_script_export_t>(bytecode);
             const auto moduleName = ctx.intern(utils::readString(exports.module_name, data));
             const auto location = adv_location_t{moduleName, 0, 0};
+            auto resolveExportType = [&](vm_uint8_t type, uint32_t offset) -> adv_symbol_h {
+                if (type == VM_SCRIPT_TYPE_NONE) {
+                    return symbolTable.lookupVoid();
+                }
+                if (type >= VM_SCRIPT_TYPE_BOOL && type <= VM_SCRIPT_TYPE_STRING) {
+                    return symbolTable.lookup(static_cast<vm_value_type_t>(type));
+                }
+                if (type == VM_SCRIPT_TYPE_STRUCT) {
+                    offset += sizeof(vm_script_export_var_t);
+                    const auto typeNameOffset = utils::readUint32(bytecode, offset);
+                    const auto typeName = ctx.intern(utils::readString(typeNameOffset, data));
+                    return symbolTable.lookup(symbolTable.getGlobalScope(), typeName);
+                }
+                return Undefined;
+            };
+            std::vector<adv_node_t> structures;
+            structures.reserve(exports.struct_count);
+            for (adv_uint32_t i = 0; i < exports.struct_count; ++i) {
+                const auto exported = utils::read<vm_script_export_struct_t>(bytecode, i);
+                auto& node = structures.emplace_back(ADV_NODE_STRUCT_DECL, location);
+                node.struct_decl.name = ctx.intern(utils::readString(exported.name, data));
+                symbolTable.addSymbol(options, ctx, &node);
+            }
+            for (adv_uint32_t i = 0; i < exports.struct_count; ++i) {
+                const auto exported = utils::read<vm_script_export_struct_t>(bytecode, i);
+                symbolTable.beginScope();
+                for (adv_uint32_t j = 0; j < exported.field_count; ++j) {
+                    const auto [fieldOffset, _] =
+                        utils::internal::Offset<vm_script_export_field_t>::offset(bytecode, i, j);
+                    const auto field = utils::read<vm_script_export_field_t>(bytecode, i, j);
+                    adv_node_t fieldNode{ADV_NODE_FIELD_DECL, location, Undefined, &structures[i]};
+                    fieldNode.field_decl.name = ctx.intern(utils::readString(field.name, data));
+                    fieldNode.field_decl.symbol = Undefined;
+                    auto fieldSymbol = symbolTable.addSymbol(options, ctx, &fieldNode);
+                    fieldSymbol->type = resolveExportType(field.type, fieldOffset);
+                }
+                symbolTable.endScope();
+            }
             for (adv_uint32_t i = 0; i < exports.var_count; ++i) {
+                const auto [varOffset, _] = utils::internal::Offset<vm_script_export_var_t>::offset(bytecode, i, 0);
                 const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
                 adv_node_t node{ADV_NODE_VAR_DECL, location};
                 node.var_decl.name = ctx.intern(utils::readString(var.name, data));
                 node.var_decl.is_global = 1;
-                if (var.type > VM_VALUE_TYPE_UNKNOWN && var.type < VM_VALUE_TYPE_COUNT_ENUMS) {
-                    node.var_decl.type_hint = vm_string_h{var.type};
-                    node.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(var.type));
+                node.resolved_type = resolveExportType(var.type, varOffset);
+                if (node.resolved_type != Undefined) {
+                    node.var_decl.type_hint = symbolTable.getSymbol(node.resolved_type)->name;
                     auto sym = symbolTable.addSymbol(options, ctx, &node);
                     sym->type = node.resolved_type;
-                    sym->slot_count = 1;
-                } else {
-                    // TODO:
                 }
             }
             std::vector<adv_node_t> params;
@@ -224,14 +260,14 @@ void Analyzer::resolveSymbols() {
                 const auto func = utils::read<vm_script_export_func_t>(bytecode, i);
                 adv_node_t node{ADV_NODE_FUNCTION_DECL, location};
                 for (adv_uint32_t j = 0; j < func.param_count; ++j) {
+                    const auto [paramOffset, _] =
+                        utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, i, j);
                     const auto param = utils::read<vm_script_export_param_t>(bytecode, i, j);
                     auto& nodeParam = params.emplace_back(ADV_NODE_PARAM_DECL, location, Undefined, &node);
                     nodeParam.param_decl.name = ctx.intern(utils::readString(param.name, data));
-                    if (param.type > VM_VALUE_TYPE_UNKNOWN && param.type < VM_VALUE_TYPE_COUNT_ENUMS) {
-                        nodeParam.var_decl.type_hint = static_cast<vm_string_h>(param.type);
-                        nodeParam.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(param.type));
-                    } else {
-                        // TODO
+                    nodeParam.resolved_type = resolveExportType(param.type, paramOffset);
+                    if (nodeParam.resolved_type != Undefined) {
+                        nodeParam.param_decl.type_hint = symbolTable.getSymbol(nodeParam.resolved_type)->name;
                     }
                 }
                 node.func_decl.name = ctx.intern(utils::readString(func.name, data));
@@ -257,9 +293,6 @@ void Analyzer::resolveSymbols() {
                 for (auto& param : params) {
                     auto sym = symbolTable.addSymbol(options, ctx, &param);
                     sym->type = param.resolved_type;
-                    if (sym->type != Undefined) {
-                        sym->slot_count = 1;
-                    }
                 }
                 symbolTable.endScope();
             }
@@ -268,14 +301,13 @@ void Analyzer::resolveSymbols() {
                 const auto native = utils::read<vm_script_export_native_t>(bytecode, i);
                 adv_node_t node{ADV_NODE_NATIVE_DECL, location};
                 for (adv_uint32_t j = 0; j < native.param_count; ++j) {
+                    const auto [paramOffset, _] = utils::internal::Offset<utils::NativeParam>::offset(bytecode, i, j);
                     const auto param = utils::read<utils::NativeParam>(bytecode, i, j).param;
                     auto& nodeParam = params.emplace_back(ADV_NODE_PARAM_DECL, location, Undefined, &node);
                     nodeParam.param_decl.name = ctx.intern(utils::readString(param.name, data));
-                    if (param.type > VM_VALUE_TYPE_UNKNOWN && param.type < VM_VALUE_TYPE_COUNT_ENUMS) {
-                        nodeParam.var_decl.type_hint = static_cast<vm_string_h>(param.type);
-                        nodeParam.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(param.type));
-                    } else {
-                        // TODO
+                    nodeParam.resolved_type = resolveExportType(param.type, paramOffset);
+                    if (nodeParam.resolved_type != Undefined) {
+                        nodeParam.param_decl.type_hint = symbolTable.getSymbol(nodeParam.resolved_type)->name;
                     }
                 }
                 node.func_decl.name = ctx.intern(utils::readString(native.name, data));
@@ -301,9 +333,6 @@ void Analyzer::resolveSymbols() {
                 for (auto& param : params) {
                     auto sym = symbolTable.addSymbol(options, ctx, &param);
                     sym->type = param.resolved_type;
-                    if (sym->type != Undefined) {
-                        sym->slot_count = 1;
-                    }
                 }
                 symbolTable.endScope();
             }
@@ -344,8 +373,7 @@ void Analyzer::resolveTypes() {
             auto field = symbolTable.getSymbol(node->field_decl.symbol);
             const auto fieldType = analyzer.findBaseType(field->scope, node->field_decl.type_hint);
             if (fieldType == Undefined) {
-                ctx.log<ADV_STATUS_E3048>(
-                    options, node->location, node->field_decl.type_hint, node->field_decl.name);
+                ctx.log<ADV_STATUS_E3048>(options, node->location, node->field_decl.type_hint, node->field_decl.name);
                 return;
             }
             field->type = fieldType;
@@ -786,8 +814,7 @@ void Analyzer::resolveSlots() {
             acceptNode(node->while_stmt.cond);
             acceptNode(node->while_stmt.body);
         }
-        void visit(...) {
-        }
+        void visit(...) {}
         void visitChildrens(adv_node_t* node) {
             analyzer.visitStmtsWithRules(
                 node, [this](auto child, auto /* parent */) { acceptNode(child); }, false, true);
@@ -821,11 +848,7 @@ void Analyzer::resolveSlots() {
                 return false;
             case SlotLayoutState::Resolving:
                 assert(throughField);
-                ctx.log<ADV_STATUS_E3046>(
-                    options,
-                    throughField->location,
-                    structure->name,
-                    throughField->name);
+                ctx.log<ADV_STATUS_E3046>(options, throughField->location, structure->name, throughField->name);
                 return false;
             case SlotLayoutState::Unresolved:
                 break;
@@ -885,10 +908,7 @@ void Analyzer::resolveSlots() {
 }
 
 void Analyzer::visitStmtsWithRules(
-    adv_node_t* node,
-    std::function<void(adv_node_t*, adv_node_t*)> accept,
-    bool useScopes,
-    bool allocateSlots) {
+    adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes, bool allocateSlots) {
     auto hasFunctions = false;
     auto curr = node->stmts.first_stmt;
     while (curr) {

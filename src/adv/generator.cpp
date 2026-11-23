@@ -126,10 +126,23 @@ struct CodeGenVisitor {
         std::set<vm_string_h>& modules,
         Emitter& code,
         Emitter& exportVar,
+        Emitter& exportStruct,
         Emitter& exportFunc,
         Emitter& exportNative) noexcept
-        : options(options), ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportFunc(exportFunc),
-          exportNative(exportNative) {}
+        : options(options), ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportStruct(exportStruct),
+          exportFunc(exportFunc), exportNative(exportNative) {}
+    void emitScriptType(Emitter& emitter, adv_symbol_h typeHandle) {
+        const auto type = ctx.symbolTable().getSymbol(typeHandle);
+        assert(type);
+        if (type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+            emitter.emitByte(static_cast<adv_uint8_t>(type->primitive_type));
+        } else if (type->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+            emitter.emitByte(VM_SCRIPT_TYPE_STRUCT);
+            emitter.emitString(type->name);
+        } else {
+            assert(!"unsupported exported type");
+        }
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) {
         auto stmt = node->stmts.first_stmt;
         while (stmt) {
@@ -172,13 +185,15 @@ struct CodeGenVisitor {
                 break;
             }
         }
+        if (sym->is_global) {
+            exportVar.emitString(sym->name);
+            emitScriptType(exportVar, sym->type);
+            exportVar.count++;
+        }
         if (type && type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
             if (sym->is_global) {
                 code.emitByte(VM_OPCODE_POP_GLOBAL_BY_NAME);
                 code.emitString(sym->name);
-                exportVar.emitString(sym->name);
-                exportVar.emitByte(static_cast<adv_uint8_t>(type->primitive_type));
-                exportVar.count++;
             } else {
                 code.emitByte(VM_OPCODE_POP_LOCAL);
                 code.emitUint16(sym->slot_index);
@@ -202,15 +217,8 @@ struct CodeGenVisitor {
             exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
             for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
-                const auto paramType = ctx.symbolTable().getSymbol(param->type);
                 exportNative.emitString(param->name);
-                if (paramType && paramType->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
-                    exportNative.emitByte(static_cast<adv_uint8_t>(paramType->primitive_type));
-                } else if (paramType && paramType->kind == ADV_SYMBOL_KIND_VOID) {
-                    exportNative.emitByte(static_cast<adv_uint8_t>(VM_VALUE_TYPE_UNKNOWN));
-                } else if (paramType && paramType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
-                    // TODO
-                }
+                emitScriptType(exportNative, param->type);
             }
             ++exportNative.count;
         }
@@ -275,30 +283,28 @@ struct CodeGenVisitor {
             exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
             for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
-                const auto paramType = ctx.symbolTable().getSymbol(param->type);
                 exportFunc.emitString(param->name);
-                // exportFunc.emitByte(static_cast<adv_uint8_t>(param->type));
-                switch (paramType->kind) {
-                case ADV_SYMBOL_KIND_PRIMITIVE:
-                    exportFunc.emitByte(static_cast<adv_uint8_t>(paramType->primitive_type));
-                    break;
-                case ADV_SYMBOL_KIND_VOID:
-                    exportFunc.emitByte(0);
-                    break;
-                case ADV_SYMBOL_KIND_STRUCTURE:
-                    // TODO
-                    break;
-                default:
-                    assert(!"unreachable code");
-                    break;
-                }
+                emitScriptType(exportFunc, param->type);
             }
             ++exportFunc.count;
         } else {
             (*exportFunc.functions)[node->func_decl.symbol] = {entryIp, node};
         }
     }
-    void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {
+        const auto sym = ctx.symbolTable().getSymbol(node->struct_decl.symbol);
+        if (sym->is_global) {
+            exportStruct.emitString(node->struct_decl.name);
+            exportStruct.emitUint16(static_cast<adv_uint16_t>(node->struct_decl.field_count));
+            auto field = node->struct_decl.first_field;
+            while (field) {
+                exportStruct.emitString(field->field_decl.name);
+                emitScriptType(exportStruct, field->resolved_type);
+                field = field->next_sibling;
+            }
+            ++exportStruct.count;
+        }
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) {
@@ -521,6 +527,7 @@ struct CodeGenVisitor {
             std::ref(modules),
             std::ref(code),
             std::ref(exportVar),
+            std::ref(exportStruct),
             std::ref(exportFunc),
             std::ref(exportNative));
     }
@@ -546,6 +553,7 @@ struct CodeGenVisitor {
     std::set<vm_string_h>& modules;
     Emitter& code;
     Emitter& exportVar;
+    Emitter& exportStruct;
     Emitter& exportFunc;
     Emitter& exportNative;
 };
@@ -561,12 +569,14 @@ adv_result_t Generator::gen() {
         std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>> functions;
         std::vector<uint8_t> exportTable;
         std::vector<uint8_t> exportVar;
+        std::vector<uint8_t> exportStruct;
         std::vector<uint8_t> exportFunc;
         std::vector<uint8_t> exportNative;
         std::vector<uint8_t> data;
         std::vector<uint8_t> code;
         Emitter emitterCode(_ctx, strings, data, code);
         Emitter emitterExportVar(_ctx, strings, data, exportVar);
+        Emitter emitterExportStruct(_ctx, strings, data, exportStruct);
         Emitter emitterExportFunc(_ctx, strings, data, exportFunc, &functions);
         Emitter emitterExportNative(_ctx, strings, data, exportNative);
         accept<CodeGenVisitor>(
@@ -576,17 +586,21 @@ adv_result_t Generator::gen() {
             std::ref(modules),
             std::ref(emitterCode),
             std::ref(emitterExportVar),
+            std::ref(emitterExportStruct),
             std::ref(emitterExportFunc),
             std::ref(emitterExportNative));
         Emitter emitterExport(_ctx, strings, data, exportTable);
         emitterExport.emitString(_ctx.rootModule());
         emitterExport.emitUint16(_ctx.rootFrameSlots());
+        emitterExport.emitUint16(emitterExportStruct.count);
+        emitterExport.emitUint16(static_cast<adv_uint16_t>(exportStruct.size()));
         emitterExport.emitUint16(emitterExportVar.count);
         emitterExport.emitUint16(static_cast<adv_uint16_t>(exportVar.size()));
         emitterExport.emitUint16(emitterExportFunc.count);
         emitterExport.emitUint16(static_cast<adv_uint16_t>(exportFunc.size()));
         emitterExport.emitUint16(emitterExportNative.count);
         emitterExport.emitUint16(static_cast<adv_uint16_t>(exportNative.size()));
+        exportTable.insert(exportTable.end(), exportStruct.begin(), exportStruct.end());
         exportTable.insert(exportTable.end(), exportVar.begin(), exportVar.end());
         exportTable.insert(exportTable.end(), exportFunc.begin(), exportFunc.end());
         exportTable.insert(exportTable.end(), exportNative.begin(), exportNative.end());
@@ -613,8 +627,12 @@ adv_result_t Generator::text() {
     const auto data = utils::read<utils::SectionData>(bytecode).data;
     const auto text = utils::read<utils::SectionText>(bytecode).text;
 
-    auto readType = [](size_t index) noexcept {
-        switch (index) {
+    auto readType = [&](vm_uint8_t type, uint32_t offset) noexcept {
+        if (type == VM_SCRIPT_TYPE_STRUCT) {
+            offset += sizeof(vm_script_export_var_t);
+            return utils::readString(utils::readUint32(bytecode, offset), data);
+        }
+        switch (type) {
         case VM_VALUE_TYPE_BOOL:
             return "bool"sv;
         case VM_VALUE_TYPE_INT:
@@ -675,10 +693,50 @@ adv_result_t Generator::text() {
     std::map<adv_uint32_t, Label> labels;
     ss << std::endl << ".export"sv << std::endl;
     ss << tab << "module "sv << moduleName << " "sv << exports.root_frame_slots << std::endl;
+    for (size_t i = 0; i < exports.struct_count; ++i) {
+        const auto structure = utils::read<vm_script_export_struct_t>(bytecode, i);
+        const auto name = utils::readString(structure.name, data);
+        const bool inlineFields = structure.field_count <= 4;
+        ss << tab << "struct "sv << name << " {"sv;
+        if (inlineFields && structure.field_count > 0) {
+            ss << ' ';
+        } else if (!inlineFields) {
+            ss << std::endl;
+        }
+        for (size_t f = 0; f < structure.field_count; ++f) {
+            const auto [fieldOffset, _] = utils::internal::Offset<vm_script_export_field_t>::offset(bytecode, i, f);
+            const auto field = utils::read<vm_script_export_field_t>(bytecode, i, f);
+            const auto fieldName = utils::readString(field.name, data);
+            const auto type = readType(field.type, fieldOffset);
+            if (type.empty()) {
+                return ADV_RESULT_ERROR_INVALID_ARG;
+            }
+            if (inlineFields) {
+                if (f > 0) {
+                    ss << ' ';
+                }
+                ss << fieldName << ": "sv << type << ';';
+            } else {
+                ss << tab << tab << fieldName << ": "sv << type << ';' << std::endl;
+            }
+        }
+        if (inlineFields) {
+            if (structure.field_count > 0) {
+                ss << ' ';
+            }
+            ss << '}' << std::endl;
+        } else {
+            ss << tab << '}' << std::endl;
+        }
+        if (const auto [_, inserted] = identifiers.emplace(name.data(), name.length()); !inserted) {
+            return ADV_RESULT_ERROR_INVALID_ARG;
+        }
+    }
     for (size_t i = 0; i < exports.var_count; ++i) {
+        const auto [varOffset, _] = utils::internal::Offset<vm_script_export_var_t>::offset(bytecode, i, 0);
         const auto var = utils::read<vm_script_export_var_t>(bytecode, i);
         const auto name = utils::readString(var.name, data);
-        const auto type = readType(var.type);
+        const auto type = readType(var.type, varOffset);
         if (type.empty()) {
             return ADV_RESULT_ERROR_INVALID_ARG;
         }
@@ -690,12 +748,13 @@ adv_result_t Generator::text() {
     for (size_t i = 0; i < exports.native_count; ++i) {
         const auto native = utils::read<vm_script_export_native_t>(bytecode, i);
         const auto name = utils::readString(native.name, data);
-        const auto ret = readType(native.return_type);
+        const auto ret = readType(native.return_type, 0);
         ss << tab << "native "sv << name << '(';
         for (size_t p = 0; p < native.param_count; ++p) {
-            const auto var = utils::read<utils::NativeParam>(bytecode, i, p).param;
-            const auto name = utils::readString(var.name, data);
-            const auto type = readType(var.type);
+            const auto [paramOffset, _] = utils::internal::Offset<utils::NativeParam>::offset(bytecode, i, p);
+            const auto param = utils::read<utils::NativeParam>(bytecode, i, p).param;
+            const auto name = utils::readString(param.name, data);
+            const auto type = readType(param.type, paramOffset);
             if (type.empty()) {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }
@@ -716,12 +775,13 @@ adv_result_t Generator::text() {
     for (size_t i = 0; i < exports.func_count; ++i) {
         const auto fun = utils::read<vm_script_export_func_t>(bytecode, i);
         const auto name = utils::readString(fun.name, data);
-        const auto ret = readType(fun.return_type);
+        const auto ret = readType(fun.return_type, 0);
         ss << tab << "function "sv << name << '(';
         for (size_t p = 0; p < fun.param_count; ++p) {
+            const auto [paramOffset, _] = utils::internal::Offset<vm_script_export_param_t>::offset(bytecode, i, p);
             const auto var = utils::read<vm_script_export_param_t>(bytecode, i, p);
             const auto name = utils::readString(var.name, data);
-            const auto type = readType(var.type);
+            const auto type = readType(var.type, paramOffset);
             if (type.empty()) {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             }

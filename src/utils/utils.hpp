@@ -246,6 +246,8 @@ template <typename AliasedType, typename Type>
     auto result = exportTable;
     result.module_name = swapBytes(result.module_name);
     result.root_frame_slots = swapBytes(result.root_frame_slots);
+    result.struct_count = swapBytes(result.struct_count);
+    result.struct_size = swapBytes(result.struct_size);
     result.var_count = swapBytes(result.var_count);
     result.var_size = swapBytes(result.var_size);
     result.func_count = swapBytes(result.func_count);
@@ -255,11 +257,31 @@ template <typename AliasedType, typename Type>
     return result;
 }
 
+[[nodiscard]] UTILS_FORCE_INLINE vm_script_export_struct_t
+swapBytes(const vm_script_export_struct_t& exportStruct) noexcept {
+    if (std::endian::native == std::endian::little) {
+        return exportStruct;
+    }
+    auto result = exportStruct;
+    result.name = swapBytes(result.name);
+    result.field_count = swapBytes(result.field_count);
+    return result;
+}
+
 [[nodiscard]] UTILS_FORCE_INLINE vm_script_export_var_t swapBytes(const vm_script_export_var_t& exportVar) noexcept {
     if (std::endian::native == std::endian::little) {
         return exportVar;
     }
     auto result = exportVar;
+    result.name = swapBytes(result.name);
+    return result;
+}
+
+[[nodiscard]] UTILS_FORCE_INLINE vm_script_export_field_t swapBytes(const vm_script_export_field_t& field) noexcept {
+    if (std::endian::native == std::endian::little) {
+        return field;
+    }
+    auto result = field;
     result.name = swapBytes(result.name);
     return result;
 }
@@ -434,6 +456,18 @@ struct Offset<vm_script_export_var_t> {
 };
 
 template <>
+struct Offset<vm_script_export_struct_t> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
+template <>
+struct Offset<vm_script_export_field_t> {
+    [[nodiscard]] static std::pair<size_t, size_t>
+    offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
+};
+
+template <>
 struct Offset<vm_script_export_param_t> {
     [[nodiscard]] static std::pair<size_t, size_t>
     offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept;
@@ -493,26 +527,74 @@ internal::Offset<vm_script_export_t>::offset(std::span<const vm_uint8_t> bytecod
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
 internal::Offset<vm_script_export_var_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     const auto [offset, _] = internal::Offset<vm_script_export_t>::offset(bytecode, 0, 0);
-    return {offset + sizeof(vm_script_export_t) + sizeof(vm_script_export_var_t) * i, sizeof(vm_script_export_var_t)};
+    const auto exports = read<vm_script_export_t>(bytecode);
+    size_t varOffset = offset + sizeof(vm_script_export_t) + exports.struct_size;
+    for (size_t var = 0; var < i; ++var) {
+        const auto type = bytecode[varOffset + sizeof(vm_script_export_var_t::name)];
+        varOffset += sizeof(vm_script_export_var_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+    }
+    return {varOffset, sizeof(vm_script_export_var_t)};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<vm_script_export_struct_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    assert(j == 0u);
+    const auto [exportOffset, _] = internal::Offset<vm_script_export_t>::offset(bytecode, 0, 0);
+    size_t structOffset = exportOffset + sizeof(vm_script_export_t);
+    for (size_t index = 0; index < i; ++index) {
+        const auto structure =
+            Result<vm_script_export_struct_t>::get(bytecode, structOffset, sizeof(vm_script_export_struct_t));
+        structOffset += sizeof(vm_script_export_struct_t);
+        for (size_t field = 0; field < structure.field_count; ++field) {
+            const auto type = bytecode[structOffset + sizeof(vm_script_export_field_t::name)];
+            structOffset +=
+                sizeof(vm_script_export_field_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+        }
+    }
+    return {structOffset, sizeof(vm_script_export_struct_t)};
+}
+
+UTILS_FORCE_INLINE std::pair<size_t, size_t>
+internal::Offset<vm_script_export_field_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
+    const auto [structOffset, _] = Offset<vm_script_export_struct_t>::offset(bytecode, i, 0);
+    const auto structure =
+        Result<vm_script_export_struct_t>::get(bytecode, structOffset, sizeof(vm_script_export_struct_t));
+    size_t fieldOffset = structOffset + sizeof(vm_script_export_struct_t);
+    for (size_t field = 0; field < j; ++field) {
+        const auto type = bytecode[fieldOffset + sizeof(vm_uint32_t)];
+        fieldOffset += sizeof(vm_script_export_field_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+    }
+    assert(j < structure.field_count);
+    return {fieldOffset, sizeof(vm_script_export_field_t)};
 }
 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
 internal::Offset<vm_script_export_param_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     const auto [offset, _] = Offset<vm_script_export_func_t>::offset(bytecode, i, 0);
-    return {
-        offset + sizeof(vm_script_export_func_t) + sizeof(vm_script_export_param_t) * j,
-        sizeof(vm_script_export_param_t)};
+    size_t paramOffset = offset + sizeof(vm_script_export_func_t);
+    for (size_t param = 0; param < j; ++param) {
+        const auto type = bytecode[paramOffset + sizeof(vm_uint32_t)];
+        paramOffset += sizeof(vm_script_export_param_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+    }
+    return {paramOffset, sizeof(vm_script_export_param_t)};
 }
 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
 internal::Offset<vm_script_export_func_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
-    const auto varCount = read<vm_script_export_t>(bytecode).var_count;
-    const auto [offset, _] = internal::Offset<vm_script_export_var_t>::offset(bytecode, varCount, 0);
-    size_t funcOffset = offset;
+    const auto exports = read<vm_script_export_t>(bytecode);
+    const auto [offset, _] = internal::Offset<vm_script_export_t>::offset(bytecode, 0, 0);
+    size_t funcOffset = offset + sizeof(vm_script_export_t) + exports.struct_size + exports.var_size;
     for (size_t f = 0; f < i; ++f) {
-        const auto params =
-            Result<vm_script_export_func_t>::get(bytecode, funcOffset, sizeof(vm_script_export_func_t)).param_count;
-        funcOffset += sizeof(vm_script_export_func_t) + params * sizeof(vm_script_export_param_t);
+        const auto func = Result<vm_script_export_func_t>::get(bytecode, funcOffset, sizeof(vm_script_export_func_t));
+        funcOffset += sizeof(vm_script_export_func_t);
+        size_t paramOffset = funcOffset;
+        for (size_t param = 0; param < func.param_count; ++param) {
+            const auto type = bytecode[paramOffset + sizeof(vm_uint32_t)];
+            const auto paramSize =
+                sizeof(vm_script_export_param_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+            paramOffset += paramSize;
+        }
+        funcOffset = paramOffset;
     }
     return {funcOffset, sizeof(vm_script_export_func_t)};
 }
@@ -521,12 +603,17 @@ UTILS_FORCE_INLINE std::pair<size_t, size_t>
 internal::Offset<vm_script_export_native_t>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     const auto [offset, _] = Offset<vm_script_export_t>::offset(bytecode, 0, 0);
     const auto exports = read<vm_script_export_t>(bytecode);
-    auto nativeOffset = offset + sizeof(vm_script_export_t) + exports.var_size + exports.func_size;
+    auto nativeOffset =
+        offset + sizeof(vm_script_export_t) + exports.struct_size + exports.var_size + exports.func_size;
     for (size_t n = 0; n < i; ++n) {
-        const auto params =
-            Result<vm_script_export_native_t>::get(bytecode, nativeOffset, sizeof(vm_script_export_native_t))
-                .param_count;
-        nativeOffset += sizeof(vm_script_export_native_t) + params * sizeof(vm_script_export_param_t);
+        const auto native =
+            Result<vm_script_export_native_t>::get(bytecode, nativeOffset, sizeof(vm_script_export_native_t));
+        nativeOffset += sizeof(vm_script_export_native_t);
+        for (size_t param = 0; param < native.param_count; ++param) {
+            const auto type = bytecode[nativeOffset + sizeof(vm_uint32_t)];
+            nativeOffset +=
+                sizeof(vm_script_export_param_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+        }
     }
     return {nativeOffset, sizeof(vm_script_export_native_t)};
 }
@@ -534,9 +621,12 @@ internal::Offset<vm_script_export_native_t>::offset(std::span<const vm_uint8_t> 
 UTILS_FORCE_INLINE std::pair<size_t, size_t>
 internal::Offset<NativeParam>::offset(std::span<const vm_uint8_t> bytecode, size_t i, size_t j) noexcept {
     const auto [offset, _] = Offset<vm_script_export_native_t>::offset(bytecode, i, 0);
-    return {
-        offset + sizeof(vm_script_export_native_t) + sizeof(vm_script_export_param_t) * j,
-        sizeof(vm_script_export_param_t)};
+    size_t paramOffset = offset + sizeof(vm_script_export_native_t);
+    for (size_t param = 0; param < j; ++param) {
+        const auto type = bytecode[paramOffset + sizeof(vm_uint32_t)];
+        paramOffset += sizeof(vm_script_export_param_t) + (type == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u);
+    }
+    return {paramOffset, sizeof(vm_script_export_param_t)};
 }
 
 [[nodiscard]] inline std::string escape(std::string_view input) {

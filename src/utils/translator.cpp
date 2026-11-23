@@ -5,6 +5,9 @@
 #include <vm/vm-value.h>
 #include <vm/vm-version.h>
 
+#include <algorithm>
+#include <unordered_set>
+
 using namespace std::string_view_literals;
 
 namespace utils {
@@ -21,6 +24,7 @@ enum class TokenType {
     Newline,
     RBrace,
     RParen,
+    Semicolon,
     Section,
     String,
     Identifier
@@ -50,19 +54,27 @@ enum class SymbolKind {
     Variable,
     Native,
     Function,
+    Structure,
     Data
+};
+
+struct SymbolType {
+    vm_uint8_t code;
+    std::string_view structureName;
 };
 
 struct SymbolParameter {
     std::string_view name;
-    vm_value_type_t type;
+    SymbolType type;
 };
 
 struct Symbol {
     SymbolKind kind;
     std::string_view name;
-    vm_value_type_t type{VM_VALUE_TYPE_UNKNOWN};
+    vm_uint8_t type{VM_SCRIPT_TYPE_NONE};
+    std::string_view structureName;
     std::vector<SymbolParameter> parameters;
+    std::vector<SymbolParameter> fields;
     vm_uint32_t offset{};
     vm_uint32_t line{0};
 };
@@ -77,7 +89,6 @@ struct Advt {
     std::unordered_map<std::string_view, vm_uint32_t> dataMap;
     std::unordered_map<std::string_view, vm_uint32_t> labelMap;
     std::vector<PatchInstruction> pushData;
-    std::vector<PatchInstruction> variables;
     std::vector<PatchInstruction> jumps;
     std::vector<PatchInstruction> calls;
     std::vector<uint8_t> dataSection;
@@ -91,6 +102,8 @@ struct Advt {
 class Lexer {
 public:
     explicit Lexer(std::span<const vm_char_t> code) noexcept : _source(code.data(), code.size()) {}
+
+    void setStructFieldMode(bool enabled) noexcept { _structFieldMode = enabled; }
 
     [[nodiscard]] Token nextToken() noexcept {
         skipWhitespaces();
@@ -113,6 +126,10 @@ public:
             return tok;
         }
         case ';': {
+            if (_structFieldMode && isStructFieldSeparator()) {
+                advance();
+                return Token{TokenType::Semicolon, _source.substr(start, 1), _line, startCol};
+            }
             while (_cursor < _source.size() && _source[_cursor] != '\n' && _source[_cursor] != '\r') {
                 advance();
             }
@@ -174,6 +191,35 @@ public:
     }
 
 private:
+    [[nodiscard]] bool isStructFieldSeparator() const noexcept {
+        const auto lineStart = _source.find_last_of("\r\n", _cursor);
+        const auto prefixStart = lineStart == std::string_view::npos ? 0 : lineStart + 1;
+        if (std::all_of(
+                _source.begin() + prefixStart,
+                _source.begin() + _cursor,
+                [](char c) { return c == ' ' || c == '\t'; })) {
+            return false;
+        }
+
+        auto next = _cursor + 1;
+        while (next < _source.size() && (_source[next] == ' ' || _source[next] == '\t')) {
+            ++next;
+        }
+        if (next == _source.size() || _source[next] == '\r' || _source[next] == '\n' || _source[next] == '}') {
+            return true;
+        }
+
+        while (next < _source.size() && _source[next] != ':' && _source[next] != ';' &&
+               !std::isspace(static_cast<unsigned char>(_source[next])) && _source[next] != '{' &&
+               _source[next] != '}' && _source[next] != ',' && _source[next] != '(' && _source[next] != ')') {
+            ++next;
+        }
+        while (next < _source.size() && (_source[next] == ' ' || _source[next] == '\t')) {
+            ++next;
+        }
+        return next < _source.size() && _source[next] == ':';
+    }
+
     void advance() noexcept {
         _cursor++;
         _column++;
@@ -201,6 +247,7 @@ private:
     uint32_t _cursor{0};
     uint32_t _line{1};
     uint32_t _column{1};
+    bool _structFieldMode{false};
 };
 
 class Parser {
@@ -324,6 +371,62 @@ private:
                 continue;
             }
 
+            if (equals(declaration, "struct"sv)) {
+                Symbol symbol{};
+                symbol.kind = SymbolKind::Structure;
+                symbol.line = line;
+                expect(TokenType::Identifier, "Expected structure name");
+                symbol.name = _currentToken.value;
+                advance();
+                expect(TokenType::LBrace, "Expected '{' after structure name");
+                _lexer.setStructFieldMode(true);
+                advance();
+                std::unordered_set<std::string_view> fieldNames;
+                while (_currentToken.type != TokenType::RBrace && _currentToken.type != TokenType::Eof) {
+                    skipNewlinesAndComments();
+                    if (_currentToken.type == TokenType::RBrace || _currentToken.type == TokenType::Eof) {
+                        break;
+                    }
+                    SymbolParameter field{};
+                    expect(TokenType::Identifier, "Expected field name");
+                    const auto fieldLine = _currentToken.line;
+                    field.name = _currentToken.value;
+                    advance();
+                    expect(TokenType::Colon, "Expected ':' after field name");
+                    advance();
+                    field.type = parseScriptType();
+                    if (!fieldNames.insert(field.name).second) {
+                        error(
+                            fmt::format("Duplicate field '{}'", field.name),
+                            TranslateResult::RedefinedIdentifier,
+                            false,
+                            fieldLine);
+                    }
+                    symbol.fields.push_back(field);
+                    if (_currentToken.type == TokenType::Semicolon) {
+                        advance();
+                    } else if (_currentToken.type != TokenType::Newline &&
+                               _currentToken.type != TokenType::Comment && _currentToken.type != TokenType::RBrace &&
+                               _currentToken.type != TokenType::Eof) {
+                        error("Unexpected token after structure field", TranslateResult::SyntaxError);
+                    }
+                }
+                expect(TokenType::RBrace, "Expected '}' after structure fields");
+                advance();
+                _lexer.setStructFieldMode(false);
+                expectExportLineEnd();
+                if (auto it = result.symbolMap.find(symbol.name); it != result.symbolMap.end()) {
+                    error(
+                        fmt::format("Duplicate export identifier '{}'", symbol.name),
+                        TranslateResult::RedefinedIdentifier,
+                        false,
+                        line);
+                } else {
+                    result.symbolMap[symbol.name] = std::move(symbol);
+                }
+                continue;
+            }
+
             Symbol symbol{};
             symbol.line = line;
             expect(TokenType::Identifier, "Expected export name");
@@ -333,7 +436,9 @@ private:
                 symbol.kind = SymbolKind::Variable;
                 expect(TokenType::Colon, "Expected ':' after variable name");
                 advance();
-                symbol.type = parseExportType();
+                const auto type = parseScriptType();
+                symbol.type = type.code;
+                symbol.structureName = type.structureName;
             } else if (equals(declaration, "native"sv) || equals(declaration, "function"sv)) {
                 const bool isFunction = equals(declaration, "function"sv);
                 symbol.kind = isFunction ? SymbolKind::Function : SymbolKind::Native;
@@ -599,6 +704,25 @@ private:
         error(fmt::format("Unknown export type '{}'", typeName), TranslateResult::UnknownIdentifier);
     }
 
+    [[nodiscard]] SymbolType parseScriptType() {
+        expect(TokenType::Identifier, "Expected export type");
+        const auto typeName = _currentToken.value;
+        advance();
+        if (equals(typeName, "bool"sv)) {
+            return {VM_SCRIPT_TYPE_BOOL, {}};
+        }
+        if (equals(typeName, "int"sv)) {
+            return {VM_SCRIPT_TYPE_INT, {}};
+        }
+        if (equals(typeName, "float"sv)) {
+            return {VM_SCRIPT_TYPE_FLOAT, {}};
+        }
+        if (equals(typeName, "string"sv)) {
+            return {VM_SCRIPT_TYPE_STRING, {}};
+        }
+        return {VM_SCRIPT_TYPE_STRUCT, typeName};
+    }
+
     [[nodiscard]] std::vector<SymbolParameter> parseExportParameters() {
         expect(
             _currentToken.type == TokenType::LBrace ? TokenType::LBrace : TokenType::LParen,
@@ -616,7 +740,7 @@ private:
             advance();
             expect(TokenType::Colon, "Expected ':' after parameter name");
             advance();
-            const auto type = parseExportType();
+            const auto type = parseScriptType();
             parameters.push_back({name, type});
             if (_currentToken.type == closeType) {
                 advance();
@@ -684,15 +808,8 @@ private:
             if (!operand.empty() && operand[0] == '"') {
                 pushUint32(emplaceData(result, operand), result.textSection);
             } else {
-                if (auto it = result.symbolMap.find(operand); it != result.symbolMap.end()) {
-                    if (it->second.kind != SymbolKind::Data) {
-                        error(
-                            fmt::format(
-                                "The identifier '{}' does not represent a string in the data section.", operand),
-                            TranslateResult::InvalidIdentifierReference,
-                            false,
-                            instruction.line);
-                    }
+                if (auto it = result.symbolMap.find(operand);
+                    it != result.symbolMap.end() && it->second.kind == SymbolKind::Data) {
                     pushUint32(it->second.offset, result.textSection);
                 } else {
                     result.pushData.emplace_back(operand, pollOffset(result.textSection), instruction.line);
@@ -705,18 +822,6 @@ private:
             break;
         case VM_OPCODE_PUSH_GLOBAL_BY_NAME:
         case VM_OPCODE_POP_GLOBAL_BY_NAME:
-            if (auto it = result.symbolMap.find(operand); it != result.symbolMap.end()) {
-                if (it->second.kind != SymbolKind::Variable) {
-                    error(
-                        fmt::format(
-                            "The identifier '{}' does not represent a variable in the export section.", operand),
-                        TranslateResult::InvalidIdentifierReference,
-                        false,
-                        instruction.line);
-                }
-            } else {
-                result.variables.emplace_back(operand, pollOffset(result.textSection), instruction.line);
-            }
             pushUint32(emplaceData(result, operand), result.textSection);
             break;
         case VM_OPCODE_FUNCTION_PROLOGUE:
@@ -752,29 +857,10 @@ private:
     }
 
     void resolveIdentifiers(Advt& result) {
-        for (const auto& [id, offsetText, line] : result.pushData) {
-            auto it = result.symbolMap.find(id);
-            if (it == result.symbolMap.end()) {
-                error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
-            }
-            if (it->second.kind != SymbolKind::Data) {
-                error(
-                    fmt::format("The identifier '{}' does not represent a string in the data section.", id),
-                    TranslateResult::InvalidIdentifierReference,
-                    false,
-                    line);
-            }
-            patchUint32(offsetText, it->second.offset, result.textSection);
-        }
-        for (const auto& [id, offsetText, line] : result.variables) {
-            if (auto it = result.symbolMap.find(id); it != result.symbolMap.end()) {
-                if (it->second.kind != SymbolKind::Variable) {
-                    error(
-                        fmt::format("The identifier '{}' does not represent a variable in the export section.", id),
-                        TranslateResult::InvalidIdentifierReference,
-                        false,
-                        line);
-                }
+        for (const auto& patch : result.pushData) {
+            if (auto it = result.symbolMap.find(patch.identifier);
+                it != result.symbolMap.end() && it->second.kind == SymbolKind::Data) {
+                patchUint32(patch.offset, it->second.offset, result.textSection);
             }
         }
         for (const auto& [id, offsetText, line] : result.jumps) {
@@ -783,16 +869,6 @@ private:
                 error(
                     fmt::format("Label identifier '{}' not found", id),
                     TranslateResult::UnknownIdentifier,
-                    false,
-                    line);
-            }
-            if (auto s = result.symbolMap.find(it->first); s != result.symbolMap.end()) {
-                error(
-                    fmt::format(
-                        "The jump instruction can refer only to labels, not to functions, variables, or string "
-                        "references ('{}')",
-                        id),
-                    TranslateResult::InvalidIdentifierReference,
                     false,
                     line);
             }
@@ -814,32 +890,13 @@ private:
         }
         for (const auto& [id, offsetText, line] : result.calls) {
             const auto opcode = result.textSection[offsetText - 1];
-            if (auto it = result.symbolMap.find(id); it != result.symbolMap.end()) {
-                if (it->second.kind != SymbolKind::Function && it->second.kind != SymbolKind::Native) {
-                    error(
-                        fmt::format("The identifier '{}' does not represent a variable in the export section.", id),
-                        TranslateResult::InvalidIdentifierReference,
-                        false,
-                        line);
-                } else if (opcode == VM_OPCODE_CALL_NATIVE_BY_NAME && it->second.kind != SymbolKind::Native) {
-                    error(
-                        fmt::format(
-                            "The identifier '{}' does not represent a native function in the export section.", id),
-                        TranslateResult::InvalidIdentifierReference,
-                        false,
-                        line);
-                } else if (opcode == VM_OPCODE_CALL_BY_NAME && it->second.kind != SymbolKind::Function) {
-                    error(
-                        fmt::format("The identifier '{}' does not represent a function in the export section.", id),
-                        TranslateResult::InvalidIdentifierReference,
-                        false,
-                        line);
+            if (!result.symbolMap.contains(id)) {
+                if (auto it = result.labelMap.find(id); it != result.labelMap.end()) {
+                    result.textSection[offsetText - 1] = VM_OPCODE_CALL;
+                    patchUint32(offsetText, it->second, result.textSection);
+                } else if (opcode != VM_OPCODE_CALL_BY_NAME && opcode != VM_OPCODE_CALL_NATIVE_BY_NAME) {
+                    error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
                 }
-            } else if (auto it = result.labelMap.find(id); it != result.labelMap.end()) {
-                result.textSection[offsetText - 1] = VM_OPCODE_CALL;
-                patchUint32(offsetText, it->second, result.textSection);
-            } else if (opcode != VM_OPCODE_CALL_BY_NAME && opcode != VM_OPCODE_CALL_NATIVE_BY_NAME) {
-                error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
             }
         }
     }
@@ -851,6 +908,13 @@ private:
         return static_cast<vm_uint16_t>(value);
     }
 
+    [[nodiscard]] vm_uint8_t checkedUint8(size_t value, vm_uint32_t line) {
+        if (value > std::numeric_limits<vm_uint8_t>::max()) {
+            error("Export parameter count exceeds 8-bit limit", TranslateResult::ValueOutOfRange, false, line);
+        }
+        return static_cast<vm_uint8_t>(value);
+    }
+
     void buildExportSection(Advt& result) {
         if (result.symbolMap.empty() && !result.moduleName.has_value()) {
             return;
@@ -859,56 +923,80 @@ private:
         exports.module_name = result.moduleName.value_or(0);
         exports.root_frame_slots = result.rootFrameSlots;
         result.exportSection.resize(sizeof(exports));
-        std::vector<vm_script_export_param_t> params;
+        auto appendRecord = [&](auto record) {
+            record = utils::swapBytes(record);
+            const auto* data = reinterpret_cast<const uint8_t*>(&record);
+            result.exportSection.insert(result.exportSection.end(), data, data + sizeof(record));
+        };
+        auto appendType = [&](const SymbolType& type) {
+            if (type.code == VM_SCRIPT_TYPE_STRUCT) {
+                pushUint32(emplaceData(result, type.structureName), result.exportSection);
+            }
+        };
+        for (const auto& [_, symbol] : result.symbolMap) {
+            if (symbol.kind != SymbolKind::Structure) {
+                continue;
+            }
+            const auto structLine = symbol.line;
+            appendRecord(vm_script_export_struct_t{
+                emplaceData(result, symbol.name), checkedUint16(symbol.fields.size(), structLine)});
+            exports.struct_count = checkedUint16(static_cast<size_t>(exports.struct_count) + 1, structLine);
+            exports.struct_size = checkedUint16(
+                static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_struct_t), structLine);
+            for (const auto& field : symbol.fields) {
+                appendRecord(vm_script_export_field_t{emplaceData(result, field.name), field.type.code});
+                appendType(field.type);
+                exports.struct_size = checkedUint16(
+                    static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_field_t) +
+                        (field.type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                    structLine);
+            }
+        }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Variable) {
-                vm_script_export_var_t var{emplaceData(result, symbol.name), (vm_uint8_t)symbol.type};
-                exports.var_count++;
-                exports.var_size += sizeof(var);
-                var = utils::swapBytes(var);
-                auto data = (const uint8_t*)&var;
-                std::copy(data, data + sizeof(var), std::back_inserter(result.exportSection));
+                const SymbolType type{static_cast<vm_uint8_t>(symbol.type), symbol.structureName};
+                appendRecord(vm_script_export_var_t{emplaceData(result, symbol.name), type.code});
+                appendType(type);
+                exports.var_count = checkedUint16(static_cast<size_t>(exports.var_count) + 1, symbol.line);
+                exports.var_size = checkedUint16(
+                    static_cast<size_t>(exports.var_size) + sizeof(vm_script_export_var_t) +
+                        (type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                    symbol.line);
             }
         }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Function) {
-                params.clear();
                 vm_script_export_func_t func{emplaceData(result, symbol.name), symbol.offset, (vm_uint8_t)symbol.type};
-                exports.func_count++;
-                exports.func_size += sizeof(func);
+                func.param_count = checkedUint8(symbol.parameters.size(), symbol.line);
+                appendRecord(func);
+                exports.func_count = checkedUint16(static_cast<size_t>(exports.func_count) + 1, symbol.line);
+                exports.func_size = checkedUint16(
+                    static_cast<size_t>(exports.func_size) + sizeof(func), symbol.line);
                 for (const auto& param : symbol.parameters) {
-                    params.emplace_back(emplaceData(result, param.name), (vm_uint8_t)param.type);
-                    func.param_count++;
-                    exports.func_size += sizeof(vm_script_export_param_t);
-                }
-                func = utils::swapBytes(func);
-                auto data = (const uint8_t*)&func;
-                std::copy(data, data + sizeof(func), std::back_inserter(result.exportSection));
-                for (auto& param : params) {
-                    param = utils::swapBytes(param);
-                    data = (const uint8_t*)&param;
-                    std::copy(data, data + sizeof(param), std::back_inserter(result.exportSection));
+                    appendRecord(vm_script_export_param_t{emplaceData(result, param.name), param.type.code});
+                    appendType(param.type);
+                    exports.func_size = checkedUint16(
+                        static_cast<size_t>(exports.func_size) + sizeof(vm_script_export_param_t) +
+                            (param.type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                        symbol.line);
                 }
             }
         }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Native) {
-                params.clear();
                 vm_script_export_native_t native{emplaceData(result, symbol.name), (vm_uint8_t)symbol.type};
-                exports.native_count++;
-                exports.native_size += sizeof(native);
+                native.param_count = checkedUint8(symbol.parameters.size(), symbol.line);
+                appendRecord(native);
+                exports.native_count = checkedUint16(static_cast<size_t>(exports.native_count) + 1, symbol.line);
+                exports.native_size = checkedUint16(
+                    static_cast<size_t>(exports.native_size) + sizeof(native), symbol.line);
                 for (const auto& param : symbol.parameters) {
-                    params.emplace_back(emplaceData(result, param.name), (vm_uint8_t)param.type);
-                    native.param_count++;
-                    exports.native_size += sizeof(vm_script_export_param_t);
-                }
-                native = utils::swapBytes(native);
-                auto data = (const uint8_t*)&native;
-                std::copy(data, data + sizeof(native), std::back_inserter(result.exportSection));
-                for (auto& param : params) {
-                    param = utils::swapBytes(param);
-                    data = (const uint8_t*)&param;
-                    std::copy(data, data + sizeof(param), std::back_inserter(result.exportSection));
+                    appendRecord(vm_script_export_param_t{emplaceData(result, param.name), param.type.code});
+                    appendType(param.type);
+                    exports.native_size = checkedUint16(
+                        static_cast<size_t>(exports.native_size) + sizeof(vm_script_export_param_t) +
+                            (param.type.code == VM_SCRIPT_TYPE_STRUCT ? sizeof(vm_uint32_t) : 0u),
+                        symbol.line);
                 }
             }
         }
