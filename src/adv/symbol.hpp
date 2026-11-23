@@ -5,9 +5,17 @@
 
 namespace adv {
 
+enum class SlotLayoutState {
+    Unresolved,
+    Resolving,
+    Resolved,
+    Invalid
+};
+
 struct Symbol : adv_symbol_t {
     static constexpr adv_symbol_h Undefined = {0};
     std::vector<adv_symbol_h> linearChildren;
+    SlotLayoutState slotLayoutState{SlotLayoutState::Unresolved};
 };
 
 struct Scope : adv_scope_t {

@@ -10,7 +10,6 @@ namespace adv {
 
 Analyzer::Analyzer(const Options& options, Context& ctx) noexcept : _options(options), _ctx(ctx) {
     _ctx.symbolTable().init(options, _ctx);
-    pushFrame();
 }
 
 adv_result_t Analyzer::build() {
@@ -27,7 +26,11 @@ adv_result_t Analyzer::build() {
     }
     resolveTypes();
 
-    _ctx.setRootFrameSlots(currFrame().maxSlots);
+    if (_ctx.hasErrors()) {
+        return ADV_RESULT_COMPILATION_FAILED;
+    }
+    resolveSlots();
+
     return _ctx.hasErrors() ? ADV_RESULT_COMPILATION_FAILED : ADV_RESULT_SUCCESS;
 }
 
@@ -62,9 +65,8 @@ void Analyzer::resolveSymbols() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
             node->parent = parent;
-            auto sym = symbolTable.addSymbol(options, ctx, node);
+            symbolTable.addSymbol(options, ctx, node);
             acceptNode(node->var_decl.init_expr, node);
-            analyzer.saveFrameSlot(sym);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
             node->parent = parent;
@@ -103,10 +105,7 @@ void Analyzer::resolveSymbols() {
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             node->parent = parent;
-            auto sym = symbolTable.addSymbol(options, ctx, node);
-            if (parent->type == ADV_NODE_FUNCTION_DECL) {
-                analyzer.saveFrameSlot(sym);
-            }
+            symbolTable.addSymbol(options, ctx, node);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_IDENTIFIER_EXPR>) {
             auto [handle, _] = symbolTable.lookup(options, ctx, node->location, node->id_expr.name);
@@ -176,15 +175,12 @@ void Analyzer::resolveSymbols() {
         void visit(adv_node_t* node, Tag<ADV_NODE_STRING_LITERAL>) { node->parent = parent; }
         void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) {
             node->parent = parent;
-            adv_uint16_t slotsBeforeBlock = 0;
             const auto isNonFunctionBlock = parent->type != ADV_NODE_FUNCTION_DECL;
             if (isNonFunctionBlock) {
                 symbolTable.beginScope();
-                slotsBeforeBlock = analyzer.currFrame().currentSlot;
             }
             visitChildrens(node);
             if (isNonFunctionBlock) {
-                analyzer.currFrame().currentSlot = slotsBeforeBlock;
                 symbolTable.endScope();
             }
         }
@@ -214,7 +210,9 @@ void Analyzer::resolveSymbols() {
                 if (var.type > VM_VALUE_TYPE_UNKNOWN && var.type < VM_VALUE_TYPE_COUNT_ENUMS) {
                     node.var_decl.type_hint = vm_string_h{var.type};
                     node.resolved_type = symbolTable.lookup(static_cast<vm_value_type_t>(var.type));
-                    symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
+                    auto sym = symbolTable.addSymbol(options, ctx, &node);
+                    sym->type = node.resolved_type;
+                    sym->slot_count = 1;
                 } else {
                     // TODO:
                 }
@@ -257,7 +255,11 @@ void Analyzer::resolveSymbols() {
                 symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
                 symbolTable.beginScope();
                 for (auto& param : params) {
-                    symbolTable.addSymbol(options, ctx, &param)->type = param.resolved_type;
+                    auto sym = symbolTable.addSymbol(options, ctx, &param);
+                    sym->type = param.resolved_type;
+                    if (sym->type != Undefined) {
+                        sym->slot_count = 1;
+                    }
                 }
                 symbolTable.endScope();
             }
@@ -297,7 +299,11 @@ void Analyzer::resolveSymbols() {
                 symbolTable.addSymbol(options, ctx, &node)->type = node.resolved_type;
                 symbolTable.beginScope();
                 for (auto& param : params) {
-                    symbolTable.addSymbol(options, ctx, &param)->type = param.resolved_type;
+                    auto sym = symbolTable.addSymbol(options, ctx, &param);
+                    sym->type = param.resolved_type;
+                    if (sym->type != Undefined) {
+                        sym->slot_count = 1;
+                    }
                 }
                 symbolTable.endScope();
             }
@@ -334,7 +340,17 @@ void Analyzer::resolveTypes() {
                 field = field->next_sibling;
             }
         }
-        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {}
+        void visit(adv_node_t* node, Tag<ADV_NODE_FIELD_DECL>) {
+            auto field = symbolTable.getSymbol(node->field_decl.symbol);
+            const auto fieldType = analyzer.findBaseType(field->scope, node->field_decl.type_hint);
+            if (fieldType == Undefined) {
+                ctx.log<ADV_STATUS_E3048>(
+                    options, node->location, node->field_decl.type_hint, node->field_decl.name);
+                return;
+            }
+            field->type = fieldType;
+            node->resolved_type = fieldType;
+        }
         void visit(adv_node_t* node, Tag<ADV_NODE_INT_LITERAL>) {
             node->resolved_type = symbolTable.lookup(VM_VALUE_TYPE_INT);
         }
@@ -727,8 +743,152 @@ void Analyzer::resolveTypes() {
         _ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(*this), std::ref(_ctx.symbolTable()));
 }
 
+void Analyzer::resolveSlots() {
+    struct SlotVisitor {
+        SlotVisitor(const Options& options, Context& ctx, Analyzer& analyzer, SymbolTable& symbolTable) noexcept
+            : options(options), ctx(ctx), analyzer(analyzer), symbolTable(symbolTable) {}
+
+        void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) { visitChildrens(node); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_IMPORT_STMT>) { acceptNode(node->import_stmt.root); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {
+            calculateStructureSlots(symbolTable.getSymbol(node->struct_decl.symbol), nullptr);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
+            auto param = node->func_decl.first_param;
+            while (param) {
+                calculateSymbolSlots(symbolTable.getSymbol(param->param_decl.symbol));
+                param = param->next_sibling;
+            }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_VAR_DECL>) {
+            auto sym = symbolTable.getSymbol(node->var_decl.symbol);
+            if (calculateSymbolSlots(sym)) {
+                analyzer.saveFrameSlot(sym);
+            }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
+            auto sym = symbolTable.getSymbol(node->param_decl.symbol);
+            if (calculateSymbolSlots(sym)) {
+                analyzer.saveFrameSlot(sym);
+            }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) {
+            const auto slotsBeforeBlock = analyzer.currFrame().currentSlot;
+            visitChildrens(node);
+            analyzer.currFrame().currentSlot = slotsBeforeBlock;
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
+            acceptNode(node->if_stmt.cond);
+            acceptNode(node->if_stmt.then_branch);
+            acceptNode(node->if_stmt.else_branch);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {
+            acceptNode(node->while_stmt.cond);
+            acceptNode(node->while_stmt.body);
+        }
+        void visit(...) {
+        }
+        void visitChildrens(adv_node_t* node) {
+            analyzer.visitStmtsWithRules(
+                node, [this](auto child, auto /* parent */) { acceptNode(child); }, false, true);
+        }
+        void acceptNode(adv_node_t* node) {
+            accept<SlotVisitor>(node, std::cref(options), std::ref(ctx), std::ref(analyzer), std::ref(symbolTable));
+        }
+        bool calculateSymbolSlots(Symbol* sym) {
+            const auto type = symbolTable.getSymbol(sym->type);
+            if (!type) {
+                return false;
+            }
+            if (type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+                sym->slot_count = 1;
+                return true;
+            }
+            if (type->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                if (!calculateStructureSlots(type, nullptr)) {
+                    return false;
+                }
+                sym->slot_count = type->slot_count;
+                return true;
+            }
+            return false;
+        }
+        bool calculateStructureSlots(Symbol* structure, const Symbol* throughField) {
+            switch (structure->slotLayoutState) {
+            case SlotLayoutState::Resolved:
+                return true;
+            case SlotLayoutState::Invalid:
+                return false;
+            case SlotLayoutState::Resolving:
+                assert(throughField);
+                ctx.log<ADV_STATUS_E3046>(
+                    options,
+                    throughField->location,
+                    structure->name,
+                    throughField->name);
+                return false;
+            case SlotLayoutState::Unresolved:
+                break;
+            }
+
+            structure->slotLayoutState = SlotLayoutState::Resolving;
+            adv_uint32_t slotCount = 0;
+            const auto maxSlotCount = static_cast<adv_uint32_t>(std::numeric_limits<adv_uint16_t>::max());
+            for (const auto fieldHandle : structure->linearChildren) {
+                auto field = symbolTable.getSymbol(fieldHandle);
+                auto fieldType = symbolTable.getSymbol(field->type);
+                if (!fieldType) {
+                    structure->slotLayoutState = SlotLayoutState::Invalid;
+                    return false;
+                }
+
+                adv_uint32_t fieldSlotCount = 0;
+                if (fieldType->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
+                    fieldSlotCount = 1;
+                } else if (fieldType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                    if (!calculateStructureSlots(fieldType, field)) {
+                        structure->slotLayoutState = SlotLayoutState::Invalid;
+                        return false;
+                    }
+                    fieldSlotCount = fieldType->slot_count;
+                } else {
+                    structure->slotLayoutState = SlotLayoutState::Invalid;
+                    return false;
+                }
+
+                if (fieldSlotCount > maxSlotCount - slotCount) {
+                    ctx.log<ADV_STATUS_E3047>(options, field->location, field->name);
+                    structure->slotLayoutState = SlotLayoutState::Invalid;
+                    return false;
+                }
+                field->slot_index = static_cast<adv_uint16_t>(slotCount);
+                field->slot_count = static_cast<adv_uint16_t>(fieldSlotCount);
+                slotCount += fieldSlotCount;
+            }
+
+            structure->slot_count = static_cast<adv_uint16_t>(slotCount);
+            structure->slotLayoutState = SlotLayoutState::Resolved;
+            return true;
+        }
+
+        const Options& options;
+        Context& ctx;
+        Analyzer& analyzer;
+        SymbolTable& symbolTable;
+    };
+
+    pushFrame();
+    accept<SlotVisitor>(
+        _ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(*this), std::ref(_ctx.symbolTable()));
+    _ctx.setRootFrameSlots(static_cast<adv_uint16_t>(currFrame().maxSlots));
+    popFrame();
+}
+
 void Analyzer::visitStmtsWithRules(
-    adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes) {
+    adv_node_t* node,
+    std::function<void(adv_node_t*, adv_node_t*)> accept,
+    bool useScopes,
+    bool allocateSlots) {
     auto hasFunctions = false;
     auto curr = node->stmts.first_stmt;
     while (curr) {
@@ -745,7 +905,11 @@ void Analyzer::visitStmtsWithRules(
             if (curr->type == ADV_NODE_FUNCTION_DECL) {
                 if (useScopes) {
                     symbolTable.beginScope();
+                }
+                if (allocateSlots) {
                     pushFrame();
+                }
+                if (useScopes || allocateSlots) {
                     auto param = curr->func_decl.first_param;
                     while (param) {
                         accept(param, curr);
@@ -753,10 +917,12 @@ void Analyzer::visitStmtsWithRules(
                     }
                 }
                 accept(curr->func_decl.body, curr);
-                if (useScopes) {
+                if (allocateSlots) {
                     auto sym = symbolTable.getSymbol(curr->func_decl.symbol);
-                    sym->frame_slot_count = currFrame().maxSlots;
+                    sym->slot_count = currFrame().maxSlots;
                     popFrame();
+                }
+                if (useScopes) {
                     symbolTable.endScope();
                 }
             }
@@ -769,11 +935,18 @@ void Analyzer::pushFrame() { _frameStack.emplace(); }
 
 void Analyzer::popFrame() noexcept { _frameStack.pop(); }
 
-void Analyzer::saveFrameSlot(Symbol* sym) noexcept {
+void Analyzer::saveFrameSlot(Symbol* sym) {
     if (!sym->is_global) {
         auto& frame = currFrame();
-        sym->slot_index = frame.currentSlot++;
-        frame.maxSlots = std::max(frame.maxSlots, frame.currentSlot);
+        const auto nextSlot = frame.currentSlot + sym->slot_count;
+        const auto maxSlotCount = static_cast<adv_uint32_t>(std::numeric_limits<adv_uint16_t>::max());
+        if (nextSlot > maxSlotCount) {
+            _ctx.log<ADV_STATUS_E3047>(_options, sym->location, sym->name);
+            return;
+        }
+        sym->slot_index = static_cast<adv_uint16_t>(frame.currentSlot);
+        frame.currentSlot = nextSlot;
+        frame.maxSlots = std::max(frame.maxSlots, nextSlot);
     }
 }
 

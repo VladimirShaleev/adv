@@ -25,12 +25,14 @@ void SymbolTable::init(const Options& options, Context& ctx) {
         auto symbol = addSymbol(options, ctx, &node);
         symbol->kind = ADV_SYMBOL_KIND_PRIMITIVE;
         symbol->primitive_type = static_cast<vm_value_type_t>(i);
+        symbol->slot_count = 1;
         _primitives[i] = node.var_decl.symbol;
     }
 
     adv_node_t nodeVoid{ADV_NODE_VAR_DECL};
     auto symbol = addSymbol(options, ctx, &nodeVoid);
     symbol->kind = ADV_SYMBOL_KIND_VOID;
+    symbol->slot_count = 0;
     _void = nodeVoid.var_decl.symbol;
 }
 

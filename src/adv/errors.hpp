@@ -129,6 +129,12 @@ inline std::string err(Args&&... args) {
         str = fmt::format("Unsupported version, script version {}, compiler version {}", args...);
     } else if constexpr (Status == ADV_STATUS_E3045) {
         str = fmt::format("Unknown return type '{}' in declaration of native function '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3046) {
+        str = fmt::format("Structure '{}' has infinitely recursive layout through field '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3047) {
+        str = fmt::format("Symbol '{}' requires more stack slots than supported", args...);
+    } else if constexpr (Status == ADV_STATUS_E3048) {
+        str = fmt::format("Unknown type '{}' in declaration of structure field '{}'", args...);
     } else {
         assert(!"Unknown status code");
     }

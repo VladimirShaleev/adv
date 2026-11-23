@@ -95,7 +95,10 @@ typedef enum
     ADV_STATUS_E3043       = 3043, /**< The checksum did not match. */
     ADV_STATUS_E3044       = 3044, /**< Unsupported version. */
     ADV_STATUS_E3045       = 3045, /**< Unknown return type in declaration of native function. */
-    ADV_STATUS_COUNT_ENUMS = 53, /**< Count of constants in the enumeration. */
+    ADV_STATUS_E3046       = 3046, /**< Structure contains a recursive field layout. */
+    ADV_STATUS_E3047       = 3047, /**< Symbol requires too many stack slots. */
+    ADV_STATUS_E3048       = 3048, /**< Unknown type in structure field declaration. */
+    ADV_STATUS_COUNT_ENUMS = 56, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
 

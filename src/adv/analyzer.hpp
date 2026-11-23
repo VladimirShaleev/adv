@@ -23,18 +23,23 @@ public:
 private:
     void resolveSymbols();
     void resolveTypes();
+    void resolveSlots();
 
     void
-    visitStmtsWithRules(adv_node_t* node, std::function<void(adv_node_t*, adv_node_t*)> accept, bool useScopes = false);
+    visitStmtsWithRules(
+        adv_node_t* node,
+        std::function<void(adv_node_t*, adv_node_t*)> accept,
+        bool useScopes = false,
+        bool allocateSlots = false);
 
     struct FunctionFrameState {
-        adv_uint16_t currentSlot;
-        adv_uint16_t maxSlots;
+        adv_uint32_t currentSlot{};
+        adv_uint32_t maxSlots{};
     };
 
     void pushFrame();
     void popFrame() noexcept;
-    void saveFrameSlot(class Symbol* sym) noexcept;
+    void saveFrameSlot(class Symbol* sym);
     [[nodiscard]] FunctionFrameState& currFrame() noexcept;
 
     [[nodiscard]] adv_node_t* promoteCastNode(adv_node_t* node, adv_symbol_h targetType);

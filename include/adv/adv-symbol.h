@@ -50,7 +50,7 @@ typedef struct
     adv_uint16_t        child_count; /**< Number of child symbols. */
     adv_scope_h         scope; /**< Handle to the scope in which the symbol is defined. */
     adv_uint16_t        slot_index; /**< Index of the symbol in the local frame or global table. */
-    adv_uint16_t        frame_slot_count; /**< Number of slots used by the symbol (for functions). */
+    adv_uint16_t        slot_count; /**< Number of slots used by the symbol. */
     adv_bool_t          is_global; /**< Flag indicating whether the symbol is globally scoped. */
 } adv_symbol_t;
 

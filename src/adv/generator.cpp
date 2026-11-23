@@ -232,7 +232,7 @@ struct CodeGenVisitor {
 
         code.emitByte(VM_OPCODE_FUNCTION_PROLOGUE);
         code.emitByte(lexicalDepth);
-        code.emitUint16(sym->frame_slot_count);
+        code.emitUint16(sym->slot_count);
         code.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
         switch (type->kind) {
         case ADV_SYMBOL_KIND_PRIMITIVE:
