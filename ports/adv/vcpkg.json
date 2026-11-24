@@ -1,7 +1,7 @@
 {
   "name": "adv",
   "version": "0.1.0",
-  "port-version": 1,
+  "port-version": 2,
   "description": "An embeddable bytecode VM and compiler for the Adventure scripting language (vm, adv, and advc CLI)",
   "homepage": "https://github.com/VladimirShaleev/adv",
   "documentation": "https://vladimirshaleev.github.io/adv/",
