@@ -273,8 +273,9 @@ struct adv_node_t
          **/
         struct
         {
-            adv_node_t* target;     /**< Target object instance expression. */
-            vm_string_h member;     /**< Member field name string handle. */
+            adv_node_t*  target;     /**< Target object instance expression. */
+            vm_string_h  member;     /**< Member field name string handle. */
+            adv_symbol_h symbol;     /**< Handle to the resolved field symbol. */
         } member_access; /**< Member access expression payload. */
 
         adv_bool_t    bool_val;    /**< Boolean literal value. */

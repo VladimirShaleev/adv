@@ -98,7 +98,8 @@ typedef enum
     ADV_STATUS_E3046       = 3046, /**< Structure contains a recursive field layout. */
     ADV_STATUS_E3047       = 3047, /**< Symbol requires too many stack slots. */
     ADV_STATUS_E3048       = 3048, /**< Unknown type in structure field declaration. */
-    ADV_STATUS_COUNT_ENUMS = 56, /**< Count of constants in the enumeration. */
+    ADV_STATUS_E3049       = 3049, /**< Type does not contain the requested field. */
+    ADV_STATUS_COUNT_ENUMS = 57, /**< Count of constants in the enumeration. */
     ADV_STATUS_MAX_ENUM    = 0x7FFFFFFF /**< Max value of enum (not used) */
 } adv_status_t;
 

@@ -55,11 +55,11 @@ void Analyzer::resolveSymbols() {
             auto importModule = utils::getModuleName(ctx.getString(node->import_stmt.path));
             if (!modules.contains(importModule)) {
                 modules.insert(importModule);
-                if (ctx.codeFormat(importModule) == utils::Format::Advb) {
-                    loadSymbolsFromBinary(ctx.bytecode(importModule));
-                }
                 if (node->import_stmt.root) {
                     acceptNode(node->import_stmt.root, node);
+                }
+                if (ctx.codeFormat(importModule) == utils::Format::Advb) {
+                    loadSymbolsFromBinary(ctx.bytecode(importModule));
                 }
             }
         }
@@ -717,7 +717,7 @@ void Analyzer::resolveTypes() {
                 acceptNode(node->while_stmt.body);
             }
         }
-        void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
+        void visit(adv_node_t* /* node */, Tag<ADV_NODE_YIELD_STMT>) { assert(!"not implemented"); }
         void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {
             if (!node->expr_stmt.expr) {
                 ctx.log<ADV_STATUS_E3041>(options, node->location);
@@ -733,8 +733,32 @@ void Analyzer::resolveTypes() {
                 return;
             }
         }
-        void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) { assert(!"unreachable code"); }
-        void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) { assert(!"not implemented"); }
+        void visit(adv_node_t* /* node */, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) { assert(!"unreachable code"); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {
+            const auto targetTypeHandle = acceptNode(node->member_access.target);
+            if (targetTypeHandle == Undefined) {
+                return;
+            }
+            const auto targetType = symbolTable.getSymbol(targetTypeHandle);
+            if (!targetType) {
+                return;
+            }
+            if (targetType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                for (const auto fieldHandle : targetType->linearChildren) {
+                    const auto field = symbolTable.getSymbol(fieldHandle);
+                    if (field && field->name == node->member_access.member) {
+                        if (field->type == Undefined) {
+                            ctx.log<ADV_STATUS_E3018>(options, node->location, field->name);
+                            return;
+                        }
+                        node->member_access.symbol = fieldHandle;
+                        node->resolved_type = field->type;
+                        return;
+                    }
+                }
+            }
+            ctx.log<ADV_STATUS_E3049>(options, node->location, targetTypeHandle, node->member_access.member);
+        }
         void visitChildrens(adv_node_t* node) {
             analyzer.visitStmtsWithRules(node, [this](auto node, auto /* parent */) { acceptNode(node); });
         }

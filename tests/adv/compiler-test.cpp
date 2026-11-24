@@ -44,4 +44,31 @@ TEST(Compiler, ExportsOnlyGlobalStructures) {
     EXPECT_EQ(output.find("struct Local"), std::string::npos);
 }
 
+TEST(Compiler, ResolvesStructureFieldAccess) {
+    constexpr char sourceText[] =
+        "struct Point { x: float; y: float; }\n"
+        "struct Sample { name: string; p1: Point; p2: Point; }\n"
+        "var s: Sample;\n"
+        "s.name = \"OK\";\n"
+        "s.p2.y = 3.5;\n";
+    adv_source_t source{"test.adv", sourceText, static_cast<adv_uint32_t>(sizeof(sourceText) - 1)};
+
+    adv_options_t options{};
+    ASSERT_EQ(adv_options_create(&options), ADV_RESULT_SUCCESS);
+    adv_options_set_standard_library(options, 0);
+
+    adv_compiler_t compiler{};
+    const auto createResult = adv_compiler_create(&compiler);
+    if (createResult != ADV_RESULT_SUCCESS) {
+        adv_options_destroy(options);
+        FAIL() << adv_result_to_string(createResult);
+    }
+
+    const auto compileResult = adv_compiler_compile(compiler, nullptr, 1, &source, options, nullptr);
+    adv_compiler_destroy(compiler);
+    adv_options_destroy(options);
+
+    EXPECT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
+}
+
 } // namespace

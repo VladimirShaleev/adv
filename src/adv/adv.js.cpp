@@ -296,7 +296,8 @@ EMSCRIPTEN_BINDINGS(adv) {
         .value("E3045", ADV_STATUS_E3045)
         .value("E3046", ADV_STATUS_E3046)
         .value("E3047", ADV_STATUS_E3047)
-        .value("E3048", ADV_STATUS_E3048);
+        .value("E3048", ADV_STATUS_E3048)
+        .value("E3049", ADV_STATUS_E3049);
 
     enum_<adv_format_t>("Format").value("BINARY", ADV_FORMAT_BINARY).value("TEXT", ADV_FORMAT_TEXT);
 

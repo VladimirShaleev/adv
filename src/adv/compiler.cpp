@@ -189,6 +189,9 @@ private:
                         ++program->stmts.stmt_count;
                     }
                     break;
+                case VM_OPCODE_FUNCTION_PROLOGUE:
+                    ip += 5;
+                    break;
                 case VM_OPCODE_PUSH_INT:
                 case VM_OPCODE_PUSH_FLOAT:
                 case VM_OPCODE_PUSH_STRING_FROM_DATA:

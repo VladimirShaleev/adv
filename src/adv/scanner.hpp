@@ -85,7 +85,7 @@ public:
             }
             return false;
         }
-        _ctx.setBytecode(utils::getModuleName(*filename()), std::move(bytecode), result.format);
+        _ctx.setBytecode(utils::getModuleName(*filename()), std::move(bytecode), utils::Format::Advb);
         return true;
     }
 

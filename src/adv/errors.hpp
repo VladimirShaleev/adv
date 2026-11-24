@@ -135,6 +135,8 @@ inline std::string err(Args&&... args) {
         str = fmt::format("Symbol '{}' requires more stack slots than supported", args...);
     } else if constexpr (Status == ADV_STATUS_E3048) {
         str = fmt::format("Unknown type '{}' in declaration of structure field '{}'", args...);
+    } else if constexpr (Status == ADV_STATUS_E3049) {
+        str = fmt::format("Type '{}' does not have field '{}'", args...);
     } else {
         assert(!"Unknown status code");
     }
