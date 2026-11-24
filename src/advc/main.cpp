@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     adv_options_set_warnings_as_errors(options, warnAsErr ? 1 : 0);
+    adv_options_set_standard_library(options, noStd ? 0 : 1);
     adv_options_set_output_format(options, text ? ADV_FORMAT_TEXT : ADV_FORMAT_BINARY);
     adv_options_set_output_path(options, outputPath.c_str());
     adv_options_set_import_dirs(options, (adv_uint32_t)dirs.size(), dirs.data());
