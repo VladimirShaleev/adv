@@ -194,10 +194,9 @@ private:
     [[nodiscard]] bool isStructFieldSeparator() const noexcept {
         const auto lineStart = _source.find_last_of("\r\n", _cursor);
         const auto prefixStart = lineStart == std::string_view::npos ? 0 : lineStart + 1;
-        if (std::all_of(
-                _source.begin() + prefixStart,
-                _source.begin() + _cursor,
-                [](char c) { return c == ' ' || c == '\t'; })) {
+        if (std::all_of(_source.begin() + prefixStart, _source.begin() + _cursor, [](char c) {
+                return c == ' ' || c == '\t';
+            })) {
             return false;
         }
 
@@ -405,9 +404,9 @@ private:
                     symbol.fields.push_back(field);
                     if (_currentToken.type == TokenType::Semicolon) {
                         advance();
-                    } else if (_currentToken.type != TokenType::Newline &&
-                               _currentToken.type != TokenType::Comment && _currentToken.type != TokenType::RBrace &&
-                               _currentToken.type != TokenType::Eof) {
+                    } else if (
+                        _currentToken.type != TokenType::Newline && _currentToken.type != TokenType::Comment &&
+                        _currentToken.type != TokenType::RBrace && _currentToken.type != TokenType::Eof) {
                         error("Unexpected token after structure field", TranslateResult::SyntaxError);
                     }
                 }
@@ -445,7 +444,9 @@ private:
                 symbol.parameters = parseExportParameters();
                 if (_currentToken.type == TokenType::Colon) {
                     advance();
-                    symbol.type = parseExportType();
+                    const auto type = parseScriptType();
+                    symbol.type = type.code;
+                    symbol.structureName = type.structureName;
                 }
             } else {
                 error(
@@ -685,25 +686,6 @@ private:
             TranslateResult::IncompatibleVersion);
     }
 
-    [[nodiscard]] vm_value_type_t parseExportType() {
-        expect(TokenType::Identifier, "Expected export type");
-        const auto typeName = _currentToken.value;
-        advance();
-        if (equals(typeName, "bool"sv)) {
-            return VM_VALUE_TYPE_BOOL;
-        }
-        if (equals(typeName, "int"sv)) {
-            return VM_VALUE_TYPE_INT;
-        }
-        if (equals(typeName, "float"sv)) {
-            return VM_VALUE_TYPE_FLOAT;
-        }
-        if (equals(typeName, "string"sv)) {
-            return VM_VALUE_TYPE_STRING;
-        }
-        error(fmt::format("Unknown export type '{}'", typeName), TranslateResult::UnknownIdentifier);
-    }
-
     [[nodiscard]] SymbolType parseScriptType() {
         expect(TokenType::Identifier, "Expected export type");
         const auto typeName = _currentToken.value;
@@ -895,7 +877,8 @@ private:
                     result.textSection[offsetText - 1] = VM_OPCODE_CALL;
                     patchUint32(offsetText, it->second, result.textSection);
                 } else if (opcode != VM_OPCODE_CALL_BY_NAME && opcode != VM_OPCODE_CALL_NATIVE_BY_NAME) {
-                    error(fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
+                    error(
+                        fmt::format("Identifier '{}' not found", id), TranslateResult::UnknownIdentifier, false, line);
                 }
             }
         }
@@ -932,7 +915,11 @@ private:
             if (type.code > VM_VALUE_TYPE_STRING) {
                 const auto dataOffset = emplaceData(result, type.structureName);
                 if (dataOffset > (std::numeric_limits<vm_uint32_t>::max() >> 3)) {
-                    error("Structure type name offset exceeds export type limit", TranslateResult::ValueOutOfRange, false, line);
+                    error(
+                        "Structure type name offset exceeds export type limit",
+                        TranslateResult::ValueOutOfRange,
+                        false,
+                        line);
                 }
                 return utils::encodeExportStructureType(dataOffset);
             }
@@ -943,28 +930,26 @@ private:
                 continue;
             }
             const auto structLine = symbol.line;
-            appendRecord(vm_script_export_struct_t{
-                emplaceData(result, symbol.name), checkedUint16(symbol.fields.size(), structLine)});
+            appendRecord(
+                vm_script_export_struct_t{
+                    emplaceData(result, symbol.name), checkedUint16(symbol.fields.size(), structLine)});
             exports.struct_count = checkedUint16(static_cast<size_t>(exports.struct_count) + 1, structLine);
-            exports.struct_size = checkedUint16(
-                static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_struct_t), structLine);
+            exports.struct_size =
+                checkedUint16(static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_struct_t), structLine);
             for (const auto& field : symbol.fields) {
                 const auto type = encodeType(field.type, structLine);
                 appendRecord(vm_script_export_field_t{emplaceData(result, field.name), type});
                 exports.struct_size = checkedUint16(
-                    static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_field_t),
-                    structLine);
+                    static_cast<size_t>(exports.struct_size) + sizeof(vm_script_export_field_t), structLine);
             }
         }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Variable) {
                 const SymbolType type{symbol.type, symbol.structureName};
-                appendRecord(vm_script_export_var_t{
-                    emplaceData(result, symbol.name), encodeType(type, symbol.line)});
+                appendRecord(vm_script_export_var_t{emplaceData(result, symbol.name), encodeType(type, symbol.line)});
                 exports.var_count = checkedUint16(static_cast<size_t>(exports.var_count) + 1, symbol.line);
-                exports.var_size = checkedUint16(
-                    static_cast<size_t>(exports.var_size) + sizeof(vm_script_export_var_t),
-                    symbol.line);
+                exports.var_size =
+                    checkedUint16(static_cast<size_t>(exports.var_size) + sizeof(vm_script_export_var_t), symbol.line);
             }
         }
         for (const auto& [_, symbol] : result.symbolMap) {
@@ -973,31 +958,31 @@ private:
                 func.param_count = checkedUint8(symbol.parameters.size(), symbol.line);
                 appendRecord(func);
                 exports.func_count = checkedUint16(static_cast<size_t>(exports.func_count) + 1, symbol.line);
-                exports.func_size = checkedUint16(
-                    static_cast<size_t>(exports.func_size) + sizeof(func), symbol.line);
+                exports.func_size = checkedUint16(static_cast<size_t>(exports.func_size) + sizeof(func), symbol.line);
                 for (const auto& param : symbol.parameters) {
-                    appendRecord(vm_script_export_param_t{
-                        emplaceData(result, param.name), encodeType(param.type, symbol.line)});
+                    appendRecord(
+                        vm_script_export_param_t{emplaceData(result, param.name), encodeType(param.type, symbol.line)});
                     exports.func_size = checkedUint16(
-                        static_cast<size_t>(exports.func_size) + sizeof(vm_script_export_param_t),
-                        symbol.line);
+                        static_cast<size_t>(exports.func_size) + sizeof(vm_script_export_param_t), symbol.line);
                 }
             }
         }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Native) {
-                vm_script_export_native_t native{emplaceData(result, symbol.name), (vm_uint8_t)symbol.type};
+                const SymbolType returnType{symbol.type, symbol.structureName};
+                vm_script_export_native_t native{
+                    emplaceData(result, symbol.name),
+                    encodeType(returnType, symbol.line)};
                 native.param_count = checkedUint8(symbol.parameters.size(), symbol.line);
                 appendRecord(native);
                 exports.native_count = checkedUint16(static_cast<size_t>(exports.native_count) + 1, symbol.line);
-                exports.native_size = checkedUint16(
-                    static_cast<size_t>(exports.native_size) + sizeof(native), symbol.line);
+                exports.native_size =
+                    checkedUint16(static_cast<size_t>(exports.native_size) + sizeof(native), symbol.line);
                 for (const auto& param : symbol.parameters) {
-                    appendRecord(vm_script_export_param_t{
-                        emplaceData(result, param.name), encodeType(param.type, symbol.line)});
+                    appendRecord(
+                        vm_script_export_param_t{emplaceData(result, param.name), encodeType(param.type, symbol.line)});
                     exports.native_size = checkedUint16(
-                        static_cast<size_t>(exports.native_size) + sizeof(vm_script_export_param_t),
-                        symbol.line);
+                        static_cast<size_t>(exports.native_size) + sizeof(vm_script_export_param_t), symbol.line);
                 }
             }
         }

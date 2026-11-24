@@ -10,7 +10,8 @@ struct Native {
     vm_script_h script;
     vm_native_callback_t func;
     vm_uint16_t paramCount;
-    vm_uint16_t returnCount;
+    vm_uint32_t argSlotCount;
+    vm_uint16_t returnSlotCount;
     vm_data_t data;
 };
 
@@ -33,13 +34,29 @@ public:
     void unregisterFunc(vm_native_h native) noexcept;
 
 private:
-    void addNative(vm_script_h script, std::string_view name, vm_uint16_t paramCount, vm_uint16_t returnCount);
+    void addNative(
+        vm_script_h script,
+        std::string_view name,
+        vm_uint16_t paramCount,
+        vm_uint32_t argSlotCount,
+        vm_uint16_t returnCount);
 
     struct FuncReflect : vm_reflect_func_t {
+        struct StructReflect {
+            vm_reflect_struct_t info{};
+            std::string name;
+            std::vector<std::string> fieldNames;
+            std::vector<vm_reflect_field_t> fields;
+            std::vector<vm_uint32_t> fieldTypes;
+        };
+
         std::string nameFunc;
+        std::vector<StructReflect> structures;
         std::vector<std::string> linearParamNames;
         std::vector<vm_reflect_param_t> linearParams;
-        std::vector<vm_value_type_t> linearReturns;
+        vm_reflect_type_t reflectedReturn{};
+        vm_uint16_t reflectedReturnSlotCount{};
+        bool hasReturn{};
 
         const vm_reflect_func_t* fill() noexcept;
     };

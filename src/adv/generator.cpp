@@ -214,8 +214,7 @@ struct CodeGenVisitor {
         const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
         if (sym->is_global) {
             exportNative.emitString(sym->name);
-            const auto returnType = ctx.symbolTable().getSymbol(sym->type);
-            exportNative.emitByte(returnType->primitive_type);
+            exportNative.emitType(sym->type);
             exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
             for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);

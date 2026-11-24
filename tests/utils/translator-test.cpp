@@ -237,7 +237,7 @@ TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
         "    var zeta: int\n"
         "    function run(value: A, count: int): bool\n"
         "    function zetaRun(count: int): bool\n"
-        "    native inspect(value: B)\n"
+        "    native inspect(value: B): A\n"
         "    native zetaNative(enabled: bool)\n"
         ".data\n"
         "    padding: \"") +
@@ -261,7 +261,7 @@ TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
     EXPECT_EQ(exports.struct_size, 36);
     EXPECT_EQ(exports.var_size, 16);
     EXPECT_EQ(exports.func_size, 44);
-    EXPECT_EQ(exports.native_size, 28);
+    EXPECT_EQ(exports.native_size, 34);
 
     const auto structureA = utils::read<vm_script_export_struct_t>(bytecode, 0);
     const auto fieldChild = utils::read<vm_script_export_field_t>(bytecode, 0, 1);
@@ -295,6 +295,9 @@ TEST(Translator, SerializesStructureExportsAndDynamicTypes) {
     const auto nativeParam = utils::read<utils::NativeParam>(bytecode, 0, 0).param;
     EXPECT_EQ(utils::exportTypeBase(nativeParam.type), utils::ExportTypeStructure);
     EXPECT_EQ(readTypeName(nativeParam.type), "B");
+    const auto native = utils::read<vm_script_export_native_t>(bytecode, 0);
+    EXPECT_EQ(utils::exportTypeBase(native.return_type), utils::ExportTypeStructure);
+    EXPECT_EQ(readTypeName(native.return_type), "A");
     const auto secondNative = utils::read<vm_script_export_native_t>(bytecode, 1);
     EXPECT_EQ(utils::readString(secondNative.name, data), "zetaNative");
     const auto secondNativeParam = utils::read<utils::NativeParam>(bytecode, 1, 0).param;

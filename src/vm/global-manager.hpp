@@ -22,11 +22,30 @@ public:
         std::optional<vm_value_type_t> returnType;
     };
 
+    struct TypeRef {
+        vm_uint32_t baseType{VM_VALUE_TYPE_UNKNOWN};
+        vm_string_h structureName{};
+    };
+
+    struct StructureField {
+        vm_string_h name;
+        TypeRef type;
+    };
+
+    struct StructureLayout {
+        std::vector<StructureField> fields;
+    };
+
+    struct PendingVar {
+        TypeRef type;
+        bool materialized{};
+    };
+
     explicit GlobalManager(Cache& cache) noexcept;
 
     void addGlobals(vm_script_h script, std::span<const uint8_t> bytecode);
 
-    [[nodiscard]] VarSlot resolveVar(std::string_view name) const noexcept;
+    [[nodiscard]] VarSlot resolveVar(std::string_view name);
     [[nodiscard]] FuncSlot resolveFunc(std::string_view name) const noexcept;
 
     void setVar(VarSlot slot, const vm_value_t& value) noexcept;
@@ -34,7 +53,13 @@ public:
     [[nodiscard]] const Func& getFunc(FuncSlot slot) const noexcept;
 
 private:
-    void addGlobalVar(std::string_view name, vm_value_type_t type);
+    [[nodiscard]] TypeRef readType(vm_uint32_t packedType, std::span<const uint8_t> data);
+    [[nodiscard]] bool collectGlobalSlots(
+        std::string& name,
+        const TypeRef& type,
+        std::vector<std::pair<std::string, vm_value_type_t>>& slots,
+        std::vector<vm_string_h>& structureStack) const;
+    [[nodiscard]] bool materializeGlobalVar(std::string_view name, PendingVar& var);
     void addGlobalFun(
         std::string_view name,
         vm_uint16_t paramCount,
@@ -43,6 +68,8 @@ private:
         std::optional<vm_value_type_t> returnType);
 
     Cache& _cache;
+    std::unordered_map<vm_string_h, StructureLayout> _structures;
+    std::unordered_map<vm_string_h, PendingVar> _pendingVars;
     utils::FlatMap<vm_string_h, VarSlot, vm_value_t> _vars;
     utils::FlatMap<vm_string_h, FuncSlot, Func> _funcs;
 };

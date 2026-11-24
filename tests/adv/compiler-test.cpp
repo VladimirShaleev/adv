@@ -14,13 +14,18 @@ void captureOutput(const adv_source_t* source, adv_data_t data) {
 
 struct ReturnCheck {
     bool called{};
+    vm_value_t firstValue{};
     vm_value_t value{};
+    size_t callCount{};
 };
 
 void verifyReturnedStructureField(vm_t vm, vm_thread_h thread, vm_native_h, vm_uint16_t, vm_data_t data) {
     auto& result = *static_cast<ReturnCheck*>(data);
     result.called = true;
     result.value = vm_thread_get_arg(vm, thread, 0);
+    if (result.callCount++ == 0) {
+        result.firstValue = result.value;
+    }
 }
 
 TEST(Compiler, ExportsOnlyGlobalStructures) {
@@ -262,6 +267,9 @@ TEST(Compiler, ReturnsStructureSlotsAndSelectsCallFields) {
         "struct Sample { id: int; inner: Inner; }\n"
         "struct Tiny { value: int; }\n"
         "var global_source: Sample;\n"
+        "global_source.id = 1;\n"
+        "global_source.inner.first = 2;\n"
+        "global_source.inner.second = 9;\n"
         "function make(value: Sample): Sample { return value; }\n"
         "function makeTiny(): Tiny { var value: Tiny; value.value = 4; return value; }\n"
         "var global_result = make(global_source).inner.second;\n"
@@ -275,6 +283,7 @@ TEST(Compiler, ReturnsStructureSlotsAndSelectsCallFields) {
         "    return make(copy).inner.second;\n"
         "}\n"
         "native verify(value: int);\n"
+        "verify(global_result);\n"
         "verify(getValue());\n";
     adv_source_t source{"test.adv", sourceText, static_cast<adv_uint32_t>(sizeof(sourceText) - 1)};
 
@@ -328,6 +337,9 @@ TEST(Compiler, ReturnsStructureSlotsAndSelectsCallFields) {
     vm_destroy(vm);
 
     ASSERT_TRUE(result.called);
+    EXPECT_EQ(result.callCount, 2);
+    EXPECT_EQ(result.firstValue.type, VM_VALUE_TYPE_INT);
+    EXPECT_EQ(result.firstValue.i32, 9);
     EXPECT_EQ(result.value.type, VM_VALUE_TYPE_INT);
     EXPECT_EQ(result.value.i32, 3);
 }

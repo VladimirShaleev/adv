@@ -147,15 +147,17 @@ typedef struct
 
 /**
  * @brief   Exported native function metadata.
- * @details Describes a native function declared by the script. Its parameter
- *          descriptors follow this structure in the export block as
- *          @c param_count consecutive ::vm_script_export_param_t records.
+ * @details Describes a native function declared by the script. The return
+ *          type uses the same packed 32-bit representation as
+ *          ::vm_script_export_var_t. Its parameter descriptors follow this
+ *          structure in the export block as @c param_count consecutive
+ *          ::vm_script_export_param_t records.
  * @ingroup vm_structs
  */
 typedef struct
 {
     vm_uint32_t name; /**< Offset or index of the native function name in the data block. */
-    vm_uint8_t  return_type; /**< Type code returned by the native function. */
+    vm_uint32_t return_type; /**< Packed type code returned by the native function. */
     vm_uint8_t  param_count; /**< Number of parameters expected by the native function. */
     /* vm_script_export_param_t params[param_count]; */
 } VM_PACKED_ATTR vm_script_export_native_t;

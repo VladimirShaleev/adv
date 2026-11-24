@@ -113,17 +113,23 @@ public:
 private:
     static void nativeCallback(vm_t vm, vm_thread_h thread, vm_native_h native, vm_uint16_t argCount, vm_data_t data) {
         const auto& callback = *static_cast<val*>(data);
+        const auto* func = vm_reflect_native_func(vm, native);
         auto args = val::array();
         args.call<void>("push", thread);
         args.call<void>("push", native);
-        for (vm_uint16_t i = 0; i < argCount; ++i) {
-            args.call<void>("push", valueToJs(vm, vm_thread_get_arg(vm, thread, i)));
+        if (func) {
+            for (vm_uint16_t i = 0; i < func->param_count; ++i) {
+                args.call<void>("push", valueToJs(vm, thread, func->params[i].type, func->params[i].slot_index));
+            }
+        } else {
+            for (vm_uint16_t i = 0; i < argCount; ++i) {
+                args.call<void>("push", valueToJs(vm, vm_thread_get_arg(vm, thread, i)));
+            }
         }
         const auto result = val::global("Reflect").call<val>("apply", callback, val::undefined(), args);
         if (!result.isUndefined()) {
-            if (const auto func = vm_reflect_native_func(vm, native); func && func->return_count == 1) {
-                const auto value = valueFromJs(vm, result, func->returns[0]);
-                vm_thread_set_result(vm, thread, 0, &value);
+            if (func && func->return_type) {
+                valueFromJs(vm, thread, result, *func->return_type, 0);
             }
         }
     }
@@ -173,6 +179,19 @@ private:
         }
     }
 
+    [[nodiscard]] static val
+    valueToJs(vm_t vm, vm_thread_h thread, const vm_reflect_type_t& type, vm_uint32_t baseSlot) {
+        if (type.structure) {
+            auto object = val::object();
+            for (vm_uint16_t i = 0; i < type.structure->field_count; ++i) {
+                const auto& field = type.structure->fields[i];
+                object.set(field.name, valueToJs(vm, thread, field.type, baseSlot + field.slot_index));
+            }
+            return object;
+        }
+        return valueToJs(vm, vm_thread_get_arg(vm, thread, baseSlot));
+    }
+
     [[nodiscard]] static vm_value_t valueFromJs(vm_t vm, const val& value, vm_value_type_t targetType) {
         if (value.isUndefined()) {
             return {};
@@ -198,6 +217,19 @@ private:
         throwError("TypeError", "Native callbacks must return a boolean, number, string, or undefined");
     }
 
+    static void
+    valueFromJs(vm_t vm, vm_thread_h thread, const val& value, const vm_reflect_type_t& type, vm_uint32_t baseSlot) {
+        if (type.structure) {
+            for (vm_uint16_t i = 0; i < type.structure->field_count; ++i) {
+                const auto& field = type.structure->fields[i];
+                valueFromJs(vm, thread, value[field.name], field.type, baseSlot + field.slot_index);
+            }
+        } else {
+            const auto result = valueFromJs(vm, value, type.primitive_type);
+            vm_thread_set_result(vm, thread, baseSlot, &result);
+        }
+    }
+
     vm_t _vm{};
     std::unordered_map<vm_uint32_t, std::unique_ptr<NativeCallback>> _nativeCallbacks;
     ImportCallback _importer{val::undefined()};
@@ -207,8 +239,7 @@ private:
 EMSCRIPTEN_BINDINGS(adv_vm) {
     register_type<String>("string");
     register_type<Bytecode>("Bytecode", "ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string");
-    register_type<NativeCallback>(
-        "NativeCallback", "(thread: Thread, native: Native, ...args: (number | boolean | string)[]) => void");
+    register_type<NativeCallback>("NativeCallback", "(thread: Thread, native: Native, ...args: any[]) => void");
     register_type<ImportCallback>("ImportCallback", "(module: string) => Bytecode");
     register_type<LoggerCallback>(
         "LoggerCallback", "(thread: Thread, instructionPos: number, message: string) => void");

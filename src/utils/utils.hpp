@@ -328,6 +328,7 @@ swapBytes(const vm_script_export_native_t& exportNative) noexcept {
     }
     auto result = exportNative;
     result.name = swapBytes(result.name);
+    result.return_type = swapBytes(result.return_type);
     return result;
 }
 

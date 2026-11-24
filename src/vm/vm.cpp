@@ -81,8 +81,8 @@ public:
         if (const auto threadPtr = _threads.access(thread)) {
             const auto native = _nativeManager.func(threadPtr->currentNative);
             assert(native);
-            const auto argBase = threadPtr->stackPos - native->paramCount;
-            if (index < native->paramCount) {
+            const auto argBase = threadPtr->stackPos - native->argSlotCount;
+            if (index < native->argSlotCount) {
                 return &threadPtr->stack[argBase + index];
             }
         }
@@ -663,21 +663,19 @@ private:
 
     template <typename Logger>
     void callNative(ScriptThread* thread, vm_native_h nativeHandle, const Native& native, Logger&& log) {
-        if (thread->stackPos + native.returnCount < StackSize) {
+        if (thread->stackPos + native.returnSlotCount < StackSize) {
             thread->currentNative = nativeHandle;
             if (native.func) {
                 native.func(this, _threads.handle(thread), nativeHandle, native.paramCount, native.data);
             }
-            vm_value_t retVal{};
-            if (native.returnCount) {
-                assert(native.returnCount == 1);
-                retVal = thread->stack[thread->stackPos];
+            const auto argBase = thread->stackPos - native.argSlotCount;
+            if (native.returnSlotCount) {
+                std::memmove(
+                    &thread->stack[argBase],
+                    &thread->stack[thread->stackPos],
+                    native.returnSlotCount * sizeof(vm_value_t));
             }
-            thread->stackPos = thread->stackPos - native.paramCount;
-            if (native.returnCount) {
-                assert(native.returnCount == 1);
-                thread->stack[thread->stackPos++] = retVal;
-            }
+            thread->stackPos = argBase + native.returnSlotCount;
         } else {
             log("Call Stack Overflow in thread");
         }

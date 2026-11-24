@@ -71,30 +71,87 @@ typedef struct
 } vm_bytecode_t;
 
 /**
- * @brief   Parameter information for a registered native function.
- * @details Describes the name and value type of one native function parameter.
+ * @brief   Forward declaration of a reflect struct.
+ * @details The struct definition follows below; pointers to this type are used
+ *          to link types into reflection.
+ * @ingroup vm_types
+ */
+typedef struct vm_reflect_struct_t vm_reflect_struct_t;
+
+/**
+ * @brief   Reference to a primitive value type or a reflected structure.
+ * @details If @p structure is non-NULL, it identifies a structure and
+ *          @p primitive_type is ::VM_VALUE_TYPE_UNKNOWN. Otherwise,
+ *          @p primitive_type identifies the primitive type.
  * @ingroup vm_structs
  */
 typedef struct
 {
-    vm_utf8_t name;       /**< UTF-8 parameter name. */
-    vm_value_type_t type; /**< Type of the parameter value. */
+    vm_value_type_t            primitive_type; /**< Primitive type, or UNKNOWN for a structure. */
+    const vm_reflect_struct_t* structure; /**< Reflected structure, or NULL for a primitive. */
+} vm_reflect_type_t;
+
+/**
+ * @brief   Field information for a reflected structure.
+ * @details Describes the name and type of one structure field. The slot range
+ *          is relative to the start of the containing structure.
+ * @ingroup vm_structs
+ */
+typedef struct
+{
+    vm_utf8_t         name; /**< UTF-8 field name. */
+    vm_reflect_type_t type; /**< Type of the field value. */
+    vm_uint16_t       slot_index; /**< First slot occupied by the field in its containing structure. */
+    vm_uint16_t       slot_count; /**< Number of slots occupied by the field. */
+} vm_reflect_field_t;
+
+/**
+ * @brief   Reflection information for a structure.
+ * @details The array referenced by @p fields contains @p field_count entries.
+ *          Structure values are flattened in field order; nested structures
+ *          contribute all of their leaf-field slots. @p slot_count is the
+ *          total number of VM slots occupied by the flattened structure.
+ * @ingroup vm_structs
+ */
+struct vm_reflect_struct_t
+{
+    vm_utf8_t                 name; /**< UTF-8 structure name. */
+    const vm_reflect_field_t* fields;  /**< Structure field information. */
+    vm_uint16_t               field_count; /**< Number of fields. */
+    vm_uint16_t               slot_count; /**< Total number of VM slots occupied by the structure. */
+    
+};
+
+/**
+ * @brief   Parameter information for a registered native function.
+ * @details Describes the name and type of one native function parameter. The
+ *          slot range is relative to the beginning of the native call's
+ *          argument slots.
+ * @ingroup vm_structs
+ */
+typedef struct
+{
+    vm_utf8_t         name; /**< UTF-8 parameter name. */
+    vm_reflect_type_t type; /**< Type of the parameter value. */
+    vm_uint16_t       slot_index; /**< First VM argument slot occupied by the parameter. */
+    vm_uint16_t       slot_count; /**< Number of VM argument slots occupied by the parameter. */
 } vm_reflect_param_t;
 
 /**
  * @brief   Reflection information for a registered native function.
- * @details Describes the function name, its parameters, and its return value
- *          types. The arrays referenced by @p params and @p returns contain
- *          @p param_count and @p return_count entries, respectively.
+ * @details Describes the function name and parameters. @p return_type points
+ *          to the single return type when the function returns a value, or is
+ *          NULL for a function with no return value. The return value occupies
+ *          @p return_slot_count VM slots; zero means there is no return value.
  * @ingroup vm_structs
  */
 typedef struct
 {
-    vm_utf8_t                 name;         /**< UTF-8 function name. */
-    const vm_reflect_param_t* params;       /**< Function parameter information. */
-    const vm_value_type_t*    returns;      /**< Return value types. */
-    vm_uint16_t               param_count;  /**< Number of parameters. */
-    vm_uint16_t               return_count; /**< Number of return values. */
+    vm_utf8_t                 name; /**< UTF-8 function name. */
+    const vm_reflect_param_t* params; /**< Function parameter information. */
+    const vm_reflect_type_t*  return_type; /**< Single return type, or NULL for no return value. */
+    vm_uint16_t               param_count; /**< Number of parameters. */
+    vm_uint16_t               return_slot_count; /**< Number of VM slots occupied by the return value. */
 } vm_reflect_func_t;
 
 /**
@@ -300,13 +357,14 @@ vm_shutdown_thread(vm_t vm,
 
 /**
  * @brief      Reads an argument passed to the current native call.
- * @details    Native functions may use this helper to read arguments supplied by
- *             the VM for the currently executing thread. The value is returned in
- *             the native representation expected by the host runtime.
+ * @details    Native functions may use this helper to read argument slots
+ *             supplied by the VM for the currently executing thread. Structure
+ *             arguments occupy consecutive slots in field order; use native
+ *             function reflection to map those slots to fields.
  * @param[in]  vm VM instance owning the thread.
  * @param[in]  thread Thread to query.
- * @param[in]  index Argument index.
- * @return     Argument value at @p index.
+ * @param[in]  index Argument slot index.
+ * @return     Argument slot value at @p index.
  * @sa         ::vm_register_native
  * @ingroup    vm_functions
  */
@@ -409,8 +467,9 @@ vm_unregister_native(vm_t vm,
 
 /**
  * @brief     Retrieves reflection information for a native function.
- * @details   Returns the function's name, parameters, and return types. The VM
- *            caches reflection results, so repeated calls incur no additional
+ * @details   Returns the function's name, parameters, return types, and
+ *            structure definitions referenced by those types. The VM caches
+ *            reflection results, so repeated calls incur no additional
  *            reflection cost.
  * @param[in] vm VM instance owning the native.
  * @param[in] native Native function handle.
