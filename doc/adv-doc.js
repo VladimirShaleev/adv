@@ -62,7 +62,7 @@ var answer: int = fibonacci(8);
       });
       monaco.languages.setMonarchTokensProvider("adv", {
         keywords: [
-          "import", "native", "function", "var", "as", "or", "and", "not",
+          "import", "native", "function", "struct", "var", "as", "or", "and", "not",
           "if", "else", "while", "yield", "wait", "return"
         ],
         typeKeywords: ["bool", "int", "float", "string"],
@@ -74,6 +74,7 @@ var answer: int = fibonacci(8);
             [/"/, { token: "string.quote", next: "@string" }],
             [/\d+\.\d+([eE][-+]?\d+)?/, "number.float"],
             [/\d+/, "number"],
+            [/(:)(\s*)([a-zA-Z_]\w*)/, ["delimiter", "", "type"]],
             [/[a-zA-Z_]\w*/, {
               cases: {
                 "@keywords": "keyword",
@@ -149,6 +150,7 @@ var answer: int = fibonacci(8);
         const pattern = /\s+|[A-Za-z_@$][A-Za-z0-9_.$@]*|-?\d+(?:\.\d+)*|"(?:\\.|[^"\\])*"|[^\s]/gy;
         let lastIndex = 0;
         let match;
+        let expectingType = false;
         while ((match = pattern.exec(text))) {
           const value = match[0];
           if (/^\s+$/.test(value)) {
@@ -158,15 +160,19 @@ var answer: int = fibonacci(8);
           }
           appendAsmToken(line, "", text.slice(lastIndex, match.index));
           const next = text.slice(pattern.lastIndex).match(/^\s*:/);
+          const isType = section === ".export" && expectingType;
+          expectingType = value === ":";
           let className = "";
           if (value.startsWith("\"")) {
             className = "asm-string";
           } else if (/^-?\d/.test(value)) {
             className = "asm-number";
           } else if (/^[A-Za-z_@$]/.test(value)) {
-            if (section === ".export" && value === "module") {
+            if (isType) {
+              className = "asm-type";
+            } else if (section === ".export" && value === "module") {
               className = "asm-keyword";
-            } else if (section === ".export" && ["var", "native", "function"].includes(value)) {
+            } else if (section === ".export" && ["var", "native", "function", "struct"].includes(value)) {
               className = "asm-keyword";
             } else if (section === ".export" && ["bool", "int", "float", "string"].includes(value)) {
               className = "asm-type";
@@ -217,8 +223,8 @@ var answer: int = fibonacci(8);
             appendAsmToken(line, "asm-label", match[2]);
             appendAsmToken(line, "asm-punctuation", match[3]);
             appendAsmTokens(line, match[4], section);
-          } else if (section === ".export" && /^\s*(var|native|function)\b/.test(sourceLine)) {
-            const match = sourceLine.match(/^(\s*)(var|native|function)(\s+)([A-Za-z_@$][A-Za-z0-9_.$@]*)(.*)$/);
+          } else if (section === ".export" && /^\s*(var|native|function|struct)\b/.test(sourceLine)) {
+            const match = sourceLine.match(/^(\s*)(var|native|function|struct)(\s+)([A-Za-z_@$][A-Za-z0-9_.$@]*)(.*)$/);
             if (match) {
               appendAsmToken(line, "", match[1]);
               appendAsmToken(line, "asm-keyword", match[2]);
