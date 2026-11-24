@@ -797,6 +797,7 @@ void Analyzer::resolveSlots() {
             if (calculateSymbolSlots(sym)) {
                 analyzer.saveFrameSlot(sym);
             }
+            acceptNode(node->var_decl.init_expr);
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_PARAM_DECL>) {
             auto sym = symbolTable.getSymbol(node->param_decl.symbol);
@@ -804,11 +805,47 @@ void Analyzer::resolveSlots() {
                 analyzer.saveFrameSlot(sym);
             }
         }
-        void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) {
-            const auto slotsBeforeBlock = analyzer.currFrame().currentSlot;
-            visitChildrens(node);
-            analyzer.currFrame().currentSlot = slotsBeforeBlock;
+        void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
+            acceptNode(node->assign_expr.val);
+            acceptNode(node->assign_expr.target);
         }
+        void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) { acceptNode(node->expr_stmt.expr); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) { acceptNode(node->expr_stmt.expr); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) { acceptNode(node->expr_stmt.expr); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_BINARY_EXPR>) {
+            acceptNode(node->binary_expr.left);
+            acceptNode(node->binary_expr.right);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_UNARY_EXPR>) { acceptNode(node->unary_expr.operand); }
+        void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
+            auto arg = node->call_expr.first_arg;
+            while (arg) {
+                acceptNode(arg);
+                arg = arg->next_sibling;
+            }
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {
+            const auto isNestedAccess =
+                node->parent && node->parent->type == ADV_NODE_MEMBER_ACCESS &&
+                node->parent->member_access.target == node;
+            if (!isNestedAccess) {
+                auto root = node;
+                while (root->type == ADV_NODE_MEMBER_ACCESS) {
+                    root = root->member_access.target;
+                }
+                if (root->type == ADV_NODE_CALL_EXPR) {
+                    auto type = symbolTable.getSymbol(root->resolved_type);
+                    if (type && type->kind == ADV_SYMBOL_KIND_STRUCTURE &&
+                        calculateStructureSlots(type, nullptr)) {
+                        auto& frame = analyzer.currFrame();
+                        frame.maxTemporarySlots =
+                            std::max<adv_uint32_t>(frame.maxTemporarySlots, type->slot_count);
+                    }
+                }
+            }
+            acceptNode(node->member_access.target);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_EXPLICIT_CAST_EXPR>) { acceptNode(node->cast_expr.operand); }
         void visit(adv_node_t* node, Tag<ADV_NODE_IF_STMT>) {
             acceptNode(node->if_stmt.cond);
             acceptNode(node->if_stmt.then_branch);
@@ -817,6 +854,11 @@ void Analyzer::resolveSlots() {
         void visit(adv_node_t* node, Tag<ADV_NODE_WHILE_STMT>) {
             acceptNode(node->while_stmt.cond);
             acceptNode(node->while_stmt.body);
+        }
+        void visit(adv_node_t* node, Tag<ADV_NODE_BLOCK>) {
+            const auto slotsBeforeBlock = analyzer.currFrame().currentSlot;
+            visitChildrens(node);
+            analyzer.currFrame().currentSlot = slotsBeforeBlock;
         }
         void visit(...) {}
         void visitChildrens(adv_node_t* node) {
@@ -907,7 +949,13 @@ void Analyzer::resolveSlots() {
     pushFrame();
     accept<SlotVisitor>(
         _ctx.root(), std::cref(_options), std::ref(_ctx), std::ref(*this), std::ref(_ctx.symbolTable()));
-    _ctx.setRootFrameSlots(static_cast<adv_uint16_t>(currFrame().maxSlots));
+    const auto rootFrameSize = currFrame().maxSlots + currFrame().maxTemporarySlots;
+    if (rootFrameSize > std::numeric_limits<adv_uint16_t>::max()) {
+        _ctx.log<ADV_STATUS_E3047>(_options, _ctx.root()->location, _ctx.rootModule());
+        _ctx.setRootFrameSlots(0);
+    } else {
+        _ctx.setRootFrameSlots(static_cast<adv_uint16_t>(rootFrameSize));
+    }
     popFrame();
 }
 
@@ -943,7 +991,13 @@ void Analyzer::visitStmtsWithRules(
                 accept(curr->func_decl.body, curr);
                 if (allocateSlots) {
                     auto sym = symbolTable.getSymbol(curr->func_decl.symbol);
-                    sym->slot_count = currFrame().maxSlots;
+                    const auto frameSize = currFrame().maxSlots + currFrame().maxTemporarySlots;
+                    if (frameSize > std::numeric_limits<adv_uint16_t>::max()) {
+                        _ctx.log<ADV_STATUS_E3047>(_options, curr->location, sym->name);
+                        sym->slot_count = 0;
+                    } else {
+                        sym->slot_count = static_cast<adv_uint16_t>(frameSize);
+                    }
                     popFrame();
                 }
                 if (useScopes) {

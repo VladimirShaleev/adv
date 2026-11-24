@@ -35,6 +35,7 @@ private:
     struct FunctionFrameState {
         adv_uint32_t currentSlot{};
         adv_uint32_t maxSlots{};
+        adv_uint32_t maxTemporarySlots{};
     };
 
     void pushFrame();

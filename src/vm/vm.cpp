@@ -479,7 +479,7 @@ private:
                 auto& frame = thread->frames[thread->frameCount - 1];
                 frame.argCount = params;
                 frame.baseStackPos -= params;
-                frame.hasReturnValue = rets != 0;
+                frame.returnCount = rets;
                 frame.lexicalDepth = depth;
                 thread->stackPos += slots - params;
                 if (depth == 0) {
@@ -556,15 +556,23 @@ private:
                     thread->state = ThreadState::Dead;
                     return;
                 }
-                vm_value_t retVal;
-                const auto& frame = thread->frames[--thread->frameCount];
-                if (frame.hasReturnValue) {
-                    retVal = thread->stack[--thread->stackPos];
+                const auto& activeFrame = thread->frames[thread->frameCount - 1];
+                std::array<vm_value_t, 0xFF> returnValues{};
+                if (thread->stackPos < activeFrame.returnCount ||
+                    activeFrame.baseStackPos + activeFrame.returnCount > StackSize) {
+                    log("Invalid function return stack state");
+                    thread->state = ThreadState::Dead;
+                    return;
                 }
+                const auto returnBase = thread->stackPos - activeFrame.returnCount;
+                for (vm_uint32_t i = 0; i < activeFrame.returnCount; ++i) {
+                    returnValues[i] = thread->stack[returnBase + i];
+                }
+                const auto& frame = thread->frames[--thread->frameCount];
                 swapScript(thread, frame.prevScript, module);
                 thread->stackPos = frame.baseStackPos;
-                if (frame.hasReturnValue) {
-                    thread->stack[thread->stackPos++] = retVal;
+                for (vm_uint32_t i = 0; i < frame.returnCount; ++i) {
+                    thread->stack[thread->stackPos++] = returnValues[i];
                 }
                 thread->instructionPos = frame.returnInstructionPos;
                 text = module->text();

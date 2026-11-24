@@ -136,7 +136,6 @@ private:
 
 struct CodeGenVisitor {
     CodeGenVisitor(
-        const Options& options,
         Context& ctx,
         std::set<vm_string_h>& modules,
         Emitter& code,
@@ -144,7 +143,7 @@ struct CodeGenVisitor {
         Emitter& exportStruct,
         Emitter& exportFunc,
         Emitter& exportNative) noexcept
-        : options(options), ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportStruct(exportStruct),
+        : ctx(ctx), modules(modules), code(code), exportVar(exportVar), exportStruct(exportStruct),
           exportFunc(exportFunc), exportNative(exportNative) {}
     void visit(adv_node_t* node, Tag<ADV_NODE_PROGRAM>) {
         auto stmt = node->stmts.first_stmt;
@@ -165,7 +164,11 @@ struct CodeGenVisitor {
         const auto sym = ctx.symbolTable().getSymbol(node->var_decl.symbol);
         const auto type = ctx.symbolTable().getSymbol(sym->type);
         if (node->var_decl.init_expr) {
-            acceptNode(node->var_decl.init_expr);
+            if (type->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                emitCallArgument(node->var_decl.init_expr);
+            } else {
+                acceptNode(node->var_decl.init_expr);
+            }
         } else if (type->kind == ADV_SYMBOL_KIND_PRIMITIVE) {
             switch (type->primitive_type) {
             case VM_VALUE_TYPE_BOOL:
@@ -201,15 +204,18 @@ struct CodeGenVisitor {
                 code.emitByte(VM_OPCODE_POP_LOCAL);
                 code.emitUint16(sym->slot_index);
             }
-        } else {
-            // TODO
+        } else if (type && type->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+            if (node->var_decl.init_expr) {
+                emitStructureStore(sym, sym->type, {}, sym->type, node);
+            }
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_NATIVE_DECL>) {
         const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
         if (sym->is_global) {
             exportNative.emitString(sym->name);
-            exportNative.emitType(sym->type);
+            const auto returnType = ctx.symbolTable().getSymbol(sym->type);
+            exportNative.emitByte(returnType->primitive_type);
             exportNative.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
             for (const auto paramHandle : sym->linearChildren) {
                 const auto param = ctx.symbolTable().getSymbol(paramHandle);
@@ -322,7 +328,12 @@ struct CodeGenVisitor {
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_RETURN_STMT>) {
         if (node->expr_stmt.expr) {
-            acceptNode(node->expr_stmt.expr);
+            const auto type = ctx.symbolTable().getSymbol(node->expr_stmt.expr->resolved_type);
+            if (type && type->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                emitCallArgument(node->expr_stmt.expr);
+            } else {
+                acceptNode(node->expr_stmt.expr);
+            }
         }
         code.emitByte(VM_OPCODE_RETURN);
     }
@@ -368,8 +379,34 @@ struct CodeGenVisitor {
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_ASSIGN_EXPR>) {
-        acceptNode(node->assign_expr.val);
         auto target = node->assign_expr.target;
+        const auto targetType = ctx.symbolTable().getSymbol(node->resolved_type);
+        if (targetType && targetType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+            emitCallArgument(node->assign_expr.val);
+            if (target->type == ADV_NODE_IDENTIFIER_EXPR) {
+                const auto sym = ctx.symbolTable().getSymbol(target->id_expr.symbol);
+                emitStructureStore(sym, sym->type, {}, sym->type, node);
+            } else if (target->type == ADV_NODE_MEMBER_ACCESS) {
+                std::vector<adv_node_t*> members;
+                auto root = target;
+                while (root->type == ADV_NODE_MEMBER_ACCESS) {
+                    members.push_back(root);
+                    root = root->member_access.target;
+                }
+                assert(root->type == ADV_NODE_IDENTIFIER_EXPR);
+                std::reverse(members.begin(), members.end());
+                std::vector<adv_symbol_h> fields;
+                fields.reserve(members.size());
+                for (const auto member : members) {
+                    fields.push_back(member->member_access.symbol);
+                }
+                const auto sym = ctx.symbolTable().getSymbol(root->id_expr.symbol);
+                emitStructureStore(sym, root->resolved_type, fields, node->resolved_type, node);
+            }
+            return;
+        }
+
+        acceptNode(node->assign_expr.val);
         if (target->type == ADV_NODE_IDENTIFIER_EXPR) {
             auto sym = ctx.symbolTable().getSymbol(target->id_expr.symbol);
             if (sym->is_global) {
@@ -385,6 +422,8 @@ struct CodeGenVisitor {
                 }
                 code.emitUint16(sym->slot_index);
             }
+        } else if (target->type == ADV_NODE_MEMBER_ACCESS) {
+            emitMemberAccess(target, true, node);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_BINARY_EXPR>) {
@@ -461,7 +500,7 @@ struct CodeGenVisitor {
     void visit(adv_node_t* node, Tag<ADV_NODE_CALL_EXPR>) {
         auto arg = node->call_expr.first_arg;
         while (arg) {
-            acceptNode(arg);
+            emitCallArgument(arg);
             arg = arg->next_sibling;
         }
 
@@ -480,7 +519,7 @@ struct CodeGenVisitor {
             code.emitString(sym->name);
         }
     }
-    void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {}
+    void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) { emitMemberAccess(node, false, node); }
     void visit(adv_node_t* node, Tag<ADV_NODE_BOOL_LITERAL>) {
         code.emitByte(node->bool_val ? VM_OPCODE_PUSH_TRUE : VM_OPCODE_PUSH_FALSE);
     }
@@ -499,7 +538,6 @@ struct CodeGenVisitor {
     void acceptNode(adv_node_t* node) {
         accept<CodeGenVisitor>(
             node,
-            std::cref(options),
             std::ref(ctx),
             std::ref(modules),
             std::ref(code),
@@ -507,6 +545,198 @@ struct CodeGenVisitor {
             std::ref(exportStruct),
             std::ref(exportFunc),
             std::ref(exportNative));
+    }
+    void emitCallArgument(adv_node_t* node) {
+        const auto type = ctx.symbolTable().getSymbol(node->resolved_type);
+        assert(type);
+        if (type->kind != ADV_SYMBOL_KIND_STRUCTURE) {
+            acceptNode(node);
+            return;
+        }
+        if (node->type == ADV_NODE_CALL_EXPR) {
+            acceptNode(node);
+            return;
+        }
+
+        std::vector<adv_node_t*> members;
+        auto root = node;
+        while (root->type == ADV_NODE_MEMBER_ACCESS) {
+            members.push_back(root);
+            root = root->member_access.target;
+        }
+        if (root->type == ADV_NODE_CALL_EXPR) {
+            acceptNode(node);
+            return;
+        }
+        if (root->type != ADV_NODE_IDENTIFIER_EXPR) {
+            assert(!"unsupported structure argument expression");
+            return;
+        }
+        std::reverse(members.begin(), members.end());
+
+        std::vector<adv_symbol_h> fields;
+        fields.reserve(members.size());
+        for (const auto member : members) {
+            fields.push_back(member->member_access.symbol);
+        }
+        const auto rootSymbol = ctx.symbolTable().getSymbol(root->id_expr.symbol);
+        emitStructureArgument(rootSymbol, root->resolved_type, type, fields, node);
+    }
+    void emitStructureArgument(
+        Symbol* rootSymbol,
+        adv_symbol_h rootType,
+        Symbol* structure,
+        std::vector<adv_symbol_h>& fields,
+        adv_node_t* referenceNode) {
+        for (const auto fieldHandle : structure->linearChildren) {
+            const auto field = ctx.symbolTable().getSymbol(fieldHandle);
+            assert(field);
+            const auto fieldType = ctx.symbolTable().getSymbol(field->type);
+            assert(fieldType);
+            fields.push_back(fieldHandle);
+            if (fieldType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                emitStructureArgument(rootSymbol, rootType, fieldType, fields, referenceNode);
+            } else {
+                emitFieldPath(rootSymbol, rootType, fields, false, referenceNode);
+            }
+            fields.pop_back();
+        }
+    }
+    void emitMemberAccess(adv_node_t* node, bool isStore, adv_node_t* referenceNode) {
+        std::vector<adv_node_t*> members;
+        auto root = node;
+        while (root->type == ADV_NODE_MEMBER_ACCESS) {
+            members.push_back(root);
+            root = root->member_access.target;
+        }
+        if (root->type == ADV_NODE_CALL_EXPR) {
+            std::reverse(members.begin(), members.end());
+            emitCallMemberAccess(node, root, members);
+            return;
+        }
+        if (root->type != ADV_NODE_IDENTIFIER_EXPR || members.empty()) {
+            assert(!"unsupported structure field access target");
+            return;
+        }
+        std::reverse(members.begin(), members.end());
+
+        std::vector<adv_symbol_h> fields;
+        fields.reserve(members.size());
+        for (const auto member : members) {
+            fields.push_back(member->member_access.symbol);
+        }
+        const auto rootSymbol = ctx.symbolTable().getSymbol(root->id_expr.symbol);
+        emitFieldPath(rootSymbol, root->resolved_type, fields, isStore, referenceNode);
+    }
+    void emitCallMemberAccess(adv_node_t* node, adv_node_t* call, const std::vector<adv_node_t*>& members) {
+        assert(!members.empty());
+        const auto callType = ctx.symbolTable().getSymbol(call->resolved_type);
+        assert(callType && callType->kind == ADV_SYMBOL_KIND_STRUCTURE);
+        const auto frameSlotCount = getFrameSlotCount(call);
+        assert(frameSlotCount >= callType->slot_count);
+        const auto tempSlotIndex = static_cast<adv_uint16_t>(frameSlotCount - callType->slot_count);
+        acceptNode(call);
+        for (auto slot = callType->slot_count; slot > 0; --slot) {
+            code.emitByte(VM_OPCODE_POP_LOCAL);
+            code.emitUint16(static_cast<adv_uint16_t>(tempSlotIndex + slot - 1));
+        }
+
+        adv_uint32_t fieldOffset = 0;
+        for (const auto member : members) {
+            const auto field = ctx.symbolTable().getSymbol(member->member_access.symbol);
+            assert(field);
+            fieldOffset += field->slot_index;
+        }
+        const auto resultType = ctx.symbolTable().getSymbol(node->resolved_type);
+        assert(resultType);
+        const auto resultSlotCount =
+            resultType->kind == ADV_SYMBOL_KIND_STRUCTURE ? resultType->slot_count : adv_uint16_t(1);
+        for (adv_uint32_t slot = 0; slot < resultSlotCount; ++slot) {
+            code.emitByte(VM_OPCODE_PUSH_LOCAL);
+            code.emitUint16(static_cast<adv_uint16_t>(tempSlotIndex + fieldOffset + slot));
+        }
+    }
+    adv_uint16_t getFrameSlotCount(adv_node_t* node) {
+        auto parent = node->parent;
+        while (parent) {
+            if (parent->type == ADV_NODE_FUNCTION_DECL) {
+                const auto function = ctx.symbolTable().getSymbol(parent->func_decl.symbol);
+                assert(function);
+                return function->slot_count;
+            }
+            parent = parent->parent;
+        }
+        return ctx.rootFrameSlots();
+    }
+    void emitFieldPath(
+        Symbol* rootSymbol,
+        adv_symbol_h rootType,
+        const std::vector<adv_symbol_h>& fields,
+        bool isStore,
+        adv_node_t* referenceNode) {
+        assert(rootSymbol && !fields.empty());
+        if (rootSymbol->is_global) {
+            std::string name{ctx.getString(rootSymbol->name)};
+            auto structureHandle = rootType;
+            for (const auto fieldHandle : fields) {
+                const auto structure = ctx.symbolTable().getSymbol(structureHandle);
+                assert(structure && structure->kind == ADV_SYMBOL_KIND_STRUCTURE);
+                const auto fieldIt =
+                    std::find(structure->linearChildren.begin(), structure->linearChildren.end(), fieldHandle);
+                assert(fieldIt != structure->linearChildren.end());
+                name += '.';
+                name += std::to_string(std::distance(structure->linearChildren.begin(), fieldIt));
+                structureHandle = ctx.symbolTable().getSymbol(fieldHandle)->type;
+            }
+            code.emitByte(isStore ? VM_OPCODE_POP_GLOBAL_BY_NAME : VM_OPCODE_PUSH_GLOBAL_BY_NAME);
+            code.emitString(ctx.intern(name));
+            return;
+        }
+
+        adv_uint32_t slot = rootSymbol->slot_index;
+        for (const auto fieldHandle : fields) {
+            const auto field = ctx.symbolTable().getSymbol(fieldHandle);
+            assert(field);
+            slot += field->slot_index;
+        }
+
+        const auto depth = getLexicalDepth(rootSymbol->scope, referenceNode);
+        if (depth == 0) {
+            code.emitByte(isStore ? VM_OPCODE_POP_LOCAL : VM_OPCODE_PUSH_LOCAL);
+        } else {
+            code.emitByte(isStore ? VM_OPCODE_POP_OUTER_LOCAL : VM_OPCODE_PUSH_OUTER_LOCAL);
+            code.emitByte(depth);
+        }
+        code.emitUint16(static_cast<adv_uint16_t>(slot));
+    }
+    void emitStructureStore(
+        Symbol* rootSymbol,
+        adv_symbol_h rootType,
+        std::vector<adv_symbol_h> fields,
+        adv_symbol_h structureType,
+        adv_node_t* referenceNode) {
+        std::vector<std::vector<adv_symbol_h>> leafPaths;
+        collectStructureLeafPaths(ctx.symbolTable().getSymbol(structureType), fields, leafPaths);
+        for (auto path = leafPaths.rbegin(); path != leafPaths.rend(); ++path) {
+            emitFieldPath(rootSymbol, rootType, *path, true, referenceNode);
+        }
+    }
+    void collectStructureLeafPaths(
+        Symbol* structure, std::vector<adv_symbol_h>& fields, std::vector<std::vector<adv_symbol_h>>& leafPaths) {
+        assert(structure && structure->kind == ADV_SYMBOL_KIND_STRUCTURE);
+        for (const auto fieldHandle : structure->linearChildren) {
+            const auto field = ctx.symbolTable().getSymbol(fieldHandle);
+            assert(field);
+            const auto fieldType = ctx.symbolTable().getSymbol(field->type);
+            assert(fieldType);
+            fields.push_back(fieldHandle);
+            if (fieldType->kind == ADV_SYMBOL_KIND_STRUCTURE) {
+                collectStructureLeafPaths(fieldType, fields, leafPaths);
+            } else {
+                leafPaths.push_back(fields);
+            }
+            fields.pop_back();
+        }
     }
     [[nodiscard]] adv_uint8_t getLexicalDepth(adv_scope_h scope, adv_node_t* node) {
         auto getParentScope = [this, &node]() {
@@ -525,7 +755,6 @@ struct CodeGenVisitor {
         }
         return depth;
     }
-    const Options& options;
     Context& ctx;
     std::set<vm_string_h>& modules;
     Emitter& code;
@@ -558,7 +787,6 @@ adv_result_t Generator::gen() {
         Emitter emitterExportNative(_ctx, strings, data, exportNative);
         accept<CodeGenVisitor>(
             _ctx.root(),
-            std::cref(_options),
             std::ref(_ctx),
             std::ref(modules),
             std::ref(emitterCode),
