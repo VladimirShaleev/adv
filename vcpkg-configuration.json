@@ -7,7 +7,7 @@
   "registries": [
     {
       "kind": "git",
-      "baseline": "4934558a38f2ec9b4c644a20927f35488423aab4",
+      "baseline": "9b8591c3dec1f5c54826ed87f8bfe124dbe38a42",
       "reference": "vcpkg-registry",
       "repository": "https://github.com/VladimirShaleev/adv",
       "packages": [
