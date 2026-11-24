@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -162,19 +162,19 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a5548d0ac8e27d07b05b1b0f049bcd311" id="r_a5548d0ac8e27d07b05b1b0f049bcd311"><td class="memItemLeft"><a id="a5548d0ac8e27d07b05b1b0f049bcd311" name="a5548d0ac8e27d07b05b1b0f049bcd311"></a>
 const <a class="el" href="structvm__reflect__param__t.html">vm_reflect_param_t</a> *&#160;</td><td class="memItemRight"><b>params</b></td></tr>
 <tr class="memdesc:a5548d0ac8e27d07b05b1b0f049bcd311"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function parameter information. <br /></td></tr>
-<tr class="memitem:aca319e3358ee56655c60e83bf130be8d" id="r_aca319e3358ee56655c60e83bf130be8d"><td class="memItemLeft"><a id="aca319e3358ee56655c60e83bf130be8d" name="aca319e3358ee56655c60e83bf130be8d"></a>
-const <a class="el" href="group__vm__enums.html#ga207d08b1012e0b7db1081f714dae32a9">vm_value_type_t</a> *&#160;</td><td class="memItemRight"><b>returns</b></td></tr>
-<tr class="memdesc:aca319e3358ee56655c60e83bf130be8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return value types. <br /></td></tr>
+<tr class="memitem:aecfe43ce86ee93c76d3b9e2f93c3cf08" id="r_aecfe43ce86ee93c76d3b9e2f93c3cf08"><td class="memItemLeft"><a id="aecfe43ce86ee93c76d3b9e2f93c3cf08" name="aecfe43ce86ee93c76d3b9e2f93c3cf08"></a>
+const <a class="el" href="structvm__reflect__type__t.html">vm_reflect_type_t</a> *&#160;</td><td class="memItemRight"><b>return_type</b></td></tr>
+<tr class="memdesc:aecfe43ce86ee93c76d3b9e2f93c3cf08"><td class="mdescLeft">&#160;</td><td class="mdescRight">Single return type, or NULL for no return value. <br /></td></tr>
 <tr class="memitem:a327d27f1180598dff98fa337519bc46f" id="r_a327d27f1180598dff98fa337519bc46f"><td class="memItemLeft"><a id="a327d27f1180598dff98fa337519bc46f" name="a327d27f1180598dff98fa337519bc46f"></a>
 <a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>param_count</b></td></tr>
 <tr class="memdesc:a327d27f1180598dff98fa337519bc46f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of parameters. <br /></td></tr>
-<tr class="memitem:abc7cf8afd87bb476f6b66d1ffecc88f0" id="r_abc7cf8afd87bb476f6b66d1ffecc88f0"><td class="memItemLeft"><a id="abc7cf8afd87bb476f6b66d1ffecc88f0" name="abc7cf8afd87bb476f6b66d1ffecc88f0"></a>
-<a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>return_count</b></td></tr>
-<tr class="memdesc:abc7cf8afd87bb476f6b66d1ffecc88f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of return values. <br /></td></tr>
+<tr class="memitem:a8b1ca64fe678a79bca386870163f1b43" id="r_a8b1ca64fe678a79bca386870163f1b43"><td class="memItemLeft"><a id="a8b1ca64fe678a79bca386870163f1b43" name="a8b1ca64fe678a79bca386870163f1b43"></a>
+<a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>return_slot_count</b></td></tr>
+<tr class="memdesc:a8b1ca64fe678a79bca386870163f1b43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of VM slots occupied by the return value. <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Reflection information for a registered native function. </p>
-<p>Describes the function name, its parameters, and its return value types. The arrays referenced by <code class="param">params</code> and <code class="param">returns</code> contain <code class="param">param_count</code> and <code class="param">return_count</code> entries, respectively. </p>
+<p>Describes the function name and parameters. <code class="param">return_type</code> points to the single return type when the function returns a value, or is NULL for a function with no return value. The return value occupies <code class="param">return_slot_count</code> VM slots; zero means there is no return value. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>vm/<a class="el" href="vm_8h_source.html">vm.h</a></li>
 </ul>

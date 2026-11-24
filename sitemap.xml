@@ -170,6 +170,12 @@
     <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8func__decl.html</loc>
   </url>
   <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8struct__decl.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8field__decl.html</loc>
+  </url>
+  <url>
     <loc>https://vladimirshaleev.github.io/adv/structadv__node__t_1_1_0fstruct_0e_8unnamed_8param__decl.html</loc>
   </url>
   <url>
@@ -227,10 +233,22 @@
     <loc>https://vladimirshaleev.github.io/adv/structvm__native__h.html</loc>
   </url>
   <url>
+    <loc>https://vladimirshaleev.github.io/adv/structvm__reflect__field__t.html</loc>
+  </url>
+  <url>
     <loc>https://vladimirshaleev.github.io/adv/structvm__reflect__func__t.html</loc>
   </url>
   <url>
     <loc>https://vladimirshaleev.github.io/adv/structvm__reflect__param__t.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structvm__reflect__struct__t.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structvm__reflect__type__t.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structvm__script__export__field__t.html</loc>
   </url>
   <url>
     <loc>https://vladimirshaleev.github.io/adv/structvm__script__export__func__t.html</loc>
@@ -240,6 +258,9 @@
   </url>
   <url>
     <loc>https://vladimirshaleev.github.io/adv/structvm__script__export__param__t.html</loc>
+  </url>
+  <url>
+    <loc>https://vladimirshaleev.github.io/adv/structvm__script__export__struct__t.html</loc>
   </url>
   <url>
     <loc>https://vladimirshaleev.github.io/adv/structvm__script__export__t.html</loc>

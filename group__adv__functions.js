@@ -24,6 +24,7 @@ var group__adv__functions =
     [ "adv_options_get_output_format", "group__adv__functions.html#gad8cf1dc19890a82fc18bbe7faf302528", null ],
     [ "adv_options_get_output_path", "group__adv__functions.html#ga8895e5cdab9dfc39d0258d034fecf58b", null ],
     [ "adv_options_get_release_import", "group__adv__functions.html#ga87471d21026e49d8a1e4b3d0c38a69ee", null ],
+    [ "adv_options_get_standard_library", "group__adv__functions.html#gacf75c89ed8025a0fc82ca13a2475f280", null ],
     [ "adv_options_get_warnings_as_errors", "group__adv__functions.html#ga5cfaa685ff7f69c869c344f19d9a4d85", null ],
     [ "adv_options_get_writer", "group__adv__functions.html#ga3645d20ce6a9c306caea65dcdd7a2cf3", null ],
     [ "adv_options_reference", "group__adv__functions.html#ga264ccd93880456ff0894e1431fac249e", null ],
@@ -32,6 +33,7 @@ var group__adv__functions =
     [ "adv_options_set_output_format", "group__adv__functions.html#gad3d9c3a6853ad86cd54e8301cb26b2ec", null ],
     [ "adv_options_set_output_path", "group__adv__functions.html#gade87d7551d40c49db24adf8508a37645", null ],
     [ "adv_options_set_release_import", "group__adv__functions.html#ga8d870e71851bf41662fd508c7e08d7c0", null ],
+    [ "adv_options_set_standard_library", "group__adv__functions.html#gab37b912e5a2d2e3b6b28ee297cc8767d", null ],
     [ "adv_options_set_warnings_as_errors", "group__adv__functions.html#ga01747ded7ce67d276c9951f614fce3ef", null ],
     [ "adv_options_set_writer", "group__adv__functions.html#ga80ce6a0d430146d7591fb563287d3b0e", null ],
     [ "adv_result_to_string", "group__adv__functions.html#gab39851e73bf72bed99b34f0dd240804b", null ]

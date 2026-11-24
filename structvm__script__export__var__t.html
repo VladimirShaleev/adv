@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -159,13 +159,13 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a5488d427e459cd5d7e017cad337ac7d0" id="r_a5488d427e459cd5d7e017cad337ac7d0"><td class="memItemLeft"><a id="a5488d427e459cd5d7e017cad337ac7d0" name="a5488d427e459cd5d7e017cad337ac7d0"></a>
 <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a>&#160;</td><td class="memItemRight"><b>name</b></td></tr>
 <tr class="memdesc:a5488d427e459cd5d7e017cad337ac7d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Offset or index of the variable name in the data block. <br /></td></tr>
-<tr class="memitem:a11ac659dc3869881667aac55f46e1b26" id="r_a11ac659dc3869881667aac55f46e1b26"><td class="memItemLeft"><a id="a11ac659dc3869881667aac55f46e1b26" name="a11ac659dc3869881667aac55f46e1b26"></a>
-<a class="el" href="group__vm__types.html#gac836a04837c04776cf02bffa6c7cd7f0">vm_uint8_t</a>&#160;</td><td class="memItemRight"><b>type</b></td></tr>
-<tr class="memdesc:a11ac659dc3869881667aac55f46e1b26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type code of the exported variable. <br /></td></tr>
+<tr class="memitem:af022f2fb362a56747ff171186ac178ba" id="r_af022f2fb362a56747ff171186ac178ba"><td class="memItemLeft"><a id="af022f2fb362a56747ff171186ac178ba" name="af022f2fb362a56747ff171186ac178ba"></a>
+<a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a>&#160;</td><td class="memItemRight"><b>type</b></td></tr>
+<tr class="memdesc:af022f2fb362a56747ff171186ac178ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type code of the exported variable. <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Exported variable metadata. </p>
-<p>Describes a single global variable symbol stored in the script export block. The name field indexes a string in the script data section, while the type field identifies the variable kind. </p>
+<p>Describes a global variable. The type field stores a 32-bit packed type: the low three bits are the base type and, for composite types, the upper bits store the data-section offset of the type name. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>vm/<a class="el" href="vm-script_8h_source.html">vm-script.h</a></li>
 </ul>

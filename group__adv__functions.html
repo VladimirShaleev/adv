@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -172,6 +172,10 @@ Functions of Options.</h2></td></tr>
 <tr class="memdesc:gad8cf1dc19890a82fc18bbe7faf302528"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the target output format setting.  <br /></td></tr>
 <tr class="memitem:gad3d9c3a6853ad86cd54e8301cb26b2ec" id="r_gad3d9c3a6853ad86cd54e8301cb26b2ec"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#gad3d9c3a6853ad86cd54e8301cb26b2ec">adv_options_set_output_format</a> (<a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a> options, <a class="el" href="group__adv__enums.html#ga61d5af4631a9f25a4d1c5ce3ef43fa8d">adv_format_t</a> format)</td></tr>
 <tr class="memdesc:gad3d9c3a6853ad86cd54e8301cb26b2ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the target output format setting.  <br /></td></tr>
+<tr class="memitem:gacf75c89ed8025a0fc82ca13a2475f280" id="r_gacf75c89ed8025a0fc82ca13a2475f280"><td class="memItemLeft"><a class="el" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a>&#160;</td><td class="memItemRight"><a class="el" href="#gacf75c89ed8025a0fc82ca13a2475f280">adv_options_get_standard_library</a> (<a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a> options)</td></tr>
+<tr class="memdesc:gacf75c89ed8025a0fc82ca13a2475f280"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get standard library inclusion setting.  <br /></td></tr>
+<tr class="memitem:gab37b912e5a2d2e3b6b28ee297cc8767d" id="r_gab37b912e5a2d2e3b6b28ee297cc8767d"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#gab37b912e5a2d2e3b6b28ee297cc8767d">adv_options_set_standard_library</a> (<a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a> options, <a class="el" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a> use_std)</td></tr>
+<tr class="memdesc:gab37b912e5a2d2e3b6b28ee297cc8767d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set standard library inclusion setting.  <br /></td></tr>
 <tr class="memitem:ga8895e5cdab9dfc39d0258d034fecf58b" id="r_ga8895e5cdab9dfc39d0258d034fecf58b"><td class="memItemLeft"><a class="el" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a>&#160;</td><td class="memItemRight"><a class="el" href="#ga8895e5cdab9dfc39d0258d034fecf58b">adv_options_get_output_path</a> (<a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a> options)</td></tr>
 <tr class="memdesc:ga8895e5cdab9dfc39d0258d034fecf58b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get output path.  <br /></td></tr>
 <tr class="memitem:gade87d7551d40c49db24adf8508a37645" id="r_gade87d7551d40c49db24adf8508a37645"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#gade87d7551d40c49db24adf8508a37645">adv_options_set_output_path</a> (<a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a> options, <a class="el" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a> path)</td></tr>
@@ -992,6 +996,33 @@ Functions of Compiler.</h2></td></tr>
 
 </div>
 </div>
+<a id="gacf75c89ed8025a0fc82ca13a2475f280" name="gacf75c89ed8025a0fc82ca13a2475f280"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gacf75c89ed8025a0fc82ca13a2475f280">&#9670;&#160;</a></span>adv_options_get_standard_library()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a> adv_options_get_standard_library </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a></td>          <td class="paramname"><span class="paramname"><em>options</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get standard library inclusion setting. </p>
+<p>Checks whether the compiler is configured to include the standard library during compilation. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">options</td><td>Target options. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>::ADV_TRUE if the standard library is enabled, or ::ADV_FALSE otherwise. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#gab37b912e5a2d2e3b6b28ee297cc8767d" title="Set standard library inclusion setting.">adv_options_set_standard_library</a> </dd></dl>
+
+</div>
+</div>
 <a id="ga5cfaa685ff7f69c869c344f19d9a4d85" name="ga5cfaa685ff7f69c869c344f19d9a4d85"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga5cfaa685ff7f69c869c344f19d9a4d85">&#9670;&#160;</a></span>adv_options_get_warnings_as_errors()</h2>
 
@@ -1253,6 +1284,37 @@ A typical use of an importer is to load source code from memory or from a source
   </dd>
 </dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ga87471d21026e49d8a1e4b3d0c38a69ee" title="Get the current release import callback.">adv_options_get_release_import</a> </dd></dl>
+
+</div>
+</div>
+<a id="gab37b912e5a2d2e3b6b28ee297cc8767d" name="gab37b912e5a2d2e3b6b28ee297cc8767d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gab37b912e5a2d2e3b6b28ee297cc8767d">&#9670;&#160;</a></span>adv_options_set_standard_library()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void adv_options_set_standard_library </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__adv__types.html#ga6dc2138b8c4b9aebd4d9cb60f52a63c8">adv_options_t</a></td>          <td class="paramname"><span class="paramname"><em>options</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a></td>          <td class="paramname"><span class="paramname"><em>use_std</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set standard library inclusion setting. </p>
+<p>Configure whether the compiler should include the standard library during compilation. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">options</td><td>Target options. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">use_std</td><td>Boolean flag to enable or disable standard library inclusion. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#gacf75c89ed8025a0fc82ca13a2475f280" title="Get standard library inclusion setting.">adv_options_get_standard_library</a> </dd></dl>
 
 </div>
 </div>

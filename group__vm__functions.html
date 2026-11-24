@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -187,6 +187,10 @@ Functions for Script Handling.</h2></td></tr>
 <tr class="memdesc:ga518e05fad64ca3b3ffdc85d9414b16e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads the script export table from a buffer.  <br /></td></tr>
 <tr class="memitem:gaee002cdf4a6efc31ddcfbe60cc523bbf" id="r_gaee002cdf4a6efc31ddcfbe60cc523bbf"><td class="memItemLeft"><a class="el" href="structvm__script__export__var__t.html">vm_script_export_var_t</a> *&#160;</td><td class="memItemRight"><a class="el" href="#gaee002cdf4a6efc31ddcfbe60cc523bbf">vm_read_script_export_var</a> (const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *buffer, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> size, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> var_index, <a class="el" href="structvm__script__export__var__t.html">vm_script_export_var_t</a> *export_var)</td></tr>
 <tr class="memdesc:gaee002cdf4a6efc31ddcfbe60cc523bbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads one exported variable descriptor.  <br /></td></tr>
+<tr class="memitem:ga78fb0511b13e2774bfba2ffa9111649c" id="r_ga78fb0511b13e2774bfba2ffa9111649c"><td class="memItemLeft"><a class="el" href="structvm__script__export__struct__t.html">vm_script_export_struct_t</a> *&#160;</td><td class="memItemRight"><a class="el" href="#ga78fb0511b13e2774bfba2ffa9111649c">vm_read_script_export_struct</a> (const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *buffer, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> size, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> struct_index, <a class="el" href="structvm__script__export__struct__t.html">vm_script_export_struct_t</a> *export_struct)</td></tr>
+<tr class="memdesc:ga78fb0511b13e2774bfba2ffa9111649c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads one exported structure descriptor.  <br /></td></tr>
+<tr class="memitem:ga50b400072737959b151e1f3e4b6ac939" id="r_ga50b400072737959b151e1f3e4b6ac939"><td class="memItemLeft"><a class="el" href="structvm__script__export__field__t.html">vm_script_export_field_t</a> *&#160;</td><td class="memItemRight"><a class="el" href="#ga50b400072737959b151e1f3e4b6ac939">vm_read_script_export_struct_field</a> (const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *buffer, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> size, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> struct_index, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> field_index, <a class="el" href="structvm__script__export__field__t.html">vm_script_export_field_t</a> *field)</td></tr>
+<tr class="memdesc:ga50b400072737959b151e1f3e4b6ac939"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads one exported structure field descriptor.  <br /></td></tr>
 <tr class="memitem:gaffb5d894067dd829102937d467201d90" id="r_gaffb5d894067dd829102937d467201d90"><td class="memItemLeft"><a class="el" href="structvm__script__export__func__t.html">vm_script_export_func_t</a> *&#160;</td><td class="memItemRight"><a class="el" href="#gaffb5d894067dd829102937d467201d90">vm_read_script_export_func</a> (const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *buffer, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> size, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> func_index, <a class="el" href="structvm__script__export__func__t.html">vm_script_export_func_t</a> *export_func)</td></tr>
 <tr class="memdesc:gaffb5d894067dd829102937d467201d90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads one exported function descriptor.  <br /></td></tr>
 <tr class="memitem:gabf99284b4b0179ba2d4dcd0cc3cb364d" id="r_gabf99284b4b0179ba2d4dcd0cc3cb364d"><td class="memItemLeft"><a class="el" href="structvm__script__export__param__t.html">vm_script_export_param_t</a> *&#160;</td><td class="memItemRight"><a class="el" href="#gabf99284b4b0179ba2d4dcd0cc3cb364d">vm_read_script_export_func_param</a> (const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *buffer, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> size, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> func_index, <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a> param_index, <a class="el" href="structvm__script__export__param__t.html">vm_script_export_param_t</a> *param)</td></tr>
@@ -933,6 +937,98 @@ Functions for Virtual Machine.</h2></td></tr>
 
 </div>
 </div>
+<a id="ga78fb0511b13e2774bfba2ffa9111649c" name="ga78fb0511b13e2774bfba2ffa9111649c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga78fb0511b13e2774bfba2ffa9111649c">&#9670;&#160;</a></span>vm_read_script_export_struct()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structvm__script__export__struct__t.html">vm_script_export_struct_t</a> * vm_read_script_export_struct </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *</td>          <td class="paramname"><span class="paramname"><em>buffer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a></td>          <td class="paramname"><span class="paramname"><em>size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a></td>          <td class="paramname"><span class="paramname"><em>struct_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structvm__script__export__struct__t.html">vm_script_export_struct_t</a> *</td>          <td class="paramname"><span class="paramname"><em>export_struct</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reads one exported structure descriptor. </p>
+<p>Decodes the structure entry at <code class="param">struct_index</code> from the export table. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">buffer</td><td>Script data buffer. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>Total number of bytes available in <code class="param">buffer</code>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">struct_index</td><td>Structure index to read. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">export_struct</td><td>Destination structure descriptor. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to <code class="param">export_struct</code> on success, or <span class="tt">NULL</span> on failure. </dd></dl>
+
+</div>
+</div>
+<a id="ga50b400072737959b151e1f3e4b6ac939" name="ga50b400072737959b151e1f3e4b6ac939"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga50b400072737959b151e1f3e4b6ac939">&#9670;&#160;</a></span>vm_read_script_export_struct_field()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structvm__script__export__field__t.html">vm_script_export_field_t</a> * vm_read_script_export_struct_field </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="group__vm__types.html#ga2218c242460945b47ab657c24fb7c45b">vm_char_t</a> *</td>          <td class="paramname"><span class="paramname"><em>buffer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a></td>          <td class="paramname"><span class="paramname"><em>size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a></td>          <td class="paramname"><span class="paramname"><em>struct_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a></td>          <td class="paramname"><span class="paramname"><em>field_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structvm__script__export__field__t.html">vm_script_export_field_t</a> *</td>          <td class="paramname"><span class="paramname"><em>field</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reads one exported structure field descriptor. </p>
+<p>Decodes the field entry at <code class="param">field_index</code> within <code class="param">struct_index</code>. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">buffer</td><td>Script data buffer. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">size</td><td>Total number of bytes available in <code class="param">buffer</code>. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">struct_index</td><td>Structure index containing the field. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">field_index</td><td>Field index to read. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">field</td><td>Destination field descriptor. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Pointer to <code class="param">field</code> on success, or <span class="tt">NULL</span> on failure. </dd></dl>
+
+</div>
+</div>
 <a id="gaee002cdf4a6efc31ddcfbe60cc523bbf" name="gaee002cdf4a6efc31ddcfbe60cc523bbf"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gaee002cdf4a6efc31ddcfbe60cc523bbf">&#9670;&#160;</a></span>vm_read_script_export_var()</h2>
 
@@ -1171,7 +1267,7 @@ Functions for Virtual Machine.</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Retrieves reflection information for a native function. </p>
-<p>Returns the function's name, parameters, and return types. The VM caches reflection results, so repeated calls incur no additional reflection cost. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Returns the function's name, parameters, return types, and structure definitions referenced by those types. The VM caches reflection results, so repeated calls incur no additional reflection cost. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">vm</td><td>VM instance owning the native. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">native</td><td>Native function handle. </td></tr>
@@ -1485,15 +1581,15 @@ Functions for Virtual Machine.</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Reads an argument passed to the current native call. </p>
-<p>Native functions may use this helper to read arguments supplied by the VM for the currently executing thread. The value is returned in the native representation expected by the host runtime. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Native functions may use this helper to read argument slots supplied by the VM for the currently executing thread. Structure arguments occupy consecutive slots in field order; use native function reflection to map those slots to fields. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">vm</td><td>VM instance owning the thread. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">thread</td><td>Thread to query. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Argument index. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">index</td><td>Argument slot index. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Argument value at <code class="param">index</code>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Argument slot value at <code class="param">index</code>. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="#ga96ccdbe4936feae7deb0a04aa0f9a7f6" title="Registers a native function with the VM.">vm_register_native</a> </dd></dl>
 
 </div>

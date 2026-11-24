@@ -6,6 +6,8 @@ var group__adv__structs =
     [ "adv_node_t::[struct].unnamed.stmts", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8stmts.html", null ],
     [ "adv_node_t::[struct].unnamed.var_decl", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8var__decl.html", null ],
     [ "adv_node_t::[struct].unnamed.func_decl", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8func__decl.html", null ],
+    [ "adv_node_t::[struct].unnamed.struct_decl", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8struct__decl.html", null ],
+    [ "adv_node_t::[struct].unnamed.field_decl", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8field__decl.html", null ],
     [ "adv_node_t::[struct].unnamed.param_decl", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8param__decl.html", null ],
     [ "adv_node_t::[struct].unnamed.import_stmt", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8import__stmt.html", null ],
     [ "adv_node_t::[struct].unnamed.if_stmt", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8if__stmt.html", null ],
@@ -18,8 +20,8 @@ var group__adv__structs =
     [ "adv_node_t::[struct].unnamed.unary_expr", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8unary__expr.html", null ],
     [ "adv_node_t::[struct].unnamed.call_expr", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8call__expr.html", null ],
     [ "adv_node_t::[struct].unnamed.member_access", "structadv__node__t_1_1_0fstruct_0e_8unnamed_8member__access.html", null ],
-    [ "adv_symbol_t", "structadv__symbol__t.html", null ],
     [ "adv_source_t", "structadv__source__t.html", null ],
-    [ "adv_message_t", "structadv__message__t.html", null ],
-    [ "adv_scope_t", "structadv__scope__t.html", null ]
+    [ "adv_symbol_t", "structadv__symbol__t.html", null ],
+    [ "adv_scope_t", "structadv__scope__t.html", null ],
+    [ "adv_message_t", "structadv__message__t.html", null ]
 ];

@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -159,16 +159,16 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a5488d427e459cd5d7e017cad337ac7d0" id="r_a5488d427e459cd5d7e017cad337ac7d0"><td class="memItemLeft"><a id="a5488d427e459cd5d7e017cad337ac7d0" name="a5488d427e459cd5d7e017cad337ac7d0"></a>
 <a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a>&#160;</td><td class="memItemRight"><b>name</b></td></tr>
 <tr class="memdesc:a5488d427e459cd5d7e017cad337ac7d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Offset or index of the native function name in the data block. <br /></td></tr>
-<tr class="memitem:a7af6629d18189c2ef4bfb48044560e94" id="r_a7af6629d18189c2ef4bfb48044560e94"><td class="memItemLeft"><a id="a7af6629d18189c2ef4bfb48044560e94" name="a7af6629d18189c2ef4bfb48044560e94"></a>
-<a class="el" href="group__vm__types.html#gac836a04837c04776cf02bffa6c7cd7f0">vm_uint8_t</a>&#160;</td><td class="memItemRight"><b>return_type</b></td></tr>
-<tr class="memdesc:a7af6629d18189c2ef4bfb48044560e94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type code returned by the native function. <br /></td></tr>
+<tr class="memitem:a9a33d6f4ea992b2bf4f967345921c18e" id="r_a9a33d6f4ea992b2bf4f967345921c18e"><td class="memItemLeft"><a id="a9a33d6f4ea992b2bf4f967345921c18e" name="a9a33d6f4ea992b2bf4f967345921c18e"></a>
+<a class="el" href="group__vm__types.html#ga839e068cc85ad1798080a65d9cd7b103">vm_uint32_t</a>&#160;</td><td class="memItemRight"><b>return_type</b></td></tr>
+<tr class="memdesc:a9a33d6f4ea992b2bf4f967345921c18e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Packed type code returned by the native function. <br /></td></tr>
 <tr class="memitem:ae74fc0780859b7acd10cc09f86182de3" id="r_ae74fc0780859b7acd10cc09f86182de3"><td class="memItemLeft"><a id="ae74fc0780859b7acd10cc09f86182de3" name="ae74fc0780859b7acd10cc09f86182de3"></a>
 <a class="el" href="group__vm__types.html#gac836a04837c04776cf02bffa6c7cd7f0">vm_uint8_t</a>&#160;</td><td class="memItemRight"><b>param_count</b></td></tr>
 <tr class="memdesc:ae74fc0780859b7acd10cc09f86182de3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of parameters expected by the native function. <br /></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Exported native function metadata. </p>
-<p>Describes a native function declared by the script. Its parameter descriptors follow this structure in the export block as <code>param_count</code> consecutive <a class="el" href="structvm__script__export__param__t.html" title="Exported function parameter metadata.">vm_script_export_param_t</a> records. </p>
+<p>Describes a native function declared by the script. The return type uses the same packed 32-bit representation as <a class="el" href="structvm__script__export__var__t.html" title="Exported variable metadata.">vm_script_export_var_t</a>. Its parameter descriptors follow this structure in the export block as <code>param_count</code> consecutive <a class="el" href="structvm__script__export__param__t.html" title="Exported function parameter metadata.">vm_script_export_param_t</a> records. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>vm/<a class="el" href="vm-script_8h_source.html">vm-script.h</a></li>
 </ul>

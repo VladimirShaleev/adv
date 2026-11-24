@@ -19,6 +19,8 @@ var group__vm__functions =
     [ "vm_read_script_export_func_param", "group__vm__functions.html#gabf99284b4b0179ba2d4dcd0cc3cb364d", null ],
     [ "vm_read_script_export_native", "group__vm__functions.html#gaf766463707765c0b91ac99abafaad3d9", null ],
     [ "vm_read_script_export_native_param", "group__vm__functions.html#gaf4b07226ec38d1952a38ccc07d796117", null ],
+    [ "vm_read_script_export_struct", "group__vm__functions.html#ga78fb0511b13e2774bfba2ffa9111649c", null ],
+    [ "vm_read_script_export_struct_field", "group__vm__functions.html#ga50b400072737959b151e1f3e4b6ac939", null ],
     [ "vm_read_script_export_var", "group__vm__functions.html#gaee002cdf4a6efc31ddcfbe60cc523bbf", null ],
     [ "vm_read_script_header", "group__vm__functions.html#ga7adad4d17c7eb74f4be7d4ecfea5b59c", null ],
     [ "vm_read_script_table", "group__vm__functions.html#ga24a416dc8efb3dafd830363cce3b191f", null ],

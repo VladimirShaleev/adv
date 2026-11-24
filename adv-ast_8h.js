@@ -9,6 +9,8 @@ var adv_ast_8h =
       [ "ADV_NODE_NATIVE_DECL", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa968c2c2bc7e0576f56f52b74d0334118", null ],
       [ "ADV_NODE_FUNCTION_DECL", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa88d8259690ac271d5cc5cf9391f775f5", null ],
       [ "ADV_NODE_PARAM_DECL", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fab2b554ba6b47b67e38c50ad96741babc", null ],
+      [ "ADV_NODE_STRUCT_DECL", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa244717da2b9d76b584dcb0b52ea5a384", null ],
+      [ "ADV_NODE_FIELD_DECL", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa0b479d7964758f307be0fa64342f30a8", null ],
       [ "ADV_NODE_IMPORT_STMT", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa9547524136cce5e633009c2331bb830d", null ],
       [ "ADV_NODE_IF_STMT", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa378a9f77c931ae1fa4ca5f0f9d2478bc", null ],
       [ "ADV_NODE_WHILE_STMT", "group__adv__enums.html#ggaed1bf1d656039f0879ab36ba78d7c42fa37630898f2c6808a857d07e65a4e6db2", null ],

@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -335,170 +335,192 @@ document.addEventListener('DOMContentLoaded',() => { initNavTree('adv-options_8h
 <div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
 <div class="line"><a id="l00182" name="l00182"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gad3d9c3a6853ad86cd54e8301cb26b2ec">  182</a></span><a class="code hl_function" href="group__adv__functions.html#gad3d9c3a6853ad86cd54e8301cb26b2ec">adv_options_set_output_format</a>(adv_options_t options,</div>
 <div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>                              adv_format_t format);</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span> </div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  186</span><span class="comment"> * @brief     Get output path.</span></div>
-<div class="line"><span class="lineno">  187</span><span class="comment"> * @details   Returns the directory or file path that the compiler will use to save compilation output.</span></div>
-<div class="line"><span class="lineno">  188</span><span class="comment"> * @param[in] options Target options.</span></div>
-<div class="line"><span class="lineno">  189</span><span class="comment"> * @return    Output directory or file path.</span></div>
-<div class="line"><span class="lineno">  190</span><span class="comment"> * @sa        ::adv_options_set_output_path</span></div>
-<div class="line"><span class="lineno">  191</span><span class="comment"> * @ingroup   adv_functions</span></div>
-<div class="line"><span class="lineno">  192</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a></div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga8895e5cdab9dfc39d0258d034fecf58b">  194</a></span><a class="code hl_function" href="group__adv__functions.html#ga8895e5cdab9dfc39d0258d034fecf58b">adv_options_get_output_path</a>(adv_options_t options);</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span> </div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  197</span><span class="comment"> * @brief     Set output path.</span></div>
-<div class="line"><span class="lineno">  198</span><span class="comment"> * @details   Configure the directory or file path that the compiler will use to save compilation output.</span></div>
-<div class="line"><span class="lineno">  199</span><span class="comment"> * @param[in] options Target options.</span></div>
-<div class="line"><span class="lineno">  200</span><span class="comment"> * @param[in] path Output directory or file path.</span></div>
-<div class="line"><span class="lineno">  201</span><span class="comment"> * @note      Compiler output to the file system does not occur if output via a ::adv_options_set_writer is configured.</span></div>
-<div class="line"><span class="lineno">  202</span><span class="comment"> * @sa        ::adv_options_get_output_path</span></div>
-<div class="line"><span class="lineno">  203</span><span class="comment"> * @ingroup   adv_functions</span></div>
-<div class="line"><span class="lineno">  204</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gade87d7551d40c49db24adf8508a37645">  206</a></span><a class="code hl_function" href="group__adv__functions.html#gade87d7551d40c49db24adf8508a37645">adv_options_set_output_path</a>(adv_options_t options,</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>                            <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a> path);</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span> </div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  210</span><span class="comment"> * @brief         Gets the configured import directories.</span></div>
-<div class="line"><span class="lineno">  211</span><span class="comment"> * @details       Copies up to the supplied capacity of directory pointers into</span></div>
-<div class="line"><span class="lineno">  212</span><span class="comment"> *                @p dirs. The strings are owned by the options object; the</span></div>
-<div class="line"><span class="lineno">  213</span><span class="comment"> *                caller must not free them. Their addresses may change when</span></div>
-<div class="line"><span class="lineno">  214</span><span class="comment"> *                ::adv_options_set_import_dirs is called, so make copies if</span></div>
-<div class="line"><span class="lineno">  215</span><span class="comment"> *                they must be kept longer.</span></div>
-<div class="line"><span class="lineno">  216</span><span class="comment"> * @param[in]     options Options object to query.</span></div>
-<div class="line"><span class="lineno">  217</span><span class="comment"> * @param[in,out] dir_count On input, capacity of @p dirs when @p dirs is not</span></div>
-<div class="line"><span class="lineno">  218</span><span class="comment"> *                `NULL`. On output, number of directory pointers written. If</span></div>
-<div class="line"><span class="lineno">  219</span><span class="comment"> *                @p dirs is `NULL`, receives the total number of configured</span></div>
-<div class="line"><span class="lineno">  220</span><span class="comment"> *                directories.</span></div>
-<div class="line"><span class="lineno">  221</span><span class="comment"> * @param[out]    dirs Destination array, or `NULL` to query the total count.</span></div>
-<div class="line"><span class="lineno">  222</span><span class="comment"> * @note          When @p dirs is not `NULL`, at most the smaller of the input</span></div>
-<div class="line"><span class="lineno">  223</span><span class="comment"> *                capacity and the configured directory count is written.</span></div>
-<div class="line"><span class="lineno">  224</span><span class="comment"> * @sa            ::adv_options_set_import_dirs</span></div>
-<div class="line"><span class="lineno">  225</span><span class="comment"> * @ingroup       adv_functions</span></div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  185</span><span class="comment"> * @brief     Get standard library inclusion setting.</span></div>
+<div class="line"><span class="lineno">  186</span><span class="comment"> * @details   Checks whether the compiler is configured to include the standard library during compilation.</span></div>
+<div class="line"><span class="lineno">  187</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  188</span><span class="comment"> * @return    ::ADV_TRUE if the standard library is enabled, or ::ADV_FALSE otherwise.</span></div>
+<div class="line"><span class="lineno">  189</span><span class="comment"> * @sa        ::adv_options_set_standard_library</span></div>
+<div class="line"><span class="lineno">  190</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  191</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a></div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gacf75c89ed8025a0fc82ca13a2475f280">  193</a></span><a class="code hl_function" href="group__adv__functions.html#gacf75c89ed8025a0fc82ca13a2475f280">adv_options_get_standard_library</a>(adv_options_t options);</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span> </div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  196</span><span class="comment"> * @brief     Set standard library inclusion setting.</span></div>
+<div class="line"><span class="lineno">  197</span><span class="comment"> * @details   Configure whether the compiler should include the standard library during compilation.</span></div>
+<div class="line"><span class="lineno">  198</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  199</span><span class="comment"> * @param[in] use_std Boolean flag to enable or disable standard library inclusion.</span></div>
+<div class="line"><span class="lineno">  200</span><span class="comment"> * @sa        ::adv_options_get_standard_library</span></div>
+<div class="line"><span class="lineno">  201</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  202</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gab37b912e5a2d2e3b6b28ee297cc8767d">  204</a></span><a class="code hl_function" href="group__adv__functions.html#gab37b912e5a2d2e3b6b28ee297cc8767d">adv_options_set_standard_library</a>(adv_options_t options,</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>                                 <a class="code hl_typedef" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a> use_std);</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  208</span><span class="comment"> * @brief     Get output path.</span></div>
+<div class="line"><span class="lineno">  209</span><span class="comment"> * @details   Returns the directory or file path that the compiler will use to save compilation output.</span></div>
+<div class="line"><span class="lineno">  210</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  211</span><span class="comment"> * @return    Output directory or file path.</span></div>
+<div class="line"><span class="lineno">  212</span><span class="comment"> * @sa        ::adv_options_set_output_path</span></div>
+<div class="line"><span class="lineno">  213</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  214</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a></div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga8895e5cdab9dfc39d0258d034fecf58b">  216</a></span><a class="code hl_function" href="group__adv__functions.html#ga8895e5cdab9dfc39d0258d034fecf58b">adv_options_get_output_path</a>(adv_options_t options);</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span> </div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  219</span><span class="comment"> * @brief     Set output path.</span></div>
+<div class="line"><span class="lineno">  220</span><span class="comment"> * @details   Configure the directory or file path that the compiler will use to save compilation output.</span></div>
+<div class="line"><span class="lineno">  221</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  222</span><span class="comment"> * @param[in] path Output directory or file path.</span></div>
+<div class="line"><span class="lineno">  223</span><span class="comment"> * @note      Compiler output to the file system does not occur if output via a ::adv_options_set_writer is configured.</span></div>
+<div class="line"><span class="lineno">  224</span><span class="comment"> * @sa        ::adv_options_get_output_path</span></div>
+<div class="line"><span class="lineno">  225</span><span class="comment"> * @ingroup   adv_functions</span></div>
 <div class="line"><span class="lineno">  226</span><span class="comment"> */</span></div>
 <div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gad7cee4b29b8bf6567de461f3b2a7de38">  228</a></span><a class="code hl_function" href="group__adv__functions.html#gad7cee4b29b8bf6567de461f3b2a7de38">adv_options_get_import_dirs</a>(adv_options_t options,</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>                            <a class="code hl_typedef" href="group__adv__types.html#ga18a8e4fb015b00dcf9acf4fb167a2883">adv_uint32_t</a>* dir_count,</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>                            <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a>* dirs);</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> </div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  233</span><span class="comment"> * @brief     Configures directories to search for source files.</span></div>
-<div class="line"><span class="lineno">  234</span><span class="comment"> * @details   These paths are used to search source code when an import is encountered during compilation.</span></div>
-<div class="line"><span class="lineno">  235</span><span class="comment"> * @param[in] options Target options.</span></div>
-<div class="line"><span class="lineno">  236</span><span class="comment"> * @param[in] dir_count Number of directories.</span></div>
-<div class="line"><span class="lineno">  237</span><span class="comment"> * @param[in] dirs UTF-8 import directory paths. The options object copies these</span></div>
-<div class="line"><span class="lineno">  238</span><span class="comment"> *            strings.</span></div>
-<div class="line"><span class="lineno">  239</span><span class="comment"> * @note      These paths are used when resolving imports if the callback passed to ::adv_options_set_importer</span></div>
-<div class="line"><span class="lineno">  240</span><span class="comment"> *            did not return a source and no matching entry was found in the</span></div>
-<div class="line"><span class="lineno">  241</span><span class="comment"> *            sources passed to ::adv_compiler_compile.</span></div>
-<div class="line"><span class="lineno">  242</span><span class="comment"> * @sa        ::adv_options_get_import_dirs</span></div>
-<div class="line"><span class="lineno">  243</span><span class="comment"> * @ingroup   adv_functions</span></div>
-<div class="line"><span class="lineno">  244</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga197725c7f1be7202d0246ca740659833">  246</a></span><a class="code hl_function" href="group__adv__functions.html#ga197725c7f1be7202d0246ca740659833">adv_options_set_import_dirs</a>(adv_options_t options,</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>                            <a class="code hl_typedef" href="group__adv__types.html#ga18a8e4fb015b00dcf9acf4fb167a2883">adv_uint32_t</a> dir_count,</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>                            <span class="keyword">const</span> <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a>* dirs);</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  251</span><span class="comment"> * @brief      Get the current import callback.</span></div>
-<div class="line"><span class="lineno">  252</span><span class="comment"> * @details    Returns a callback if one has been configured.</span></div>
-<div class="line"><span class="lineno">  253</span><span class="comment"> * @param[in]  options Target options.</span></div>
-<div class="line"><span class="lineno">  254</span><span class="comment"> * @param[out] data Returning a callback user data pointer (may be null).</span></div>
-<div class="line"><span class="lineno">  255</span><span class="comment"> * @return     Returns a callback.</span></div>
-<div class="line"><span class="lineno">  256</span><span class="comment"> * @sa         ::adv_options_set_importer</span></div>
-<div class="line"><span class="lineno">  257</span><span class="comment"> * @ingroup    adv_functions</span></div>
-<div class="line"><span class="lineno">  258</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> adv_import_callback_t</div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga6750df353dbd1f25f83f2c80388457da">  260</a></span><a class="code hl_function" href="group__adv__functions.html#ga6750df353dbd1f25f83f2c80388457da">adv_options_get_importer</a>(adv_options_t options,</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>                         <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a>* data);</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span> </div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  264</span><span class="comment"> * @brief     Set import callback.</span></div>
-<div class="line"><span class="lineno">  265</span><span class="comment"> * @details   Used to resolve code sources, such as when the compiler encounters imports.</span></div>
-<div class="line"><span class="lineno">  266</span><span class="comment"> * @param[in] options Target options.</span></div>
-<div class="line"><span class="lineno">  267</span><span class="comment"> * @param[in] callback Callback function.</span></div>
-<div class="line"><span class="lineno">  268</span><span class="comment"> * @param[in] data Callback user data.</span></div>
-<div class="line"><span class="lineno">  269</span><span class="comment"> * @note      If set, the importer is queried before the sources passed to</span></div>
-<div class="line"><span class="lineno">  270</span><span class="comment"> *            ::adv_compiler_compile. If it returns `NULL` and no matching source</span></div>
-<div class="line"><span class="lineno">  271</span><span class="comment"> *            is found, the compiler searches the file system, including the</span></div>
-<div class="line"><span class="lineno">  272</span><span class="comment"> *            importing file&#39;s directory, the configured import directories, and</span></div>
-<div class="line"><span class="lineno">  273</span><span class="comment"> *            the current working directory.</span></div>
-<div class="line"><span class="lineno">  274</span><span class="comment"> * @note      A typical use of an importer is to load source code from memory or</span></div>
-<div class="line"><span class="lineno">  275</span><span class="comment"> *            from a source that is not available through the file system.</span></div>
-<div class="line"><span class="lineno">  276</span><span class="comment"> * @sa        ::adv_options_get_importer</span></div>
-<div class="line"><span class="lineno">  277</span><span class="comment"> * @ingroup   adv_functions</span></div>
-<div class="line"><span class="lineno">  278</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga3ef7b9798b6cef03afefbf18d29cbbaf">  280</a></span><a class="code hl_function" href="group__adv__functions.html#ga3ef7b9798b6cef03afefbf18d29cbbaf">adv_options_set_importer</a>(adv_options_t options,</div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>                         adv_import_callback_t callback,</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>                         <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a> data);</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  285</span><span class="comment"> * @brief      Get the current release import callback.</span></div>
-<div class="line"><span class="lineno">  286</span><span class="comment"> * @details    Callback for releasing sources allocated via ::adv_options_set_importer.</span></div>
-<div class="line"><span class="lineno">  287</span><span class="comment"> * @param[in]  options Target options.</span></div>
-<div class="line"><span class="lineno">  288</span><span class="comment"> * @param[out] data Returning a callback user data pointer (may be null).</span></div>
-<div class="line"><span class="lineno">  289</span><span class="comment"> * @return     Returns a callback.</span></div>
-<div class="line"><span class="lineno">  290</span><span class="comment"> * @sa         ::adv_options_set_release_import</span></div>
-<div class="line"><span class="lineno">  291</span><span class="comment"> * @ingroup    adv_functions</span></div>
-<div class="line"><span class="lineno">  292</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__callbacks.html#ga87324ba65ec0da586c84740e1130a5c1">adv_release_import_callback_t</a></div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga87471d21026e49d8a1e4b3d0c38a69ee">  294</a></span><a class="code hl_function" href="group__adv__functions.html#ga87471d21026e49d8a1e4b3d0c38a69ee">adv_options_get_release_import</a>(adv_options_t options,</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>                               <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a>* data);</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span> </div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  298</span><span class="comment"> * @brief     Set release import callback.</span></div>
-<div class="line"><span class="lineno">  299</span><span class="comment"> * @details   If the callback set in ::adv_options_set_importer allocates data on the heap or creates</span></div>
-<div class="line"><span class="lineno">  300</span><span class="comment"> *            any resources, they can be freed by the callback set here.</span></div>
-<div class="line"><span class="lineno">  301</span><span class="comment"> * @param[in] options Target options.</span></div>
-<div class="line"><span class="lineno">  302</span><span class="comment"> * @param[in] callback Callback function.</span></div>
-<div class="line"><span class="lineno">  303</span><span class="comment"> * @param[in] data Callback user data.</span></div>
-<div class="line"><span class="lineno">  304</span><span class="comment"> * @sa        ::adv_options_get_release_import</span></div>
-<div class="line"><span class="lineno">  305</span><span class="comment"> * @ingroup   adv_functions</span></div>
-<div class="line"><span class="lineno">  306</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga8d870e71851bf41662fd508c7e08d7c0">  308</a></span><a class="code hl_function" href="group__adv__functions.html#ga8d870e71851bf41662fd508c7e08d7c0">adv_options_set_release_import</a>(adv_options_t options,</div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                               <a class="code hl_typedef" href="group__adv__callbacks.html#ga87324ba65ec0da586c84740e1130a5c1">adv_release_import_callback_t</a> callback,</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                               <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a> data);</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span> </div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  313</span><span class="comment"> * @brief      Get the current write callback.</span></div>
-<div class="line"><span class="lineno">  314</span><span class="comment"> * @details    Returns a callback if one has been configured.</span></div>
-<div class="line"><span class="lineno">  315</span><span class="comment"> * @param[in]  options Target options.</span></div>
-<div class="line"><span class="lineno">  316</span><span class="comment"> * @param[out] data Returning a callback user data pointer (may be null).</span></div>
-<div class="line"><span class="lineno">  317</span><span class="comment"> * @return     Returns a callback.</span></div>
-<div class="line"><span class="lineno">  318</span><span class="comment"> * @sa         ::adv_options_set_writer</span></div>
-<div class="line"><span class="lineno">  319</span><span class="comment"> * @ingroup    adv_functions</span></div>
-<div class="line"><span class="lineno">  320</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__callbacks.html#gaf9a1a759e7023307644e7c12ed5dd1aa">adv_write_callback_t</a></div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga3645d20ce6a9c306caea65dcdd7a2cf3">  322</a></span><a class="code hl_function" href="group__adv__functions.html#ga3645d20ce6a9c306caea65dcdd7a2cf3">adv_options_get_writer</a>(adv_options_t options,</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>                       <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a>* data);</div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span> </div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span><span class="comment">/**</span></div>
-<div class="line"><span class="lineno">  326</span><span class="comment"> * @brief     Set write callback.</span></div>
-<div class="line"><span class="lineno">  327</span><span class="comment"> * @details   Configures a callback to receive compiler output. If the callback is set, no output</span></div>
-<div class="line"><span class="lineno">  328</span><span class="comment"> *            will be made to the file system (::adv_options_set_output_path will also not be used).</span></div>
-<div class="line"><span class="lineno">  329</span><span class="comment"> * @param[in] options Target options.</span></div>
-<div class="line"><span class="lineno">  330</span><span class="comment"> * @param[in] callback Callback function.</span></div>
-<div class="line"><span class="lineno">  331</span><span class="comment"> * @param[in] data Callback user data.</span></div>
-<div class="line"><span class="lineno">  332</span><span class="comment"> * @note      Typical uses of a writer are writing to memory or outputting to the console and the like.</span></div>
-<div class="line"><span class="lineno">  333</span><span class="comment"> * @sa        ::adv_options_get_writer</span></div>
-<div class="line"><span class="lineno">  334</span><span class="comment"> * @ingroup   adv_functions</span></div>
-<div class="line"><span class="lineno">  335</span><span class="comment"> */</span></div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga80ce6a0d430146d7591fb563287d3b0e">  337</a></span><a class="code hl_function" href="group__adv__functions.html#ga80ce6a0d430146d7591fb563287d3b0e">adv_options_set_writer</a>(adv_options_t options,</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>                       <a class="code hl_typedef" href="group__adv__callbacks.html#gaf9a1a759e7023307644e7c12ed5dd1aa">adv_write_callback_t</a> callback,</div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>                       <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a> data);</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span><span class="comment">/** @} */</span></div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span> </div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span><span class="preprocessor">#</span><span class="preprocessor">ifdef</span> __cplusplus</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>}</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span><span class="preprocessor">#</span><span class="preprocessor">endif</span></div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gade87d7551d40c49db24adf8508a37645">  228</a></span><a class="code hl_function" href="group__adv__functions.html#gade87d7551d40c49db24adf8508a37645">adv_options_set_output_path</a>(adv_options_t options,</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>                            <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a> path);</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span> </div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  232</span><span class="comment"> * @brief         Gets the configured import directories.</span></div>
+<div class="line"><span class="lineno">  233</span><span class="comment"> * @details       Copies up to the supplied capacity of directory pointers into</span></div>
+<div class="line"><span class="lineno">  234</span><span class="comment"> *                @p dirs. The strings are owned by the options object; the</span></div>
+<div class="line"><span class="lineno">  235</span><span class="comment"> *                caller must not free them. Their addresses may change when</span></div>
+<div class="line"><span class="lineno">  236</span><span class="comment"> *                ::adv_options_set_import_dirs is called, so make copies if</span></div>
+<div class="line"><span class="lineno">  237</span><span class="comment"> *                they must be kept longer.</span></div>
+<div class="line"><span class="lineno">  238</span><span class="comment"> * @param[in]     options Options object to query.</span></div>
+<div class="line"><span class="lineno">  239</span><span class="comment"> * @param[in,out] dir_count On input, capacity of @p dirs when @p dirs is not</span></div>
+<div class="line"><span class="lineno">  240</span><span class="comment"> *                `NULL`. On output, number of directory pointers written. If</span></div>
+<div class="line"><span class="lineno">  241</span><span class="comment"> *                @p dirs is `NULL`, receives the total number of configured</span></div>
+<div class="line"><span class="lineno">  242</span><span class="comment"> *                directories.</span></div>
+<div class="line"><span class="lineno">  243</span><span class="comment"> * @param[out]    dirs Destination array, or `NULL` to query the total count.</span></div>
+<div class="line"><span class="lineno">  244</span><span class="comment"> * @note          When @p dirs is not `NULL`, at most the smaller of the input</span></div>
+<div class="line"><span class="lineno">  245</span><span class="comment"> *                capacity and the configured directory count is written.</span></div>
+<div class="line"><span class="lineno">  246</span><span class="comment"> * @sa            ::adv_options_set_import_dirs</span></div>
+<div class="line"><span class="lineno">  247</span><span class="comment"> * @ingroup       adv_functions</span></div>
+<div class="line"><span class="lineno">  248</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno"><a class="line" href="group__adv__functions.html#gad7cee4b29b8bf6567de461f3b2a7de38">  250</a></span><a class="code hl_function" href="group__adv__functions.html#gad7cee4b29b8bf6567de461f3b2a7de38">adv_options_get_import_dirs</a>(adv_options_t options,</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>                            <a class="code hl_typedef" href="group__adv__types.html#ga18a8e4fb015b00dcf9acf4fb167a2883">adv_uint32_t</a>* dir_count,</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>                            <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a>* dirs);</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span> </div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  255</span><span class="comment"> * @brief     Configures directories to search for source files.</span></div>
+<div class="line"><span class="lineno">  256</span><span class="comment"> * @details   These paths are used to search source code when an import is encountered during compilation.</span></div>
+<div class="line"><span class="lineno">  257</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  258</span><span class="comment"> * @param[in] dir_count Number of directories.</span></div>
+<div class="line"><span class="lineno">  259</span><span class="comment"> * @param[in] dirs UTF-8 import directory paths. The options object copies these</span></div>
+<div class="line"><span class="lineno">  260</span><span class="comment"> *            strings.</span></div>
+<div class="line"><span class="lineno">  261</span><span class="comment"> * @note      These paths are used when resolving imports if the callback passed to ::adv_options_set_importer</span></div>
+<div class="line"><span class="lineno">  262</span><span class="comment"> *            did not return a source and no matching entry was found in the</span></div>
+<div class="line"><span class="lineno">  263</span><span class="comment"> *            sources passed to ::adv_compiler_compile.</span></div>
+<div class="line"><span class="lineno">  264</span><span class="comment"> * @sa        ::adv_options_get_import_dirs</span></div>
+<div class="line"><span class="lineno">  265</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  266</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga197725c7f1be7202d0246ca740659833">  268</a></span><a class="code hl_function" href="group__adv__functions.html#ga197725c7f1be7202d0246ca740659833">adv_options_set_import_dirs</a>(adv_options_t options,</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>                            <a class="code hl_typedef" href="group__adv__types.html#ga18a8e4fb015b00dcf9acf4fb167a2883">adv_uint32_t</a> dir_count,</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>                            <span class="keyword">const</span> <a class="code hl_typedef" href="group__adv__types.html#gaf8b1fb788024912630bd4f336dcb8054">adv_utf8_t</a>* dirs);</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  273</span><span class="comment"> * @brief      Get the current import callback.</span></div>
+<div class="line"><span class="lineno">  274</span><span class="comment"> * @details    Returns a callback if one has been configured.</span></div>
+<div class="line"><span class="lineno">  275</span><span class="comment"> * @param[in]  options Target options.</span></div>
+<div class="line"><span class="lineno">  276</span><span class="comment"> * @param[out] data Returning a callback user data pointer (may be null).</span></div>
+<div class="line"><span class="lineno">  277</span><span class="comment"> * @return     Returns a callback.</span></div>
+<div class="line"><span class="lineno">  278</span><span class="comment"> * @sa         ::adv_options_set_importer</span></div>
+<div class="line"><span class="lineno">  279</span><span class="comment"> * @ingroup    adv_functions</span></div>
+<div class="line"><span class="lineno">  280</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> adv_import_callback_t</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga6750df353dbd1f25f83f2c80388457da">  282</a></span><a class="code hl_function" href="group__adv__functions.html#ga6750df353dbd1f25f83f2c80388457da">adv_options_get_importer</a>(adv_options_t options,</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>                         <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a>* data);</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span> </div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  286</span><span class="comment"> * @brief     Set import callback.</span></div>
+<div class="line"><span class="lineno">  287</span><span class="comment"> * @details   Used to resolve code sources, such as when the compiler encounters imports.</span></div>
+<div class="line"><span class="lineno">  288</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  289</span><span class="comment"> * @param[in] callback Callback function.</span></div>
+<div class="line"><span class="lineno">  290</span><span class="comment"> * @param[in] data Callback user data.</span></div>
+<div class="line"><span class="lineno">  291</span><span class="comment"> * @note      If set, the importer is queried before the sources passed to</span></div>
+<div class="line"><span class="lineno">  292</span><span class="comment"> *            ::adv_compiler_compile. If it returns `NULL` and no matching source</span></div>
+<div class="line"><span class="lineno">  293</span><span class="comment"> *            is found, the compiler searches the file system, including the</span></div>
+<div class="line"><span class="lineno">  294</span><span class="comment"> *            importing file&#39;s directory, the configured import directories, and</span></div>
+<div class="line"><span class="lineno">  295</span><span class="comment"> *            the current working directory.</span></div>
+<div class="line"><span class="lineno">  296</span><span class="comment"> * @note      A typical use of an importer is to load source code from memory or</span></div>
+<div class="line"><span class="lineno">  297</span><span class="comment"> *            from a source that is not available through the file system.</span></div>
+<div class="line"><span class="lineno">  298</span><span class="comment"> * @sa        ::adv_options_get_importer</span></div>
+<div class="line"><span class="lineno">  299</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  300</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga3ef7b9798b6cef03afefbf18d29cbbaf">  302</a></span><a class="code hl_function" href="group__adv__functions.html#ga3ef7b9798b6cef03afefbf18d29cbbaf">adv_options_set_importer</a>(adv_options_t options,</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>                         adv_import_callback_t callback,</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>                         <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a> data);</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span> </div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  307</span><span class="comment"> * @brief      Get the current release import callback.</span></div>
+<div class="line"><span class="lineno">  308</span><span class="comment"> * @details    Callback for releasing sources allocated via ::adv_options_set_importer.</span></div>
+<div class="line"><span class="lineno">  309</span><span class="comment"> * @param[in]  options Target options.</span></div>
+<div class="line"><span class="lineno">  310</span><span class="comment"> * @param[out] data Returning a callback user data pointer (may be null).</span></div>
+<div class="line"><span class="lineno">  311</span><span class="comment"> * @return     Returns a callback.</span></div>
+<div class="line"><span class="lineno">  312</span><span class="comment"> * @sa         ::adv_options_set_release_import</span></div>
+<div class="line"><span class="lineno">  313</span><span class="comment"> * @ingroup    adv_functions</span></div>
+<div class="line"><span class="lineno">  314</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__callbacks.html#ga87324ba65ec0da586c84740e1130a5c1">adv_release_import_callback_t</a></div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga87471d21026e49d8a1e4b3d0c38a69ee">  316</a></span><a class="code hl_function" href="group__adv__functions.html#ga87471d21026e49d8a1e4b3d0c38a69ee">adv_options_get_release_import</a>(adv_options_t options,</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>                               <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a>* data);</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span> </div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  320</span><span class="comment"> * @brief     Set release import callback.</span></div>
+<div class="line"><span class="lineno">  321</span><span class="comment"> * @details   If the callback set in ::adv_options_set_importer allocates data on the heap or creates</span></div>
+<div class="line"><span class="lineno">  322</span><span class="comment"> *            any resources, they can be freed by the callback set here.</span></div>
+<div class="line"><span class="lineno">  323</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  324</span><span class="comment"> * @param[in] callback Callback function.</span></div>
+<div class="line"><span class="lineno">  325</span><span class="comment"> * @param[in] data Callback user data.</span></div>
+<div class="line"><span class="lineno">  326</span><span class="comment"> * @sa        ::adv_options_get_release_import</span></div>
+<div class="line"><span class="lineno">  327</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  328</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga8d870e71851bf41662fd508c7e08d7c0">  330</a></span><a class="code hl_function" href="group__adv__functions.html#ga8d870e71851bf41662fd508c7e08d7c0">adv_options_set_release_import</a>(adv_options_t options,</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>                               <a class="code hl_typedef" href="group__adv__callbacks.html#ga87324ba65ec0da586c84740e1130a5c1">adv_release_import_callback_t</a> callback,</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>                               <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a> data);</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span> </div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  335</span><span class="comment"> * @brief      Get the current write callback.</span></div>
+<div class="line"><span class="lineno">  336</span><span class="comment"> * @details    Returns a callback if one has been configured.</span></div>
+<div class="line"><span class="lineno">  337</span><span class="comment"> * @param[in]  options Target options.</span></div>
+<div class="line"><span class="lineno">  338</span><span class="comment"> * @param[out] data Returning a callback user data pointer (may be null).</span></div>
+<div class="line"><span class="lineno">  339</span><span class="comment"> * @return     Returns a callback.</span></div>
+<div class="line"><span class="lineno">  340</span><span class="comment"> * @sa         ::adv_options_set_writer</span></div>
+<div class="line"><span class="lineno">  341</span><span class="comment"> * @ingroup    adv_functions</span></div>
+<div class="line"><span class="lineno">  342</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <a class="code hl_typedef" href="group__adv__callbacks.html#gaf9a1a759e7023307644e7c12ed5dd1aa">adv_write_callback_t</a></div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga3645d20ce6a9c306caea65dcdd7a2cf3">  344</a></span><a class="code hl_function" href="group__adv__functions.html#ga3645d20ce6a9c306caea65dcdd7a2cf3">adv_options_get_writer</a>(adv_options_t options,</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>                       <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a>* data);</div>
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span> </div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span><span class="preprocessor">#</span><span class="preprocessor">endif</span> <span class="comment">/* ADV_OPTIONS_H */</span></div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span><span class="comment">/**</span></div>
+<div class="line"><span class="lineno">  348</span><span class="comment"> * @brief     Set write callback.</span></div>
+<div class="line"><span class="lineno">  349</span><span class="comment"> * @details   Configures a callback to receive compiler output. If the callback is set, no output</span></div>
+<div class="line"><span class="lineno">  350</span><span class="comment"> *            will be made to the file system (::adv_options_set_output_path will also not be used).</span></div>
+<div class="line"><span class="lineno">  351</span><span class="comment"> * @param[in] options Target options.</span></div>
+<div class="line"><span class="lineno">  352</span><span class="comment"> * @param[in] callback Callback function.</span></div>
+<div class="line"><span class="lineno">  353</span><span class="comment"> * @param[in] data Callback user data.</span></div>
+<div class="line"><span class="lineno">  354</span><span class="comment"> * @note      Typical uses of a writer are writing to memory or outputting to the console and the like.</span></div>
+<div class="line"><span class="lineno">  355</span><span class="comment"> * @sa        ::adv_options_get_writer</span></div>
+<div class="line"><span class="lineno">  356</span><span class="comment"> * @ingroup   adv_functions</span></div>
+<div class="line"><span class="lineno">  357</span><span class="comment"> */</span></div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span><a class="code hl_define" href="group__adv__macros.html#ga6c26f546282e2ea078a49f20eb34ab57">ADV_API</a> <span class="keywordtype">void</span></div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno"><a class="line" href="group__adv__functions.html#ga80ce6a0d430146d7591fb563287d3b0e">  359</a></span><a class="code hl_function" href="group__adv__functions.html#ga80ce6a0d430146d7591fb563287d3b0e">adv_options_set_writer</a>(adv_options_t options,</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>                       <a class="code hl_typedef" href="group__adv__callbacks.html#gaf9a1a759e7023307644e7c12ed5dd1aa">adv_write_callback_t</a> callback,</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>                       <a class="code hl_typedef" href="group__adv__types.html#ga4ace576104e5f793fb20f0e36ec3c9c3">adv_data_t</a> data);</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span> </div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span><span class="comment">/** @} */</span></div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span> </div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span><span class="preprocessor">#</span><span class="preprocessor">ifdef</span> __cplusplus</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>}</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span><span class="preprocessor">#</span><span class="preprocessor">endif</span></div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span> </div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span><span class="preprocessor">#</span><span class="preprocessor">endif</span> <span class="comment">/* ADV_OPTIONS_H */</span></div>
 <div class="ttc" id="agroup__adv__callbacks_html_ga87324ba65ec0da586c84740e1130a5c1"><div class="ttname"><a href="group__adv__callbacks.html#ga87324ba65ec0da586c84740e1130a5c1">adv_release_import_callback_t</a></div><div class="ttdeci">void(*) adv_release_import_callback_t(adv_source_t *source, adv_data_t data)</div><div class="ttdoc">Callback that releases a source returned by the importer.</div><div class="ttdef"><b>Definition</b> adv-options.h:85</div></div>
 <div class="ttc" id="agroup__adv__callbacks_html_gaf9a1a759e7023307644e7c12ed5dd1aa"><div class="ttname"><a href="group__adv__callbacks.html#gaf9a1a759e7023307644e7c12ed5dd1aa">adv_write_callback_t</a></div><div class="ttdeci">void(*) adv_write_callback_t(const adv_source_t *source, adv_data_t data)</div><div class="ttdoc">Callback to which the compilation result is passed.</div><div class="ttdef"><b>Definition</b> adv-options.h:97</div></div>
 <div class="ttc" id="agroup__adv__enums_html_gga61d5af4631a9f25a4d1c5ce3ef43fa8da34205957e4e21af9c6c67bc6e7364f9b"><div class="ttname"><a href="group__adv__enums.html#gga61d5af4631a9f25a4d1c5ce3ef43fa8da34205957e4e21af9c6c67bc6e7364f9b">ADV_FORMAT_TEXT</a></div><div class="ttdeci">@ ADV_FORMAT_TEXT</div><div class="ttdoc">Textual assembly source format.</div><div class="ttdef"><b>Definition</b> adv-options.h:27</div></div>
@@ -517,7 +539,9 @@ document.addEventListener('DOMContentLoaded',() => { initNavTree('adv-options_8h
 <div class="ttc" id="agroup__adv__functions_html_ga8895e5cdab9dfc39d0258d034fecf58b"><div class="ttname"><a href="group__adv__functions.html#ga8895e5cdab9dfc39d0258d034fecf58b">adv_options_get_output_path</a></div><div class="ttdeci">adv_utf8_t adv_options_get_output_path(adv_options_t options)</div><div class="ttdoc">Get output path.</div></div>
 <div class="ttc" id="agroup__adv__functions_html_ga8d870e71851bf41662fd508c7e08d7c0"><div class="ttname"><a href="group__adv__functions.html#ga8d870e71851bf41662fd508c7e08d7c0">adv_options_set_release_import</a></div><div class="ttdeci">void adv_options_set_release_import(adv_options_t options, adv_release_import_callback_t callback, adv_data_t data)</div><div class="ttdoc">Set release import callback.</div></div>
 <div class="ttc" id="agroup__adv__functions_html_ga8e8ca87f1291bf86d527c37995fe2ca3"><div class="ttname"><a href="group__adv__functions.html#ga8e8ca87f1291bf86d527c37995fe2ca3">adv_options_destroy</a></div><div class="ttdeci">void adv_options_destroy(adv_options_t options)</div><div class="ttdoc">Releases options instance.</div></div>
+<div class="ttc" id="agroup__adv__functions_html_gab37b912e5a2d2e3b6b28ee297cc8767d"><div class="ttname"><a href="group__adv__functions.html#gab37b912e5a2d2e3b6b28ee297cc8767d">adv_options_set_standard_library</a></div><div class="ttdeci">void adv_options_set_standard_library(adv_options_t options, adv_bool_t use_std)</div><div class="ttdoc">Set standard library inclusion setting.</div></div>
 <div class="ttc" id="agroup__adv__functions_html_gac600f81bf49ff1cdf60391023ff69f99"><div class="ttname"><a href="group__adv__functions.html#gac600f81bf49ff1cdf60391023ff69f99">adv_options_create</a></div><div class="ttdeci">adv_result_t adv_options_create(adv_options_t *options)</div><div class="ttdoc">Creates new options instance.</div></div>
+<div class="ttc" id="agroup__adv__functions_html_gacf75c89ed8025a0fc82ca13a2475f280"><div class="ttname"><a href="group__adv__functions.html#gacf75c89ed8025a0fc82ca13a2475f280">adv_options_get_standard_library</a></div><div class="ttdeci">adv_bool_t adv_options_get_standard_library(adv_options_t options)</div><div class="ttdoc">Get standard library inclusion setting.</div></div>
 <div class="ttc" id="agroup__adv__functions_html_gad3d9c3a6853ad86cd54e8301cb26b2ec"><div class="ttname"><a href="group__adv__functions.html#gad3d9c3a6853ad86cd54e8301cb26b2ec">adv_options_set_output_format</a></div><div class="ttdeci">void adv_options_set_output_format(adv_options_t options, adv_format_t format)</div><div class="ttdoc">Set the target output format setting.</div></div>
 <div class="ttc" id="agroup__adv__functions_html_gad7cee4b29b8bf6567de461f3b2a7de38"><div class="ttname"><a href="group__adv__functions.html#gad7cee4b29b8bf6567de461f3b2a7de38">adv_options_get_import_dirs</a></div><div class="ttdeci">void adv_options_get_import_dirs(adv_options_t options, adv_uint32_t *dir_count, adv_utf8_t *dirs)</div><div class="ttdoc">Gets the configured import directories.</div></div>
 <div class="ttc" id="agroup__adv__functions_html_gad8cf1dc19890a82fc18bbe7faf302528"><div class="ttname"><a href="group__adv__functions.html#gad8cf1dc19890a82fc18bbe7faf302528">adv_options_get_output_format</a></div><div class="ttdeci">adv_format_t adv_options_get_output_format(adv_options_t options)</div><div class="ttdoc">Get the target output format setting.</div></div>

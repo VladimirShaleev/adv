@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -166,45 +166,49 @@ Enums</h2></td></tr>
 , <br />
 &#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fab2b554ba6b47b67e38c50ad96741babc">ADV_NODE_PARAM_DECL</a> = 6
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9547524136cce5e633009c2331bb830d">ADV_NODE_IMPORT_STMT</a> = 7
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa244717da2b9d76b584dcb0b52ea5a384">ADV_NODE_STRUCT_DECL</a> = 7
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa378a9f77c931ae1fa4ca5f0f9d2478bc">ADV_NODE_IF_STMT</a> = 8
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa0b479d7964758f307be0fa64342f30a8">ADV_NODE_FIELD_DECL</a> = 8
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa37630898f2c6808a857d07e65a4e6db2">ADV_NODE_WHILE_STMT</a> = 9
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9547524136cce5e633009c2331bb830d">ADV_NODE_IMPORT_STMT</a> = 9
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faac112c79c71334334560846c2832a40a">ADV_NODE_RETURN_STMT</a> = 10
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa378a9f77c931ae1fa4ca5f0f9d2478bc">ADV_NODE_IF_STMT</a> = 10
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa5f60cc4fadaf9634064b95a752cc6823">ADV_NODE_YIELD_STMT</a> = 11
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa37630898f2c6808a857d07e65a4e6db2">ADV_NODE_WHILE_STMT</a> = 11
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa5228c27ca79668efe0ef80a203db9a00">ADV_NODE_WAIT_STMT</a> = 12
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faac112c79c71334334560846c2832a40a">ADV_NODE_RETURN_STMT</a> = 12
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa0e5082403ddceff2eecef3071aad43e1">ADV_NODE_EXPR_STMT</a> = 13
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa5f60cc4fadaf9634064b95a752cc6823">ADV_NODE_YIELD_STMT</a> = 13
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9542f807011fef4286df39be9296ed98">ADV_NODE_IMPLICIT_CAST_EXPR</a> = 14
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa5228c27ca79668efe0ef80a203db9a00">ADV_NODE_WAIT_STMT</a> = 14
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa37312242f54dbdff931212e7252b9a32">ADV_NODE_EXPLICIT_CAST_EXPR</a> = 15
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa0e5082403ddceff2eecef3071aad43e1">ADV_NODE_EXPR_STMT</a> = 15
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa2088623d271642bba73535224b837e11">ADV_NODE_IDENTIFIER_EXPR</a> = 16
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9542f807011fef4286df39be9296ed98">ADV_NODE_IMPLICIT_CAST_EXPR</a> = 16
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fad3cde02a6de3d7a3de40f191cc5e35e5">ADV_NODE_ASSIGN_EXPR</a> = 17
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa37312242f54dbdff931212e7252b9a32">ADV_NODE_EXPLICIT_CAST_EXPR</a> = 17
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faae27fb1af880236626aaaa37fed0fe9e">ADV_NODE_BINARY_EXPR</a> = 18
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa2088623d271642bba73535224b837e11">ADV_NODE_IDENTIFIER_EXPR</a> = 18
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faf317fef092091f7c9e8657f96137761e">ADV_NODE_UNARY_EXPR</a> = 19
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fad3cde02a6de3d7a3de40f191cc5e35e5">ADV_NODE_ASSIGN_EXPR</a> = 19
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9ca7bad26f025879137d0fc4e03226ab">ADV_NODE_CALL_EXPR</a> = 20
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faae27fb1af880236626aaaa37fed0fe9e">ADV_NODE_BINARY_EXPR</a> = 20
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faa0633914c6f66b5a341d6e79ed2ea13a">ADV_NODE_MEMBER_ACCESS</a> = 21
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faf317fef092091f7c9e8657f96137761e">ADV_NODE_UNARY_EXPR</a> = 21
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa1b1b21ffe1ef760b8350fb304e6adb86">ADV_NODE_BOOL_LITERAL</a> = 22
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9ca7bad26f025879137d0fc4e03226ab">ADV_NODE_CALL_EXPR</a> = 22
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faa2500cf24f4a0503aa822b8ab5e76fe8">ADV_NODE_INT_LITERAL</a> = 23
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faa0633914c6f66b5a341d6e79ed2ea13a">ADV_NODE_MEMBER_ACCESS</a> = 23
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9d4f4ca5341b203de4b5652222ccc309">ADV_NODE_FLOAT_LITERAL</a> = 24
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa1b1b21ffe1ef760b8350fb304e6adb86">ADV_NODE_BOOL_LITERAL</a> = 24
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa5962ca044cb1a84aea4078f2e0fdf7c3">ADV_NODE_STRING_LITERAL</a> = 25
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42faa2500cf24f4a0503aa822b8ab5e76fe8">ADV_NODE_INT_LITERAL</a> = 25
 , <br />
-&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa57cb863beb03f9e117d2e93302fa0111">ADV_NODE_COUNT_ENUMS</a> = 26
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa9d4f4ca5341b203de4b5652222ccc309">ADV_NODE_FLOAT_LITERAL</a> = 26
+, <br />
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa5962ca044cb1a84aea4078f2e0fdf7c3">ADV_NODE_STRING_LITERAL</a> = 27
+, <br />
+&#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42fa57cb863beb03f9e117d2e93302fa0111">ADV_NODE_COUNT_ENUMS</a> = 28
 , <br />
 &#160;&#160;<a class="el" href="#ggaed1bf1d656039f0879ab36ba78d7c42facecedd92d58839d64354f30c5d174ed3">ADV_NODE_MAX_ENUM</a> = 0x7FFFFFFF
 <br />
@@ -244,6 +248,8 @@ Enums</h2></td></tr>
 <tr class="memdesc:ga18781c6a8d2eae56b1347112cfffb704"><td class="mdescLeft">&#160;</td><td class="mdescRight">Result codes.  <a href="#ga18781c6a8d2eae56b1347112cfffb704">More...</a><br /></td></tr>
 <tr class="memitem:ga5bdfcdfed5a782eb7f56aa41afa20b9f" id="r_ga5bdfcdfed5a782eb7f56aa41afa20b9f"><td class="memItemLeft">enum &#160;</td><td class="memItemRight"><a class="el" href="#ga5bdfcdfed5a782eb7f56aa41afa20b9f">adv_status_t</a> { <br />
 &#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9faf0fadfec64b7f782dd984350a8944833">ADV_STATUS_N1001</a> = 1001
+, <br />
+&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa8cc4bf2d0477272721aaa4b1ed748382">ADV_STATUS_N1002</a> = 1002
 , <br />
 &#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fadc59500223cabd6cbef49d63e4ffb3e9">ADV_STATUS_W2001</a> = 2001
 , <br />
@@ -347,24 +353,38 @@ Enums</h2></td></tr>
 , <br />
 &#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa581fc7396a51058b12bfbced32766e7e">ADV_STATUS_E3045</a> = 3045
 , <br />
-&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa32e4fe4b8023b3fe9435c10cb914b70f">ADV_STATUS_COUNT_ENUMS</a> = 52
+&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa86c107ea3fb4f12919143e2e809a3fb9">ADV_STATUS_E3046</a> = 3046
+, <br />
+&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa2a0fddc42698ad911c3aa9e1b2f9dcff">ADV_STATUS_E3047</a> = 3047
+, <br />
+&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa2e7e0fe68294c8e97c019791a85b9f90">ADV_STATUS_E3048</a> = 3048
+, <br />
+&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fab6543c2966bd269871ef1a0d46fc4f49">ADV_STATUS_E3049</a> = 3049
+, <br />
+&#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa32e4fe4b8023b3fe9435c10cb914b70f">ADV_STATUS_COUNT_ENUMS</a> = 57
 , <br />
 &#160;&#160;<a class="el" href="#gga5bdfcdfed5a782eb7f56aa41afa20b9fa02ff751cceceb0d0ac2df23d01e622a5">ADV_STATUS_MAX_ENUM</a> = 0x7FFFFFFF
 <br />
  }</td></tr>
 <tr class="memdesc:ga5bdfcdfed5a782eb7f56aa41afa20b9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compilation statuses.  <a href="#ga5bdfcdfed5a782eb7f56aa41afa20b9f">More...</a><br /></td></tr>
 <tr class="memitem:gabc40323fca9ddc253e9acf496c71ac4c" id="r_gabc40323fca9ddc253e9acf496c71ac4c"><td class="memItemLeft">enum &#160;</td><td class="memItemRight"><a class="el" href="#gabc40323fca9ddc253e9acf496c71ac4c">adv_symbol_kind_t</a> { <br />
-&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4cabf4064c6ea87613d1a3c24530e3b7952">ADV_SYMBOL_KIND_VARIABLE</a> = 0
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca2ab8aa114aa0d4d5c2295c8ab8bfca4e">ADV_SYMBOL_KIND_PRIMITIVE</a> = 0
 , <br />
-&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca0e299ab295db964e5bde6ba59fb6c360">ADV_SYMBOL_KIND_PARAMETER</a> = 1
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca2b3532720345877edb1d0ed40ae3d437">ADV_SYMBOL_KIND_VOID</a> = 1
 , <br />
-&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca22dc41790a9e0167d0b61f501566f35e">ADV_SYMBOL_KIND_NATIVE</a> = 2
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4cabf4064c6ea87613d1a3c24530e3b7952">ADV_SYMBOL_KIND_VARIABLE</a> = 2
 , <br />
-&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca5f54ecf4d3c9b89d5eb88af71365522a">ADV_SYMBOL_KIND_FUNCTION</a> = 3
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca0e299ab295db964e5bde6ba59fb6c360">ADV_SYMBOL_KIND_PARAMETER</a> = 3
 , <br />
-&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca3a43ec10c7289d5cb8e27392830e7029">ADV_SYMBOL_KIND_STRUCT</a> = 4
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca22dc41790a9e0167d0b61f501566f35e">ADV_SYMBOL_KIND_NATIVE</a> = 4
 , <br />
-&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca3bd5b6c2cce5bbfca51dbc5e7f57ae2b">ADV_SYMBOL_KIND_COUNT_ENUMS</a> = 5
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca5f54ecf4d3c9b89d5eb88af71365522a">ADV_SYMBOL_KIND_FUNCTION</a> = 5
+, <br />
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca6c0e88c439aeb60b221799c3dd88d9cb">ADV_SYMBOL_KIND_FIELD</a> = 6
+, <br />
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4cab5e251d5278b9622a064f9e71a55d295">ADV_SYMBOL_KIND_STRUCTURE</a> = 7
+, <br />
+&#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca3bd5b6c2cce5bbfca51dbc5e7f57ae2b">ADV_SYMBOL_KIND_COUNT_ENUMS</a> = 8
 , <br />
 &#160;&#160;<a class="el" href="#ggabc40323fca9ddc253e9acf496c71ac4ca38b43cb8001031e2e0b7adff39937a34">ADV_SYMBOL_KIND_MAX_ENUM</a> = 0x7FFFFFFF
 <br />
@@ -427,6 +447,10 @@ Enums</h2></td></tr>
 <tr><td class="fieldname"><a id="ggaed1bf1d656039f0879ab36ba78d7c42fa88d8259690ac271d5cc5cf9391f775f5" name="ggaed1bf1d656039f0879ab36ba78d7c42fa88d8259690ac271d5cc5cf9391f775f5"></a>ADV_NODE_FUNCTION_DECL&#160;</td><td class="fielddoc"><p><span class="tt">function name(...)</span>: func_decl. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ggaed1bf1d656039f0879ab36ba78d7c42fab2b554ba6b47b67e38c50ad96741babc" name="ggaed1bf1d656039f0879ab36ba78d7c42fab2b554ba6b47b67e38c50ad96741babc"></a>ADV_NODE_PARAM_DECL&#160;</td><td class="fielddoc"><p><span class="tt">a: int</span>: param_decl (used in func_decl). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaed1bf1d656039f0879ab36ba78d7c42fa244717da2b9d76b584dcb0b52ea5a384" name="ggaed1bf1d656039f0879ab36ba78d7c42fa244717da2b9d76b584dcb0b52ea5a384"></a>ADV_NODE_STRUCT_DECL&#160;</td><td class="fielddoc"><p><span class="tt">struct Name { ... }</span>: struct_decl. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaed1bf1d656039f0879ab36ba78d7c42fa0b479d7964758f307be0fa64342f30a8" name="ggaed1bf1d656039f0879ab36ba78d7c42fa0b479d7964758f307be0fa64342f30a8"></a>ADV_NODE_FIELD_DECL&#160;</td><td class="fielddoc"><p><span class="tt">name: type</span>: field_decl. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ggaed1bf1d656039f0879ab36ba78d7c42fa9547524136cce5e633009c2331bb830d" name="ggaed1bf1d656039f0879ab36ba78d7c42fa9547524136cce5e633009c2331bb830d"></a>ADV_NODE_IMPORT_STMT&#160;</td><td class="fielddoc"><p><span class="tt">import "file"</span>: import_stmt (path). </p>
 </td></tr>
@@ -527,6 +551,8 @@ Enums</h2></td></tr>
 <p>This enumeration contains warnings and errors that may occur during compilation. </p>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9faf0fadfec64b7f782dd984350a8944833" name="gga5bdfcdfed5a782eb7f56aa41afa20b9faf0fadfec64b7f782dd984350a8944833"></a>ADV_STATUS_N1001&#160;</td><td class="fielddoc"><p>Symbol name shadowing in an outer scope. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa8cc4bf2d0477272721aaa4b1ed748382" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa8cc4bf2d0477272721aaa4b1ed748382"></a>ADV_STATUS_N1002&#160;</td><td class="fielddoc"><p>Structure has no fields. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fadc59500223cabd6cbef49d63e4ffb3e9" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fadc59500223cabd6cbef49d63e4ffb3e9"></a>ADV_STATUS_W2001&#160;</td><td class="fielddoc"><p>Value out of range. </p>
 </td></tr>
@@ -630,6 +656,14 @@ Enums</h2></td></tr>
 </td></tr>
 <tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa581fc7396a51058b12bfbced32766e7e" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa581fc7396a51058b12bfbced32766e7e"></a>ADV_STATUS_E3045&#160;</td><td class="fielddoc"><p>Unknown return type in declaration of native function. </p>
 </td></tr>
+<tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa86c107ea3fb4f12919143e2e809a3fb9" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa86c107ea3fb4f12919143e2e809a3fb9"></a>ADV_STATUS_E3046&#160;</td><td class="fielddoc"><p>Structure contains a recursive field layout. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa2a0fddc42698ad911c3aa9e1b2f9dcff" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa2a0fddc42698ad911c3aa9e1b2f9dcff"></a>ADV_STATUS_E3047&#160;</td><td class="fielddoc"><p>Symbol requires too many stack slots. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa2e7e0fe68294c8e97c019791a85b9f90" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa2e7e0fe68294c8e97c019791a85b9f90"></a>ADV_STATUS_E3048&#160;</td><td class="fielddoc"><p>Unknown type in structure field declaration. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fab6543c2966bd269871ef1a0d46fc4f49" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fab6543c2966bd269871ef1a0d46fc4f49"></a>ADV_STATUS_E3049&#160;</td><td class="fielddoc"><p>Type does not contain the requested field. </p>
+</td></tr>
 <tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa32e4fe4b8023b3fe9435c10cb914b70f" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa32e4fe4b8023b3fe9435c10cb914b70f"></a>ADV_STATUS_COUNT_ENUMS&#160;</td><td class="fielddoc"><p>Count of constants in the enumeration. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="gga5bdfcdfed5a782eb7f56aa41afa20b9fa02ff751cceceb0d0ac2df23d01e622a5" name="gga5bdfcdfed5a782eb7f56aa41afa20b9fa02ff751cceceb0d0ac2df23d01e622a5"></a>ADV_STATUS_MAX_ENUM&#160;</td><td class="fielddoc"><p>Max value of enum (not used). </p>
@@ -653,7 +687,11 @@ Enums</h2></td></tr>
 <p>Symbol kinds. </p>
 <p>Identifies the role of a symbol declared in the source code. </p>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4cabf4064c6ea87613d1a3c24530e3b7952" name="ggabc40323fca9ddc253e9acf496c71ac4cabf4064c6ea87613d1a3c24530e3b7952"></a>ADV_SYMBOL_KIND_VARIABLE&#160;</td><td class="fielddoc"><p>Variable symbol. </p>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca2ab8aa114aa0d4d5c2295c8ab8bfca4e" name="ggabc40323fca9ddc253e9acf496c71ac4ca2ab8aa114aa0d4d5c2295c8ab8bfca4e"></a>ADV_SYMBOL_KIND_PRIMITIVE&#160;</td><td class="fielddoc"><p>Primitive type symbol (e.g., bool, int, float, string). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca2b3532720345877edb1d0ed40ae3d437" name="ggabc40323fca9ddc253e9acf496c71ac4ca2b3532720345877edb1d0ed40ae3d437"></a>ADV_SYMBOL_KIND_VOID&#160;</td><td class="fielddoc"><p>Void type symbol. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4cabf4064c6ea87613d1a3c24530e3b7952" name="ggabc40323fca9ddc253e9acf496c71ac4cabf4064c6ea87613d1a3c24530e3b7952"></a>ADV_SYMBOL_KIND_VARIABLE&#160;</td><td class="fielddoc"><p>Variable symbol. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca0e299ab295db964e5bde6ba59fb6c360" name="ggabc40323fca9ddc253e9acf496c71ac4ca0e299ab295db964e5bde6ba59fb6c360"></a>ADV_SYMBOL_KIND_PARAMETER&#160;</td><td class="fielddoc"><p>Function parameter symbol. </p>
 </td></tr>
@@ -661,7 +699,9 @@ Enums</h2></td></tr>
 </td></tr>
 <tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca5f54ecf4d3c9b89d5eb88af71365522a" name="ggabc40323fca9ddc253e9acf496c71ac4ca5f54ecf4d3c9b89d5eb88af71365522a"></a>ADV_SYMBOL_KIND_FUNCTION&#160;</td><td class="fielddoc"><p>Function symbol. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca3a43ec10c7289d5cb8e27392830e7029" name="ggabc40323fca9ddc253e9acf496c71ac4ca3a43ec10c7289d5cb8e27392830e7029"></a>ADV_SYMBOL_KIND_STRUCT&#160;</td><td class="fielddoc"><p>Struct symbol. </p>
+<tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca6c0e88c439aeb60b221799c3dd88d9cb" name="ggabc40323fca9ddc253e9acf496c71ac4ca6c0e88c439aeb60b221799c3dd88d9cb"></a>ADV_SYMBOL_KIND_FIELD&#160;</td><td class="fielddoc"><p>Field symbol. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4cab5e251d5278b9622a064f9e71a55d295" name="ggabc40323fca9ddc253e9acf496c71ac4cab5e251d5278b9622a064f9e71a55d295"></a>ADV_SYMBOL_KIND_STRUCTURE&#160;</td><td class="fielddoc"><p>Struct symbol. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="ggabc40323fca9ddc253e9acf496c71ac4ca3bd5b6c2cce5bbfca51dbc5e7f57ae2b" name="ggabc40323fca9ddc253e9acf496c71ac4ca3bd5b6c2cce5bbfca51dbc5e7f57ae2b"></a>ADV_SYMBOL_KIND_COUNT_ENUMS&#160;</td><td class="fielddoc"><p>Count of constants in the enumeration. </p>
 </td></tr>

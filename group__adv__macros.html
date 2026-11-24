@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -164,9 +164,9 @@ Version Components.</h2></td></tr>
 </td></tr>
 <tr class="memitem:ga4fc988c7ce904b20696016cff9ced4e8" id="r_ga4fc988c7ce904b20696016cff9ced4e8"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#ga4fc988c7ce904b20696016cff9ced4e8">ADV_VERSION_MAJOR</a>&#160;&#160;&#160;0</td></tr>
 <tr class="memdesc:ga4fc988c7ce904b20696016cff9ced4e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Major version number (API-breaking changes).  <br /></td></tr>
-<tr class="memitem:gafa3428818a0e57a30c6254a717c1f0d9" id="r_gafa3428818a0e57a30c6254a717c1f0d9"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#gafa3428818a0e57a30c6254a717c1f0d9">ADV_VERSION_MINOR</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memitem:gafa3428818a0e57a30c6254a717c1f0d9" id="r_gafa3428818a0e57a30c6254a717c1f0d9"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#gafa3428818a0e57a30c6254a717c1f0d9">ADV_VERSION_MINOR</a>&#160;&#160;&#160;2</td></tr>
 <tr class="memdesc:gafa3428818a0e57a30c6254a717c1f0d9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minor version number (backwards-compatible additions).  <br /></td></tr>
-<tr class="memitem:gaa9fd182d199e34f4dbe5ad9598dd5475" id="r_gaa9fd182d199e34f4dbe5ad9598dd5475"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#gaa9fd182d199e34f4dbe5ad9598dd5475">ADV_VERSION_MICRO</a>&#160;&#160;&#160;0</td></tr>
+<tr class="memitem:gaa9fd182d199e34f4dbe5ad9598dd5475" id="r_gaa9fd182d199e34f4dbe5ad9598dd5475"><td class="memItemLeft">#define&#160;</td><td class="memItemRight"><a class="el" href="#gaa9fd182d199e34f4dbe5ad9598dd5475">ADV_VERSION_MICRO</a>&#160;&#160;&#160;1</td></tr>
 <tr class="memdesc:gaa9fd182d199e34f4dbe5ad9598dd5475"><td class="mdescLeft">&#160;</td><td class="mdescRight">Micro version number (bug fixes and patches).  <br /></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-member-group" class="groupheader"><a id="member-group" name="member-group"></a>
@@ -357,7 +357,7 @@ Current Version.</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define ADV_VERSION_MICRO&#160;&#160;&#160;0</td>
+          <td class="memname">#define ADV_VERSION_MICRO&#160;&#160;&#160;1</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -376,7 +376,7 @@ Current Version.</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define ADV_VERSION_MINOR&#160;&#160;&#160;1</td>
+          <td class="memname">#define ADV_VERSION_MINOR&#160;&#160;&#160;2</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -406,7 +406,7 @@ Current Version.</h2></td></tr>
 <div class="ttc" id="agroup__adv__macros_html_ga1e5c5b99c1bb737ca2ef5256c89d0197"><div class="ttname"><a href="#ga1e5c5b99c1bb737ca2ef5256c89d0197">ADV_VERSION_STRINGIZE</a></div><div class="ttdeci">#define ADV_VERSION_STRINGIZE(major, minor, micro)</div><div class="ttdoc">Creates version string from components.</div><div class="ttdef"><b>Definition</b> adv-version.h:97</div></div>
 </div><!-- fragment -->
 <p>Library version as human-readable string. </p>
-<p>Version string in "MAJOR.MINOR.MICRO" format (e.g., "1.1.0"). Use <a class="el" href="#ga1fe09610d53f1cb0e1e580581504f5f2" title="Encoded library version as integer.">ADV_VERSION</a> for numeric comparisons. </p><dl class="section see"><dt>See also</dt><dd><a class="el" href="#ga1fe09610d53f1cb0e1e580581504f5f2" title="Encoded library version as integer.">ADV_VERSION</a> </dd></dl>
+<p>Version string in "MAJOR.MINOR.MICRO" format (e.g., "1.2.1"). Use <a class="el" href="#ga1fe09610d53f1cb0e1e580581504f5f2" title="Encoded library version as integer.">ADV_VERSION</a> for numeric comparisons. </p><dl class="section see"><dt>See also</dt><dd><a class="el" href="#ga1fe09610d53f1cb0e1e580581504f5f2" title="Encoded library version as integer.">ADV_VERSION</a> </dd></dl>
 
 </div>
 </div>
@@ -437,7 +437,7 @@ Current Version.</h2></td></tr>
 <div class="ttc" id="agroup__adv__macros_html_ga0f475abb472a9e22a224aa7e9a038559"><div class="ttname"><a href="#ga0f475abb472a9e22a224aa7e9a038559">ADV_VERSION_STRINGIZE_</a></div><div class="ttdeci">#define ADV_VERSION_STRINGIZE_(major, minor, micro)</div><div class="ttdoc">Internal macro for string version generation.</div><div class="ttdef"><b>Definition</b> adv-version.h:85</div></div>
 </div><!-- fragment -->
 <p>Creates version string from components. </p>
-<p>Generates a string literal from version components (e.g., 0, 1, 0 -&gt; "0.1.0"). </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Generates a string literal from version components (e.g., 0, 2, 1 -&gt; "0.2.1"). </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">major</td><td>Major version number. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">minor</td><td>Minor version number. </td></tr>
@@ -476,7 +476,7 @@ Current Version.</h2></td></tr>
 <b>Value:</b><div class="fragment"><div class="line"><span class="preprocessor">#major &quot;.&quot; #minor &quot;.&quot; #micro</span></div>
 </div><!-- fragment -->
 <p>Internal macro for string version generation. </p>
-<p>Helper macro that stringizes version components (e.g., 0, 1, 0 -&gt; "0.1.0"). </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Helper macro that stringizes version components (e.g., 0, 2, 1 -&gt; "0.2.1"). </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">major</td><td>Major version number. </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">minor</td><td>Minor version number. </td></tr>

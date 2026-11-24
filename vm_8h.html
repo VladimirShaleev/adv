@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -162,6 +162,12 @@ document.addEventListener('DOMContentLoaded',() => { initNavTree('vm_8h.html',''
 Data Structures</h2></td></tr>
 <tr class="memitem:vm_5Fbytecode_5Ft" id="r_vm_5Fbytecode_5Ft"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structvm__bytecode__t.html">vm_bytecode_t</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Raw bytecode block.  <a href="structvm__bytecode__t.html#details">More...</a><br /></td></tr>
+<tr class="memitem:vm_5Freflect_5Ftype_5Ft" id="r_vm_5Freflect_5Ftype_5Ft"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structvm__reflect__type__t.html">vm_reflect_type_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reference to a primitive value type or a reflected structure.  <a href="structvm__reflect__type__t.html#details">More...</a><br /></td></tr>
+<tr class="memitem:vm_5Freflect_5Ffield_5Ft" id="r_vm_5Freflect_5Ffield_5Ft"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structvm__reflect__field__t.html">vm_reflect_field_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Field information for a reflected structure.  <a href="structvm__reflect__field__t.html#details">More...</a><br /></td></tr>
+<tr class="memitem:vm_5Freflect_5Fstruct_5Ft" id="r_vm_5Freflect_5Fstruct_5Ft"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structvm__reflect__struct__t.html">vm_reflect_struct_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reflection information for a structure.  <a href="structvm__reflect__struct__t.html#details">More...</a><br /></td></tr>
 <tr class="memitem:vm_5Freflect_5Fparam_5Ft" id="r_vm_5Freflect_5Fparam_5Ft"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structvm__reflect__param__t.html">vm_reflect_param_t</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parameter information for a registered native function.  <a href="structvm__reflect__param__t.html#details">More...</a><br /></td></tr>
 <tr class="memitem:vm_5Freflect_5Ffunc_5Ft" id="r_vm_5Freflect_5Ffunc_5Ft"><td class="memItemLeft">struct &#160;</td><td class="memItemRight"><a class="el" href="structvm__reflect__func__t.html">vm_reflect_func_t</a></td></tr>
@@ -169,6 +175,8 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-typedef-members" class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
+<tr class="memitem:ga2ef611df6fe1f8252928e1fd3c628337" id="r_ga2ef611df6fe1f8252928e1fd3c628337"><td class="memItemLeft">typedef struct vm_reflect_struct_t&#160;</td><td class="memItemRight"><a class="el" href="group__vm__types.html#ga2ef611df6fe1f8252928e1fd3c628337">vm_reflect_struct_t</a></td></tr>
+<tr class="memdesc:ga2ef611df6fe1f8252928e1fd3c628337"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forward declaration of a reflect struct.  <br /></td></tr>
 <tr class="memitem:ga3090d11a30e4580fdef3640380685efc" id="r_ga3090d11a30e4580fdef3640380685efc"><td class="memItemLeft">typedef void(*)&#160;</td><td class="memItemRight"><a class="el" href="group__vm__callbacks.html#ga3090d11a30e4580fdef3640380685efc">vm_native_callback_t</a>(<a class="el" href="group__vm__types.html#gad661febe2d630023be99d6de0cca07ae">vm_t</a> vm, <a class="el" href="structvm__thread__h.html">vm_thread_h</a> thread, <a class="el" href="structvm__native__h.html">vm_native_h</a> native, <a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a> arg_count, <a class="el" href="group__vm__types.html#gadf29a3b183cb256b0ea18a8332e10f8e">vm_data_t</a> data)</td></tr>
 <tr class="memdesc:ga3090d11a30e4580fdef3640380685efc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Native callback invoked by the VM.  <br /></td></tr>
 <tr class="memitem:gaa89b340462131a6d5c7a32d763a91abe" id="r_gaa89b340462131a6d5c7a32d763a91abe"><td class="memItemLeft">typedef <a class="el" href="structvm__bytecode__t.html">vm_bytecode_t</a> *(*)&#160;</td><td class="memItemRight"><a class="el" href="group__vm__callbacks.html#gaa89b340462131a6d5c7a32d763a91abe">vm_import_callback_t</a>(<a class="el" href="group__vm__types.html#gad661febe2d630023be99d6de0cca07ae">vm_t</a> vm, <a class="el" href="group__vm__types.html#ga09c78c0f3559a5ab35d15540e8597630">vm_utf8_t</a> module, <a class="el" href="group__vm__types.html#gadf29a3b183cb256b0ea18a8332e10f8e">vm_data_t</a> data)</td></tr>

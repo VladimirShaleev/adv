@@ -13,6 +13,7 @@ var adv_result_8h =
     ] ],
     [ "adv_status_t", "group__adv__enums.html#ga5bdfcdfed5a782eb7f56aa41afa20b9f", [
       [ "ADV_STATUS_N1001", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9faf0fadfec64b7f782dd984350a8944833", null ],
+      [ "ADV_STATUS_N1002", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa8cc4bf2d0477272721aaa4b1ed748382", null ],
       [ "ADV_STATUS_W2001", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fadc59500223cabd6cbef49d63e4ffb3e9", null ],
       [ "ADV_STATUS_W2002", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9faa8e46b4eda2c490f7e54dbd03b77bd6a", null ],
       [ "ADV_STATUS_W2003", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa69cdaefcf148006495f57b45d717505d", null ],
@@ -64,6 +65,10 @@ var adv_result_8h =
       [ "ADV_STATUS_E3043", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa6c339b143aec9ae656a4c89c56fbefb2", null ],
       [ "ADV_STATUS_E3044", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fae8098dbb70f0918964c2800177e8efc0", null ],
       [ "ADV_STATUS_E3045", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa581fc7396a51058b12bfbced32766e7e", null ],
+      [ "ADV_STATUS_E3046", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa86c107ea3fb4f12919143e2e809a3fb9", null ],
+      [ "ADV_STATUS_E3047", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa2a0fddc42698ad911c3aa9e1b2f9dcff", null ],
+      [ "ADV_STATUS_E3048", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa2e7e0fe68294c8e97c019791a85b9f90", null ],
+      [ "ADV_STATUS_E3049", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fab6543c2966bd269871ef1a0d46fc4f49", null ],
       [ "ADV_STATUS_COUNT_ENUMS", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa32e4fe4b8023b3fe9435c10cb914b70f", null ],
       [ "ADV_STATUS_MAX_ENUM", "group__adv__enums.html#gga5bdfcdfed5a782eb7f56aa41afa20b9fa02ff751cceceb0d0ac2df23d01e622a5", null ]
     ] ],

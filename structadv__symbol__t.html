@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -161,28 +161,31 @@ Data Fields</h2></td></tr>
 <tr class="memdesc:aa5d601790395b276adda674ab0d4e93a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Interned symbol name string handle. <br /></td></tr>
 <tr class="memitem:ab0868e62ec766d26b695bb51770cc566" id="r_ab0868e62ec766d26b695bb51770cc566"><td class="memItemLeft"><a id="ab0868e62ec766d26b695bb51770cc566" name="ab0868e62ec766d26b695bb51770cc566"></a>
 <a class="el" href="group__adv__enums.html#gabc40323fca9ddc253e9acf496c71ac4c">adv_symbol_kind_t</a>&#160;</td><td class="memItemRight"><b>kind</b></td></tr>
-<tr class="memdesc:ab0868e62ec766d26b695bb51770cc566"><td class="mdescLeft">&#160;</td><td class="mdescRight">Symbol kind (variable, parameter, function, struct). <br /></td></tr>
-<tr class="memitem:ae038179d9817dbeb7c34fed9a08b22c6" id="r_ae038179d9817dbeb7c34fed9a08b22c6"><td class="memItemLeft"><a id="ae038179d9817dbeb7c34fed9a08b22c6" name="ae038179d9817dbeb7c34fed9a08b22c6"></a>
-<a class="el" href="group__vm__enums.html#ga207d08b1012e0b7db1081f714dae32a9">vm_value_type_t</a>&#160;</td><td class="memItemRight"><b>type</b></td></tr>
-<tr class="memdesc:ae038179d9817dbeb7c34fed9a08b22c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolved type of the symbol. <br /></td></tr>
+<tr class="memdesc:ab0868e62ec766d26b695bb51770cc566"><td class="mdescLeft">&#160;</td><td class="mdescRight">Symbol kind (variable, parameter, function, field, structure). <br /></td></tr>
+<tr class="memitem:ac2524f0574dbc4f9389d031fea256bfe" id="r_ac2524f0574dbc4f9389d031fea256bfe"><td class="memItemLeft"><a id="ac2524f0574dbc4f9389d031fea256bfe" name="ac2524f0574dbc4f9389d031fea256bfe"></a>
+<a class="el" href="group__vm__enums.html#ga207d08b1012e0b7db1081f714dae32a9">vm_value_type_t</a>&#160;</td><td class="memItemRight"><b>primitive_type</b></td></tr>
+<tr class="memdesc:ac2524f0574dbc4f9389d031fea256bfe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Primitive type of the symbol (for primitive symbols). <br /></td></tr>
+<tr class="memitem:a842fc155c4dbd9eb5bee65770195fe11" id="r_a842fc155c4dbd9eb5bee65770195fe11"><td class="memItemLeft"><a id="a842fc155c4dbd9eb5bee65770195fe11" name="a842fc155c4dbd9eb5bee65770195fe11"></a>
+<a class="el" href="structadv__symbol__h.html">adv_symbol_h</a>&#160;</td><td class="memItemRight"><b>type</b></td></tr>
+<tr class="memdesc:a842fc155c4dbd9eb5bee65770195fe11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolved type of the symbol. <br /></td></tr>
 <tr class="memitem:a257c3e0888a4b1e1f920ed444a77bbba" id="r_a257c3e0888a4b1e1f920ed444a77bbba"><td class="memItemLeft"><a id="a257c3e0888a4b1e1f920ed444a77bbba" name="a257c3e0888a4b1e1f920ed444a77bbba"></a>
 <a class="el" href="structadv__location__t.html">adv_location_t</a>&#160;</td><td class="memItemRight"><b>location</b></td></tr>
 <tr class="memdesc:a257c3e0888a4b1e1f920ed444a77bbba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Source location of the symbol declaration. <br /></td></tr>
-<tr class="memitem:a23ad8edfc6002d737ea12d49e91a6311" id="r_a23ad8edfc6002d737ea12d49e91a6311"><td class="memItemLeft"><a id="a23ad8edfc6002d737ea12d49e91a6311" name="a23ad8edfc6002d737ea12d49e91a6311"></a>
-const <a class="el" href="structadv__symbol__h.html">adv_symbol_h</a> *&#160;</td><td class="memItemRight"><b>params</b></td></tr>
-<tr class="memdesc:a23ad8edfc6002d737ea12d49e91a6311"><td class="mdescLeft">&#160;</td><td class="mdescRight">Array of parameter symbols (for functions). <br /></td></tr>
-<tr class="memitem:ae9bd1fc3f37687052aa3dc18d5a68ecb" id="r_ae9bd1fc3f37687052aa3dc18d5a68ecb"><td class="memItemLeft"><a id="ae9bd1fc3f37687052aa3dc18d5a68ecb" name="ae9bd1fc3f37687052aa3dc18d5a68ecb"></a>
-<a class="el" href="group__adv__types.html#ga9205b4c78b31d7d0c27dd9106d5da7ac">adv_uint16_t</a>&#160;</td><td class="memItemRight"><b>param_count</b></td></tr>
-<tr class="memdesc:ae9bd1fc3f37687052aa3dc18d5a68ecb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of parameters (for functions). <br /></td></tr>
+<tr class="memitem:a2650ba6d75ded1c657fe9aab95f5c858" id="r_a2650ba6d75ded1c657fe9aab95f5c858"><td class="memItemLeft"><a id="a2650ba6d75ded1c657fe9aab95f5c858" name="a2650ba6d75ded1c657fe9aab95f5c858"></a>
+const <a class="el" href="structadv__symbol__h.html">adv_symbol_h</a> *&#160;</td><td class="memItemRight"><b>children</b></td></tr>
+<tr class="memdesc:a2650ba6d75ded1c657fe9aab95f5c858"><td class="mdescLeft">&#160;</td><td class="mdescRight">Array of child symbols (function parameters or structure fields). <br /></td></tr>
+<tr class="memitem:a57415e9ce2924379097a536e4f41e55c" id="r_a57415e9ce2924379097a536e4f41e55c"><td class="memItemLeft"><a id="a57415e9ce2924379097a536e4f41e55c" name="a57415e9ce2924379097a536e4f41e55c"></a>
+<a class="el" href="group__adv__types.html#ga9205b4c78b31d7d0c27dd9106d5da7ac">adv_uint16_t</a>&#160;</td><td class="memItemRight"><b>child_count</b></td></tr>
+<tr class="memdesc:a57415e9ce2924379097a536e4f41e55c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of child symbols. <br /></td></tr>
 <tr class="memitem:aa8c605143dc2237f3de63ab4ebdd29b4" id="r_aa8c605143dc2237f3de63ab4ebdd29b4"><td class="memItemLeft"><a id="aa8c605143dc2237f3de63ab4ebdd29b4" name="aa8c605143dc2237f3de63ab4ebdd29b4"></a>
 <a class="el" href="structadv__scope__h.html">adv_scope_h</a>&#160;</td><td class="memItemRight"><b>scope</b></td></tr>
 <tr class="memdesc:aa8c605143dc2237f3de63ab4ebdd29b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Handle to the scope in which the symbol is defined. <br /></td></tr>
 <tr class="memitem:acb97007f657435b587ce478ec8820b7d" id="r_acb97007f657435b587ce478ec8820b7d"><td class="memItemLeft"><a id="acb97007f657435b587ce478ec8820b7d" name="acb97007f657435b587ce478ec8820b7d"></a>
 <a class="el" href="group__adv__types.html#ga9205b4c78b31d7d0c27dd9106d5da7ac">adv_uint16_t</a>&#160;</td><td class="memItemRight"><b>slot_index</b></td></tr>
 <tr class="memdesc:acb97007f657435b587ce478ec8820b7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the symbol in the local frame or global table. <br /></td></tr>
-<tr class="memitem:a38df295ca565afd47de7b709ec93a0a8" id="r_a38df295ca565afd47de7b709ec93a0a8"><td class="memItemLeft"><a id="a38df295ca565afd47de7b709ec93a0a8" name="a38df295ca565afd47de7b709ec93a0a8"></a>
-<a class="el" href="group__adv__types.html#ga9205b4c78b31d7d0c27dd9106d5da7ac">adv_uint16_t</a>&#160;</td><td class="memItemRight"><b>frame_slot_count</b></td></tr>
-<tr class="memdesc:a38df295ca565afd47de7b709ec93a0a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of slots used by the symbol (for functions). <br /></td></tr>
+<tr class="memitem:a66aafd7ba546f7f94744a816ef8cae64" id="r_a66aafd7ba546f7f94744a816ef8cae64"><td class="memItemLeft"><a id="a66aafd7ba546f7f94744a816ef8cae64" name="a66aafd7ba546f7f94744a816ef8cae64"></a>
+<a class="el" href="group__adv__types.html#ga9205b4c78b31d7d0c27dd9106d5da7ac">adv_uint16_t</a>&#160;</td><td class="memItemRight"><b>slot_count</b></td></tr>
+<tr class="memdesc:a66aafd7ba546f7f94744a816ef8cae64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of slots used by the symbol. <br /></td></tr>
 <tr class="memitem:a104a97192fd77c1e89e470953f5013a1" id="r_a104a97192fd77c1e89e470953f5013a1"><td class="memItemLeft"><a id="a104a97192fd77c1e89e470953f5013a1" name="a104a97192fd77c1e89e470953f5013a1"></a>
 <a class="el" href="group__adv__types.html#ga19e7a6555c7263c8320443558d6197bd">adv_bool_t</a>&#160;</td><td class="memItemRight"><b>is_global</b></td></tr>
 <tr class="memdesc:a104a97192fd77c1e89e470953f5013a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag indicating whether the symbol is globally scoped. <br /></td></tr>

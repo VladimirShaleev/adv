@@ -61,7 +61,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="logo.svg"/></td>
   <td id="projectalign">
-   <div id="projectname">adv<span id="projectnumber">&#160;0.1.0</span>
+   <div id="projectname">adv<span id="projectnumber">&#160;0.2.1</span>
    </div>
    <div id="projectbrief">Adventure Scripting Language</div>
   </td>
@@ -162,6 +162,12 @@ Data Fields</h2></td></tr>
 <tr class="memitem:a0d3ce3b2bafbfdd3f9f8dbd43afeb413" id="r_a0d3ce3b2bafbfdd3f9f8dbd43afeb413"><td class="memItemLeft"><a id="a0d3ce3b2bafbfdd3f9f8dbd43afeb413" name="a0d3ce3b2bafbfdd3f9f8dbd43afeb413"></a>
 <a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>root_frame_slots</b></td></tr>
 <tr class="memdesc:a0d3ce3b2bafbfdd3f9f8dbd43afeb413"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of stack slots required by the module's root frame. <br /></td></tr>
+<tr class="memitem:aba204c97a173e08da9b13c5934cf0c9a" id="r_aba204c97a173e08da9b13c5934cf0c9a"><td class="memItemLeft"><a id="aba204c97a173e08da9b13c5934cf0c9a" name="aba204c97a173e08da9b13c5934cf0c9a"></a>
+<a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>struct_count</b></td></tr>
+<tr class="memdesc:aba204c97a173e08da9b13c5934cf0c9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of exported structures. <br /></td></tr>
+<tr class="memitem:a29b7555d243a217406c422f043219ea3" id="r_a29b7555d243a217406c422f043219ea3"><td class="memItemLeft"><a id="a29b7555d243a217406c422f043219ea3" name="a29b7555d243a217406c422f043219ea3"></a>
+<a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>struct_size</b></td></tr>
+<tr class="memdesc:a29b7555d243a217406c422f043219ea3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size in bytes of the structure export block. <br /></td></tr>
 <tr class="memitem:aabb5c620d54d030ca9e9e15e7f8f0922" id="r_aabb5c620d54d030ca9e9e15e7f8f0922"><td class="memItemLeft"><a id="aabb5c620d54d030ca9e9e15e7f8f0922" name="aabb5c620d54d030ca9e9e15e7f8f0922"></a>
 <a class="el" href="group__vm__types.html#gac078ebb5edb956d3b72a10ccd46b6efc">vm_uint16_t</a>&#160;</td><td class="memItemRight"><b>var_count</b></td></tr>
 <tr class="memdesc:aabb5c620d54d030ca9e9e15e7f8f0922"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of exported variables. <br /></td></tr>
@@ -183,7 +189,7 @@ Data Fields</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Export table metadata for the script symbol block. </p>
-<p>Stores the number and byte size of exported variables and functions. Values are kept in little-endian byte order and are converted with vm_swap_script_export when read on big-endian hosts. </p>
+<p>Stores the number and byte size of exported structures, variables, functions, and native functions. Values are kept in little-endian byte order and converted to host byte order by the script readers. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>vm/<a class="el" href="vm-script_8h_source.html">vm-script.h</a></li>
 </ul>
