@@ -59,9 +59,8 @@ public:
 
     [[nodiscard]] bool parseAdvt() {
         assert(filename());
-        auto size = _stream->tellg();
         _stream->seekg(0, std::ios::end);
-        size = _stream->tellg() - size;
+        auto size = _stream->tellg();
         _stream->seekg(0, std::ios::beg);
 
         std::vector<char> data;
@@ -94,6 +93,21 @@ private:
     public:
         MemoryBuffer(const char* data, size_t size) {
             setg(const_cast<char*>(data), const_cast<char*>(data), const_cast<char*>(data) + size);
+        }
+
+        pos_type seekoff(off_type offset, std::ios_base::seekdir dir, std::ios_base::openmode) override {
+            switch (dir) {
+            case std::ios_base::beg:
+                setg(eback(), eback() + offset, egptr());
+                break;
+            case std::ios_base::cur:
+                setg(eback(), gptr() + offset, egptr());
+                break;
+            case std::ios_base::end:
+                setg(eback(), egptr() - offset, egptr());
+                break;
+            }
+            return pos_type{gptr() - eback()};
         }
     };
 

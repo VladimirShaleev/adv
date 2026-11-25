@@ -28,6 +28,50 @@ void verifyReturnedStructureField(vm_t vm, vm_thread_h thread, vm_native_h, vm_u
     }
 }
 
+TEST(Compiler, GeneratesTextForRecursiveNestedFunctionAfterImport) {
+    constexpr char sourceText[] =
+        "import \"dependency.adv\";\n"
+        "function outer() {\n"
+        "    var captured: int = 0;\n"
+        "    function inner(remaining: int) {\n"
+        "        if (remaining > 0) {\n"
+        "            captured = captured + 1;\n"
+        "            inner(remaining - 1);\n"
+        "        }\n"
+        "    }\n"
+        "    inner(2);\n"
+        "}\n"
+        "outer();\n";
+    constexpr char importedSourceText[] = "var imported: int;\n";
+    adv_source_t sources[] = {
+        {"test.adv", sourceText, static_cast<adv_uint32_t>(sizeof(sourceText) - 1)},
+        {"dependency.adv", importedSourceText, static_cast<adv_uint32_t>(sizeof(importedSourceText) - 1)}};
+
+    adv_options_t options{};
+    ASSERT_EQ(adv_options_create(&options), ADV_RESULT_SUCCESS);
+    adv_options_set_standard_library(options, 0);
+    adv_options_set_output_format(options, ADV_FORMAT_TEXT);
+
+    std::string output;
+    adv_options_set_writer(options, captureOutput, &output);
+
+    adv_compiler_t compiler{};
+    const auto createResult = adv_compiler_create(&compiler);
+    if (createResult != ADV_RESULT_SUCCESS) {
+        adv_options_destroy(options);
+        FAIL() << adv_result_to_string(createResult);
+    }
+
+    const auto compileResult = adv_compiler_compile(compiler, nullptr, 2, sources, options, nullptr);
+    adv_compiler_destroy(compiler);
+    adv_options_destroy(options);
+
+    ASSERT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
+    EXPECT_NE(output.find("import dependency"), std::string::npos);
+    EXPECT_NE(output.find(".function @function"), std::string::npos);
+    EXPECT_NE(output.find("call @function"), std::string::npos);
+}
+
 TEST(Compiler, ExportsOnlyGlobalStructures) {
     constexpr char sourceText[] =
         "struct Child { value: int; }\n"
@@ -59,6 +103,78 @@ TEST(Compiler, ExportsOnlyGlobalStructures) {
     ASSERT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
     EXPECT_NE(output.find("struct Global { child: Child; }"), std::string::npos);
     EXPECT_EQ(output.find("struct Local"), std::string::npos);
+}
+
+TEST(Compiler, FlattensAssignmentsToStructsImportedFromBinary) {
+    constexpr char dependencyText[] = "struct Point { x: float; y: float; }\n";
+    adv_source_t dependencySource{
+        "geometry.adv", dependencyText, static_cast<adv_uint32_t>(sizeof(dependencyText) - 1)};
+
+    adv_options_t options{};
+    ASSERT_EQ(adv_options_create(&options), ADV_RESULT_SUCCESS);
+    adv_options_set_standard_library(options, 0);
+
+    std::string dependencyBytecode;
+    adv_options_set_writer(options, captureOutput, &dependencyBytecode);
+
+    adv_compiler_t compiler{};
+    const auto createResult = adv_compiler_create(&compiler);
+    if (createResult != ADV_RESULT_SUCCESS) {
+        adv_options_destroy(options);
+        FAIL() << adv_result_to_string(createResult);
+    }
+
+    adv_options_set_output_format(options, ADV_FORMAT_TEXT);
+    const auto dependencyResult = adv_compiler_compile(compiler, nullptr, 1, &dependencySource, options, nullptr);
+    ASSERT_EQ(dependencyResult, ADV_RESULT_SUCCESS) << adv_result_to_string(dependencyResult);
+
+    constexpr char operationsText[] =
+        "import \"geometry.adt\";\n"
+        "function add_points(origin: Point, offset: Point): Point { return origin; }\n"
+        "function print_point(point: Point) {}\n";
+    adv_source_t operationsSources[] = {
+        {"operations.adv", operationsText, static_cast<adv_uint32_t>(sizeof(operationsText) - 1)},
+        {"geometry.adt", dependencyBytecode.data(), static_cast<adv_uint32_t>(dependencyBytecode.size())}};
+
+    std::string operationsBytecode;
+    adv_options_set_writer(options, captureOutput, &operationsBytecode);
+    const auto operationsResult = adv_compiler_compile(compiler, nullptr, 2, operationsSources, options, nullptr);
+    ASSERT_EQ(operationsResult, ADV_RESULT_SUCCESS) << adv_result_to_string(operationsResult);
+
+    constexpr char sourceText[] =
+        "import \"operations.adb\";\n"
+        "var origin: Point;\n"
+        "var offset: Point;\n"
+        "var combined: Point;\n"
+        "combined = add_points(origin, offset);\n"
+        "print_point(combined);\n";
+    adv_source_t sources[] = {
+        {"test.adv", sourceText, static_cast<adv_uint32_t>(sizeof(sourceText) - 1)},
+        {"operations.adb", operationsBytecode.data(), static_cast<adv_uint32_t>(operationsBytecode.size())},
+        {"geometry.adb", dependencyBytecode.data(), static_cast<adv_uint32_t>(dependencyBytecode.size())}};
+
+    std::string output;
+    adv_options_set_output_format(options, ADV_FORMAT_TEXT);
+    adv_options_set_writer(options, captureOutput, &output);
+
+    const auto compileResult = adv_compiler_compile(compiler, nullptr, 3, sources, options, nullptr);
+    adv_compiler_destroy(compiler);
+    adv_options_destroy(options);
+
+    ASSERT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
+    const auto call = output.find("call add_points");
+    const auto storeY = output.find("pop_global combined.y", call);
+    const auto storeX = output.find("pop_global combined.x", storeY);
+    const auto loadX = output.find("push_global combined.x", storeX);
+    const auto loadY = output.find("push_global combined.y", loadX);
+    const auto nextCall = output.find("call print_point", loadY);
+    EXPECT_NE(call, std::string::npos);
+    EXPECT_NE(storeY, std::string::npos);
+    EXPECT_NE(storeX, std::string::npos);
+    EXPECT_NE(loadX, std::string::npos);
+    EXPECT_NE(loadY, std::string::npos);
+    EXPECT_NE(nextCall, std::string::npos);
+    EXPECT_EQ(output.find("pop_global combined\n"), std::string::npos) << output;
 }
 
 TEST(Compiler, GeneratesStructureFieldAccess) {

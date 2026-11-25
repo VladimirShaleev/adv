@@ -11,12 +11,18 @@ namespace {
 
 class Emitter {
 public:
+    struct Func {
+        adv_uint32_t entryIp;
+        adv_node_t* node;
+        std::vector<adv_uint32_t> forwardCallOffsets;
+    };
+
     Emitter(
         Context& ctx,
         std::unordered_map<vm_string_h, adv_uint32_t>& strings,
         std::vector<uint8_t>& data,
         std::vector<uint8_t>& code,
-        std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>>* functions = nullptr) noexcept
+        std::map<adv_symbol_h, Func>* functions = nullptr) noexcept
         : ctx(ctx), strings(strings), data(data), code(code), functions(functions) {}
 
     void emitByte(uint8_t byte) { code.push_back(byte); }
@@ -53,8 +59,10 @@ public:
         return patchOffset;
     }
 
-    void patchJump(adv_uint32_t patchOffset) {
-        auto targetAddress = utils::swapBytes(offset());
+    void patchJump(adv_uint32_t patchOffset) { patchUint32(patchOffset, offset()); }
+
+    void patchUint32(adv_uint32_t patchOffset, adv_uint32_t targetAddress) {
+        targetAddress = utils::swapBytes(targetAddress);
         code[patchOffset + 0] = static_cast<uint8_t>((targetAddress >> 0) & 0xFF);
         code[patchOffset + 1] = static_cast<uint8_t>((targetAddress >> 8) & 0xFF);
         code[patchOffset + 2] = static_cast<uint8_t>((targetAddress >> 16) & 0xFF);
@@ -101,7 +109,7 @@ public:
     std::unordered_map<vm_string_h, adv_uint32_t>& strings;
     std::vector<uint8_t>& data;
     std::vector<uint8_t>& code;
-    std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>>* functions;
+    std::map<adv_symbol_h, Func>* functions;
     adv_uint16_t count{};
 
 private:
@@ -230,6 +238,27 @@ struct CodeGenVisitor {
         const auto sym = ctx.symbolTable().getSymbol(node->func_decl.symbol);
         const auto type = ctx.symbolTable().getSymbol(sym->type);
 
+        if (sym->is_global) {
+            exportFunc.emitString(sym->name);
+            exportFunc.emitUint32(entryIp);
+            exportFunc.emitType(sym->type);
+            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
+            for (const auto paramHandle : sym->linearChildren) {
+                const auto param = ctx.symbolTable().getSymbol(paramHandle);
+                exportFunc.emitString(param->name);
+                exportFunc.emitType(param->type);
+            }
+            ++exportFunc.count;
+        } else {
+            auto& func = (*exportFunc.functions)[node->func_decl.symbol];
+            func.entryIp = entryIp;
+            func.node = node;
+            for (auto offset : func.forwardCallOffsets) {
+                code.patchUint32(offset, entryIp);
+            }
+            func.forwardCallOffsets.clear();
+        }
+
         adv_uint8_t lexicalDepth = 0;
         auto parentNode = node->parent;
         while (parentNode) {
@@ -257,21 +286,6 @@ struct CodeGenVisitor {
             code.emitByte(VM_OPCODE_RETURN);
         }
         code.patchJump(jumpOverBody);
-
-        if (sym->is_global) {
-            exportFunc.emitString(sym->name);
-            exportFunc.emitUint32(entryIp);
-            exportFunc.emitType(sym->type);
-            exportFunc.emitByte(static_cast<adv_uint8_t>(sym->linearChildren.size()));
-            for (const auto paramHandle : sym->linearChildren) {
-                const auto param = ctx.symbolTable().getSymbol(paramHandle);
-                exportFunc.emitString(param->name);
-                exportFunc.emitType(param->type);
-            }
-            ++exportFunc.count;
-        } else {
-            (*exportFunc.functions)[node->func_decl.symbol] = {entryIp, node};
-        }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_STRUCT_DECL>) {
         const auto sym = ctx.symbolTable().getSymbol(node->struct_decl.symbol);
@@ -509,9 +523,14 @@ struct CodeGenVisitor {
                 code.emitByte(VM_OPCODE_CALL_BY_NAME);
                 code.emitString(sym->name);
             } else {
-                const auto [entryIp, funcNode] = (*exportFunc.functions)[node->call_expr.symbol];
+                auto& func = (*exportFunc.functions)[node->call_expr.symbol];
                 code.emitByte(VM_OPCODE_CALL);
-                code.emitUint32(entryIp);
+                if (func.node) {
+                    code.emitUint32(func.entryIp);
+                } else {
+                    func.forwardCallOffsets.push_back(code.offset());
+                    code.emitUint32(0);
+                }
             }
         } else {
             code.emitByte(VM_OPCODE_CALL_NATIVE_BY_NAME);
@@ -682,9 +701,9 @@ struct CodeGenVisitor {
                 assert(structure && structure->kind == ADV_SYMBOL_KIND_STRUCTURE);
                 const auto field = ctx.symbolTable().getSymbol(fieldHandle);
                 assert(field);
-                assert(std::find(
-                           structure->linearChildren.begin(), structure->linearChildren.end(), fieldHandle) !=
-                       structure->linearChildren.end());
+                assert(
+                    std::find(structure->linearChildren.begin(), structure->linearChildren.end(), fieldHandle) !=
+                    structure->linearChildren.end());
                 name += '.';
                 name += ctx.getString(field->name);
                 structureHandle = field->type;
@@ -773,7 +792,7 @@ adv_result_t Generator::gen() {
     if (_ctx.bytecode().empty()) {
         std::set<vm_string_h> modules;
         std::unordered_map<vm_string_h, adv_uint32_t> strings;
-        std::map<adv_symbol_h, std::pair<adv_uint32_t, adv_node_t*>> functions;
+        std::map<adv_symbol_h, Emitter::Func> functions;
         std::vector<uint8_t> exportTable;
         std::vector<uint8_t> exportVar;
         std::vector<uint8_t> exportStruct;

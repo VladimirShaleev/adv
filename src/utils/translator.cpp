@@ -954,7 +954,9 @@ private:
         }
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Function) {
-                vm_script_export_func_t func{emplaceData(result, symbol.name), symbol.offset, (vm_uint8_t)symbol.type};
+                const SymbolType type{symbol.type, symbol.structureName};
+                vm_script_export_func_t func{
+                    emplaceData(result, symbol.name), symbol.offset, encodeType(type, symbol.line)};
                 func.param_count = checkedUint8(symbol.parameters.size(), symbol.line);
                 appendRecord(func);
                 exports.func_count = checkedUint16(static_cast<size_t>(exports.func_count) + 1, symbol.line);
@@ -970,9 +972,7 @@ private:
         for (const auto& [_, symbol] : result.symbolMap) {
             if (symbol.kind == SymbolKind::Native) {
                 const SymbolType returnType{symbol.type, symbol.structureName};
-                vm_script_export_native_t native{
-                    emplaceData(result, symbol.name),
-                    encodeType(returnType, symbol.line)};
+                vm_script_export_native_t native{emplaceData(result, symbol.name), encodeType(returnType, symbol.line)};
                 native.param_count = checkedUint8(symbol.parameters.size(), symbol.line);
                 appendRecord(native);
                 exports.native_count = checkedUint16(static_cast<size_t>(exports.native_count) + 1, symbol.line);
