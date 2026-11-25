@@ -4,15 +4,160 @@
   const monacoVersion = "0.52.2";
   const monacoBaseUrl = `https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/${monacoVersion}/min`;
   const initialFiles = {
-    "main.adv": `import "math.adv";
+    "main.adv": `import "std-io";
 
-var answer: int = fibonacci(8);
-`,
-    "math.adv": `function fibonacci(n: int): int {
+function fibonacci(n: int): int {
     if (n <= 1) {
         return n;
     }
     return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+var answer: int = fibonacci(8);
+println("answer: " + answer as string);
+
+
+import "closures.adv";
+
+var search = find_ceil_sqrt(73);
+println("Smallest n where n*n >= " + search.result.target as string + ": " + search.result.candidate as string);
+println("Candidate squared: " + search.result.square as string);
+println("Recursive calls: " + search.calls as string);
+
+
+import "asm.adt";
+
+println("g_var + 2 = " + (g_var + 2) as string);
+
+function sum_points() {
+    var origin: Point;
+    origin.x = 1.0;
+    origin.y = 2.0;
+
+    var offset: Point;
+    offset.x = 3.0;
+    offset.y = 4.0;
+
+    var combined = add_points(origin, offset);
+    print_point(combined);
+}
+
+sum_points();
+`,
+    "asm.adt": `.header
+    format: ADVT
+    version: 0.2.1
+
+.export
+    module asm 0
+    struct Point { x: float; y: float; }
+    var g_var: int
+    function add_points(left: Point, right: Point): Point
+    function print_point(point: Point)
+
+.text
+    jump label
+
+.function add_points (slots: 6, params: 4, rets: 2):
+    push_local 0
+    push_local 2
+    add
+    pop_local 4
+    push_local 1
+    push_local 3
+    add
+    pop_local 5
+    push_local 4
+    push_local 5
+    ret
+
+label:
+    import std
+    jump label2
+
+.function print_point (slots: 2, params: 2):
+    push "Point("
+    push_local 0
+    ftos
+    add
+    push ", "
+    add
+    push_local 1
+    ftos
+    add
+    push ")"
+    add
+    call_native println
+    ret
+
+label2:
+    push 5
+    pop_global g_var
+    push "g_var has been initialized with a value "
+    push_global g_var
+    itos
+    add
+    call_native println
+    halt
+
+;#########################################################
+;################### original ADV code ###################
+;#########################################################
+; 
+;  struct Point {
+;      x: float;
+;      y: float;
+;  }
+;  
+;  function add_points(left: Point, right: Point): Point {
+;      var result: Point;
+;      result.x = left.x + right.x;
+;      result.y = left.y + right.y;
+;      return result;
+;  }
+;  
+;  import "std";
+;  
+;  function print_point(point: Point) {
+;      println("Point(" + (point.x as string) + ", " + (point.y as string) + ")");
+;  }
+;  
+;  var g_var = 5;
+;  println("g_var has been initialized with a value " + g_var as string);
+; 
+`,
+    "closures.adv": `struct SearchResult {
+    target: int;
+    square: int;
+    candidate: int;
+}
+
+struct SearchReport {
+    calls: int;
+    result: SearchResult;
+}
+
+function find_ceil_sqrt(target: int): SearchReport {
+    var report: SearchReport;
+
+    function search(left: int, right: int) {
+        report.calls = report.calls + 1;
+        if (left >= right) {
+            report.result.candidate = left;
+        } else {
+            var middle: int = left + (right - left) / 2;
+            if (middle * middle >= target) {
+                search(left, middle);
+            } else {
+                search(middle + 1, right);
+            }
+        }
+    }
+
+    search(0, target);
+    report.result.target = target;
+    report.result.square = report.result.candidate * report.result.candidate;
+    return report;
 }
 `
   };

@@ -172,7 +172,8 @@ document.addEventListener('DOMContentLoaded',() => { initNavTree('index.html',''
       </form>
       <ul class="adv-file-tree" id="adv-file-tree">
         <li><button class="adv-file-entry" type="button">main.adv</button></li>
-        <li><button class="adv-file-entry" type="button">math.adv</button></li>
+        <li><button class="adv-file-entry" type="button">asm.adt</button></li>
+        <li><button class="adv-file-entry" type="button">closures.adv</button></li>
       </ul>
     </aside>
     <div class="adv-editor-pane">
@@ -180,10 +181,7 @@ document.addEventListener('DOMContentLoaded',() => { initNavTree('index.html',''
         <div class="adv-editor-tab is-active"><button class="adv-editor-tab-select" type="button" role="tab" aria-selected="true">main.adv</button></div>
       </div>
       <div id="adv-code-editor" class="adv-code-editor" aria-label="Adv source code editor"></div>
-      <pre id="adv-editor-fallback" class="adv-playground-fallback"><code>import "math.adv";
-
-var answer: int = fibonacci(8);
-</code></pre>
+      <pre id="adv-editor-fallback" class="adv-playground-fallback"><code></code></pre>
     </div>
   </div>
   <div class="adv-compiler-output" id="adv-compiler-output">
