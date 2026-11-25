@@ -680,12 +680,14 @@ struct CodeGenVisitor {
             for (const auto fieldHandle : fields) {
                 const auto structure = ctx.symbolTable().getSymbol(structureHandle);
                 assert(structure && structure->kind == ADV_SYMBOL_KIND_STRUCTURE);
-                const auto fieldIt =
-                    std::find(structure->linearChildren.begin(), structure->linearChildren.end(), fieldHandle);
-                assert(fieldIt != structure->linearChildren.end());
+                const auto field = ctx.symbolTable().getSymbol(fieldHandle);
+                assert(field);
+                assert(std::find(
+                           structure->linearChildren.begin(), structure->linearChildren.end(), fieldHandle) !=
+                       structure->linearChildren.end());
                 name += '.';
-                name += std::to_string(std::distance(structure->linearChildren.begin(), fieldIt));
-                structureHandle = ctx.symbolTable().getSymbol(fieldHandle)->type;
+                name += ctx.getString(field->name);
+                structureHandle = field->type;
             }
             code.emitByte(isStore ? VM_OPCODE_POP_GLOBAL_BY_NAME : VM_OPCODE_PUSH_GLOBAL_BY_NAME);
             code.emitString(ctx.intern(name));

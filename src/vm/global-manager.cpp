@@ -114,11 +114,11 @@ bool GlobalManager::collectGlobalSlots(
 
     structureStack.push_back(type.structureName);
     const auto baseNameLength = name.length();
-    for (size_t i = 0; i < structure->second.fields.size(); ++i) {
+    for (const auto& field : structure->second.fields) {
         name.resize(baseNameLength);
         name.push_back('.');
-        name += std::to_string(i);
-        if (!collectGlobalSlots(name, structure->second.fields[i].type, slots, structureStack)) {
+        name += _cache.pool.get(field.name);
+        if (!collectGlobalSlots(name, field.type, slots, structureStack)) {
             structureStack.pop_back();
             name.resize(baseNameLength);
             return false;

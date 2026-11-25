@@ -100,8 +100,8 @@ TEST(Compiler, GeneratesStructureFieldAccess) {
     adv_options_destroy(options);
 
     EXPECT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
-    EXPECT_NE(output.find("pop_global global.1.1"), std::string::npos);
-    EXPECT_NE(output.find("push_global global.1.1"), std::string::npos);
+    EXPECT_NE(output.find("pop_global global.p.y"), std::string::npos);
+    EXPECT_NE(output.find("push_global global.p.y"), std::string::npos);
     EXPECT_NE(output.find("pop_local 2"), std::string::npos);
     EXPECT_NE(output.find("push_local 2"), std::string::npos);
     EXPECT_NE(output.find("pop_outer 1 2"), std::string::npos);
@@ -146,9 +146,9 @@ TEST(Compiler, FlattensStructureArgumentsForCalls) {
 
     ASSERT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
     const auto firstArg = output.find("push 555");
-    const auto firstField = output.find("push_global source.0", firstArg);
-    const auto secondField = output.find("push_global source.1.0", firstField);
-    const auto thirdField = output.find("push_global source.1.1", secondField);
+    const auto firstField = output.find("push_global source.id", firstArg);
+    const auto secondField = output.find("push_global source.point.x", firstField);
+    const auto thirdField = output.find("push_global source.point.y", secondField);
     const auto lastArg = output.find("push 3.5", thirdField);
     const auto functionCall = output.find("call consume", lastArg);
     ASSERT_NE(firstArg, std::string::npos);
@@ -158,9 +158,9 @@ TEST(Compiler, FlattensStructureArgumentsForCalls) {
     ASSERT_NE(lastArg, std::string::npos);
     ASSERT_NE(functionCall, std::string::npos);
 
-    const auto nativeFirstField = output.find("push_global source.0", functionCall);
-    const auto nativeSecondField = output.find("push_global source.1.0", nativeFirstField);
-    const auto nativeThirdField = output.find("push_global source.1.1", nativeSecondField);
+    const auto nativeFirstField = output.find("push_global source.id", functionCall);
+    const auto nativeSecondField = output.find("push_global source.point.x", nativeFirstField);
+    const auto nativeThirdField = output.find("push_global source.point.y", nativeSecondField);
     const auto nativeCall = output.find("call_native native_consume", nativeThirdField);
     EXPECT_NE(nativeFirstField, std::string::npos);
     EXPECT_NE(nativeSecondField, std::string::npos);
@@ -208,12 +208,12 @@ TEST(Compiler, CopiesStructureSlotsInDeclarationsAndAssignments) {
     adv_options_destroy(options);
 
     ASSERT_EQ(compileResult, ADV_RESULT_SUCCESS) << adv_result_to_string(compileResult);
-    const auto globalSource0 = output.find("push_global source.0");
-    const auto globalSource1 = output.find("push_global source.1.0", globalSource0);
-    const auto globalSource2 = output.find("push_global source.1.1", globalSource1);
-    const auto globalDest2 = output.find("pop_global copy.1.1", globalSource2);
-    const auto globalDest1 = output.find("pop_global copy.1.0", globalDest2);
-    const auto globalDest0 = output.find("pop_global copy.0", globalDest1);
+    const auto globalSource0 = output.find("push_global source.id");
+    const auto globalSource1 = output.find("push_global source.inner.first", globalSource0);
+    const auto globalSource2 = output.find("push_global source.inner.second", globalSource1);
+    const auto globalDest2 = output.find("pop_global copy.inner.second", globalSource2);
+    const auto globalDest1 = output.find("pop_global copy.inner.first", globalDest2);
+    const auto globalDest0 = output.find("pop_global copy.id", globalDest1);
     ASSERT_NE(globalSource0, std::string::npos);
     ASSERT_NE(globalSource1, std::string::npos);
     ASSERT_NE(globalSource2, std::string::npos);
@@ -221,12 +221,12 @@ TEST(Compiler, CopiesStructureSlotsInDeclarationsAndAssignments) {
     ASSERT_NE(globalDest1, std::string::npos);
     ASSERT_NE(globalDest0, std::string::npos);
 
-    const auto assignmentSource0 = output.find("push_global source.0", globalDest0);
-    const auto assignmentSource1 = output.find("push_global source.1.0", assignmentSource0);
-    const auto assignmentSource2 = output.find("push_global source.1.1", assignmentSource1);
-    const auto assignmentDest2 = output.find("pop_global copy_2.1.1", assignmentSource2);
-    const auto assignmentDest1 = output.find("pop_global copy_2.1.0", assignmentDest2);
-    const auto assignmentDest0 = output.find("pop_global copy_2.0", assignmentDest1);
+    const auto assignmentSource0 = output.find("push_global source.id", globalDest0);
+    const auto assignmentSource1 = output.find("push_global source.inner.first", assignmentSource0);
+    const auto assignmentSource2 = output.find("push_global source.inner.second", assignmentSource1);
+    const auto assignmentDest2 = output.find("pop_global copy_2.inner.second", assignmentSource2);
+    const auto assignmentDest1 = output.find("pop_global copy_2.inner.first", assignmentDest2);
+    const auto assignmentDest0 = output.find("pop_global copy_2.id", assignmentDest1);
     ASSERT_NE(assignmentSource0, std::string::npos);
     ASSERT_NE(assignmentSource1, std::string::npos);
     ASSERT_NE(assignmentSource2, std::string::npos);
