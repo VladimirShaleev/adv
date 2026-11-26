@@ -770,10 +770,21 @@ struct CodeGenVisitor {
         };
         vm_uint8_t depth = 0;
         scope = ctx.symbolTable().getScope(scope)->parent;
-        while (node && scope != getParentScope()) {
+        while (node) {
+            auto targetScope = getParentScope();
+            if (targetScope == Undefined) {
+                break;
+            }
+            auto curr = scope;
+            while (curr != targetScope && curr != Undefined) {
+                curr = ctx.symbolTable().getScope(curr)->parent;
+            }
+            if (curr == targetScope) {
+                return depth;
+            }
             ++depth;
         }
-        return depth;
+        return 0;
     }
     Context& ctx;
     std::set<vm_string_h>& modules;
