@@ -43,7 +43,7 @@
  * @sa      VM_VERSION_STRING
  * @ingroup vm_macros
  */
-#define VM_VERSION_MICRO 1
+#define VM_VERSION_MICRO 2
 
 /** @} */
 
@@ -73,7 +73,7 @@
 
 /**
  * @brief     Internal macro for string version generation.
- * @details   Helper macro that stringizes version components (e.g., 0, 2, 1 -> "0.2.1").
+ * @details   Helper macro that stringizes version components (e.g., 0, 2, 2 -> "0.2.2").
  * @param[in] major Major version number.
  * @param[in] minor Minor version number.
  * @param[in] micro Micro version number.
@@ -86,7 +86,7 @@
 
 /**
  * @brief     Creates version string from components.
- * @details   Generates a string literal from version components (e.g., 0, 2, 1 -> "0.2.1").
+ * @details   Generates a string literal from version components (e.g., 0, 2, 2 -> "0.2.2").
  * @param[in] major Major version number.
  * @param[in] minor Minor version number.
  * @param[in] micro Micro version number.
@@ -118,7 +118,7 @@
 
 /**
  * @brief   Library version as human-readable string.
- * @details Version string in "MAJOR.MINOR.MICRO" format (e.g., "1.2.1").
+ * @details Version string in "MAJOR.MINOR.MICRO" format (e.g., "1.2.2").
  *          Use #VM_VERSION for numeric comparisons.
  * @sa      VM_VERSION
  * @ingroup vm_macros
