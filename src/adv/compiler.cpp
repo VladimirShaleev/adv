@@ -209,6 +209,7 @@ private:
                     break;
                 case VM_OPCODE_PUSH_LOCAL:
                 case VM_OPCODE_POP_LOCAL:
+                case VM_OPCODE_POP:
                     ip += 2;
                     break;
                 default:

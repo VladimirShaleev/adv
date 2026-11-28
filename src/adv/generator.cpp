@@ -356,7 +356,9 @@ struct CodeGenVisitor {
         acceptNode(node->expr_stmt.expr);
         if (node->expr_stmt.expr->type != ADV_NODE_ASSIGN_EXPR &&
             node->expr_stmt.expr->resolved_type != ctx.symbolTable().lookupVoid()) {
+            const auto sym = ctx.symbolTable().getSymbol(node->expr_stmt.expr->resolved_type);
             code.emitByte(VM_OPCODE_POP);
+            code.emitUint16(sym->slot_count);
         }
     }
     void visit(adv_node_t* node, Tag<ADV_NODE_IMPLICIT_CAST_EXPR>) {
@@ -1117,6 +1119,9 @@ adv_result_t Generator::text() {
                 return ADV_RESULT_ERROR_INVALID_ARG;
             case VM_OPCODE_POP:
                 op = "pop"sv;
+                if (const auto popSlots = utils::readUint16(text, ip); popSlots > 1) {
+                    val = popSlots;
+                }
                 break;
             case VM_OPCODE_BOOL_TO_INT:
                 op = "btoi"sv;

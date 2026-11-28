@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
     adv_options_set_import_dirs(options, (adv_uint32_t)dirs.size(), dirs.data());
 
     adv_compiler_t compiler{};
-    adv_compiler_create(&compiler);
+    code = adv_compiler_create(&compiler);
     if (code != ADV_RESULT_SUCCESS) {
         adv_options_destroy(options);
         std::cerr << adv_result_to_string(code) << std::endl;

@@ -563,6 +563,9 @@ private:
                 }
                 advance();
             }
+            if (instruction.opcode == VM_OPCODE_POP && operandIndex == 0) {
+                instruction.operands[operandIndex++] = "1"sv;
+            }
             if (isPushOp) {
                 const auto [opcode, operands] = parsePushOpcode(instruction.operands[0]);
                 instruction.opcode = opcode;
@@ -768,6 +771,7 @@ private:
         switch (instruction.opcode) {
         case VM_OPCODE_PUSH_LOCAL:
         case VM_OPCODE_POP_LOCAL:
+        case VM_OPCODE_POP:
             pushUint16(parseValue<vm_uint16_t>(operand), result.textSection);
             break;
         case VM_OPCODE_PUSH_OUTER_LOCAL:
@@ -1045,7 +1049,7 @@ private:
             return {VM_OPCODE_POP_OUTER_LOCAL, 2};
         }
         if (equals(str, "pop"sv)) {
-            return {VM_OPCODE_POP, 0};
+            return {VM_OPCODE_POP, 1};
         }
         if (equals(str, "btoi"sv)) {
             return {VM_OPCODE_BOOL_TO_INT, 0};

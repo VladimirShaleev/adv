@@ -369,9 +369,11 @@ private:
                 thread->stack[localSlot] = pop(thread, log);
                 break;
             }
-            case VM_OPCODE_POP:
-                --thread->stackPos;
+            case VM_OPCODE_POP: {
+                const auto slot = utils::readUint16(text, thread->instructionPos);
+                thread->stackPos -= std::max(slot, static_cast<vm_uint16_t>(1));
                 break;
+            }
             case VM_OPCODE_BOOL_TO_INT:
                 cast<bool, vm_sint32_t>(thread, log);
                 break;
