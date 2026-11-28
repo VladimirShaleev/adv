@@ -25,8 +25,7 @@ private:
     void resolveTypes();
     void resolveSlots();
 
-    void
-    visitStmtsWithRules(
+    void visitStmtsWithRules(
         adv_node_t* node,
         std::function<void(adv_node_t*, adv_node_t*)> accept,
         bool useScopes = false,

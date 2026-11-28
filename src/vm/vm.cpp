@@ -112,7 +112,7 @@ public:
 
     [[nodiscard]] NativeManager& native() noexcept { return _nativeManager; }
 
-    void getImportDirs(vm_uint32_t& dirCount, vm_utf8_t* dirs) {
+    void getImportDirs(vm_uint32_t& dirCount, vm_utf8_t* dirs) const noexcept {
         if (dirs) {
             dirCount = std::min(dirCount, static_cast<vm_uint32_t>(_importStrDirs.size()));
             for (vm_uint32_t i = 0; i < dirCount; ++i) {
@@ -123,7 +123,7 @@ public:
         }
     }
 
-    void setImportDirs(std::span<const vm_utf8_t> dirs) {
+    void setImportDirs(std::span<const vm_utf8_t> dirs) noexcept {
         _importDirs.clear();
         _importDirs.reserve(dirs.size());
         std::copy(dirs.begin(), dirs.end(), std::back_inserter(_importDirs));
@@ -138,14 +138,14 @@ public:
         }
     }
 
-    [[nodiscard]] vm_import_callback_t getImporter(vm_data_t* data) {
+    [[nodiscard]] vm_import_callback_t getImporter(vm_data_t* data) const noexcept {
         if (data) {
             *data = _importerData;
         }
         return _importer;
     }
 
-    void setImporter(vm_import_callback_t callback, vm_data_t data) {
+    void setImporter(vm_import_callback_t callback, vm_data_t data) noexcept {
         if (callback) {
             _importer = callback;
             _importerData = data;
@@ -155,14 +155,14 @@ public:
         }
     }
 
-    [[nodiscard]] vm_release_import_callback_t getReleaseImport(vm_data_t* data) {
+    [[nodiscard]] vm_release_import_callback_t getReleaseImport(vm_data_t* data) const noexcept {
         if (data) {
             *data = _releaseImportData;
         }
         return _releaseImport;
     }
 
-    void setReleaseImport(vm_release_import_callback_t callback, vm_data_t data) {
+    void setReleaseImport(vm_release_import_callback_t callback, vm_data_t data) noexcept {
         if (callback) {
             _releaseImport = callback;
             _releaseImportData = data;
@@ -171,6 +171,10 @@ public:
             _releaseImportData = nullptr;
         }
     }
+
+    [[nodiscard]] vm_uint32_t getMaxIterationsPerStep() const noexcept { return _maxIterationsPerStep; }
+
+    void setMaxIterationsPerStep(vm_uint32_t maxIterations) noexcept { _maxIterationsPerStep = maxIterations; }
 
     [[nodiscard]] vm_logger_callback_t getLogger(vm_data_t* data) {
         if (data) {
@@ -189,11 +193,11 @@ public:
         }
     }
 
-    void tick(vm_uint32_t elapsedMs) {
-        assert(_iterations == 0 && "It is impossible to call vm_tick while vm_tick is executing");
-        _iterations = 1;
-        while (_iterations != 0) {
-            --_iterations;
+    [[nodiscard]] bool tick(vm_uint32_t elapsedMs) {
+        size_t iterations = 1;
+        size_t instructionsLimit = _maxIterationsPerStep;
+        while (iterations != 0) {
+            --iterations;
             for (size_t i = 0; i < _threadHandles.size();) {
                 auto handle = _threadHandles[i++];
                 auto thread = _threads.access(handle);
@@ -230,27 +234,35 @@ public:
                     }
                 }
                 if (thread->state == ThreadState::Running) {
-                    stepThread(thread);
+                    stepThread(thread, iterations, instructionsLimit);
                 }
             }
         }
+        for (auto handle : _threadHandles) {
+            if (_threads.access(handle)->state != ThreadState::Dead) {
+                return true;
+            }
+        }
+        return false;
     }
 
 private:
     static constexpr vm_uint32_t VM_CALL_GLOBAL_FLAG = 0x80000000;
     static constexpr vm_uint32_t VM_CALL_OFFSET_MASK = ~VM_CALL_GLOBAL_FLAG;
 
-    void stepThread(ScriptThread* thread) {
+    void stepThread(ScriptThread* thread, size_t& iterations, size_t& instructionsLimit) {
         auto module = _moduleManager.getModule(thread->script);
         auto text = module->text();
         auto data = module->data();
-        while (thread->state == ThreadState::Running && thread->instructionPos < text.size()) {
+        while (thread->state == ThreadState::Running && thread->instructionPos < text.size() &&
+               instructionsLimit != 0) {
             const auto logPos = thread->instructionPos;
             const auto log = [this, thread, logPos](vm_utf8_t message) {
                 if (_logger) {
                     _logger(this, _threads.handle(thread), logPos, message, _loggerData);
                 }
             };
+            --instructionsLimit;
             const auto opcode = static_cast<vm_opcode_t>(text[thread->instructionPos++]);
             switch (opcode) {
             case VM_OPCODE_NO_OPERATION:
@@ -264,7 +276,7 @@ private:
                     if (waitThread != Undefined) {
                         thread->state = ThreadState::Waiting;
                         thread->waitThread = waitThread;
-                        ++_iterations;
+                        ++iterations;
                         return;
                     }
                 }
@@ -597,9 +609,21 @@ private:
                 break;
             }
             case VM_OPCODE_YIELD:
+                thread->state = ThreadState::Waiting;
+                thread->waitTicks = 0;
                 break;
-            case VM_OPCODE_WAIT:
+            case VM_OPCODE_WAIT: {
+                const auto value = pop(thread, log);
+                if (value.type == VM_VALUE_TYPE_INT) {
+                    if (value.i32 > 0) {
+                        thread->state = ThreadState::Waiting;
+                        thread->waitTicks = value.i32;
+                    }
+                } else {
+                    log("The operand is not a int type");
+                }
                 break;
+            }
             case VM_OPCODE_HALT:
                 thread->state = ThreadState::Dead;
                 return;
@@ -634,7 +658,6 @@ private:
 
     template <typename Logger>
     vm_thread_h import(std::string_view moduleName, Logger&& log) {
-        vm_thread_h result = Undefined;
         vm_script_h script = Undefined;
         if (auto it = std::find_if(
                 std_sources.begin(),
@@ -811,11 +834,11 @@ private:
     std::vector<std::filesystem::path> _importDirs{};
     vm_import_callback_t _importer{};
     vm_release_import_callback_t _releaseImport{};
+    vm_uint32_t _maxIterationsPerStep{std::numeric_limits<vm_uint32_t>::max()};
     vm_logger_callback_t _logger{};
     vm_data_t _importerData{};
     vm_data_t _releaseImportData{};
     vm_data_t _loggerData{};
-    size_t _iterations{};
 };
 
 } // namespace vm
@@ -1035,11 +1058,7 @@ void vm_destroy(vm_t vm) {
     }
 }
 
-void vm_tick(vm_t vm, vm_uint32_t elapsed_ms) {
-    if (vm) {
-        vm->as<vm::VM>()->tick(elapsed_ms);
-    }
-}
+vm_bool_t vm_tick(vm_t vm, vm_uint32_t elapsed_ms) { return vm ? (vm->as<vm::VM>()->tick(elapsed_ms) ? 1 : 0) : 0; }
 
 vm_script_h vm_load_script_from_file(vm_t vm, vm_utf8_t file) {
 #if defined(__EMSCRIPTEN__)
@@ -1158,6 +1177,14 @@ vm_release_import_callback_t vm_get_release_import(vm_t vm, vm_data_t* data) {
 void vm_set_release_import(vm_t vm, vm_release_import_callback_t callback, vm_data_t data) {
     if (vm) {
         vm->as<vm::VM>()->setReleaseImport(callback, data);
+    }
+}
+
+vm_uint32_t vm_get_max_iterations_per_step(vm_t vm) { return vm ? vm->as<vm::VM>()->getMaxIterationsPerStep() : 0; }
+
+void vm_set_max_iterations_per_step(vm_t vm, vm_uint32_t max_iterations) {
+    if (vm) {
+        vm->as<vm::VM>()->setMaxIterationsPerStep(max_iterations);
     }
 }
 

@@ -114,7 +114,7 @@ inline std::string err(Args&&... args) {
     } else if constexpr (Status == ADV_STATUS_E3039) {
         str = fmt::format("Import path cannot be empty");
     } else if constexpr (Status == ADV_STATUS_E3040) {
-        str = fmt::format("The 'wait' statement requires a numeric argument ('int' or 'float'), got '{}'", args...);
+        str = fmt::format("The 'wait' statement requires a numeric argument ('int'), got '{}'", args...);
     } else if constexpr (Status == ADV_STATUS_E3041) {
         str = fmt::format("Missing argument for 'wait' statement");
     } else if constexpr (Status == ADV_STATUS_E3042) {

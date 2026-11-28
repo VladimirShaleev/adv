@@ -350,8 +350,11 @@ struct CodeGenVisitor {
         }
         code.emitByte(VM_OPCODE_RETURN);
     }
-    void visit(adv_node_t* node, Tag<ADV_NODE_YIELD_STMT>) {}
-    void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {}
+    void visit(adv_node_t* /* node */, Tag<ADV_NODE_YIELD_STMT>) { code.emitByte(VM_OPCODE_YIELD); }
+    void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {
+        acceptNode(node->expr_stmt.expr);
+        code.emitByte(VM_OPCODE_WAIT);
+    }
     void visit(adv_node_t* node, Tag<ADV_NODE_EXPR_STMT>) {
         acceptNode(node->expr_stmt.expr);
         if (node->expr_stmt.expr->type != ADV_NODE_ASSIGN_EXPR &&

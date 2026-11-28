@@ -89,7 +89,7 @@ typedef enum
     ADV_STATUS_E3037       = 3037, /**< Cannot resolve import file. */
     ADV_STATUS_E3038       = 3038, /**< Could not read imported file. */
     ADV_STATUS_E3039       = 3039, /**< Import path cannot be empty. */
-    ADV_STATUS_E3040       = 3040, /**< The 'wait' statement requires a numeric argument ('int' or 'float'). */
+    ADV_STATUS_E3040       = 3040, /**< The 'wait' statement requires a numeric argument ('int'). */
     ADV_STATUS_E3041       = 3041, /**< Missing argument for 'wait' statement. */
     ADV_STATUS_E3042       = 3042, /**< Translate Advt (text assembler) failed. */
     ADV_STATUS_E3043       = 3043, /**< The checksum did not match. */

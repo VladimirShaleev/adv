@@ -37,13 +37,25 @@ TEST(VM, Test) {
         },
         nullptr);
 
+    vm_register_native(
+        vm,
+        "sec",
+        [](vm_t vm, vm_thread_h thread, vm_native_h native, vm_uint16_t arg_count, vm_data_t data) {
+            std::time_t now = std::time(nullptr);
+            std::tm* local_time = std::localtime(&now);
+            vm_value_t result{};
+            result.type = VM_VALUE_TYPE_INT;
+            result.i32 = local_time->tm_sec;
+            vm_thread_set_result(vm, thread, 0, &result);
+        },
+        nullptr);
+
+    vm_set_max_iterations_per_step(vm, 1);
     auto thread = vm_run_thread(vm, script);
     EXPECT_NE(thread, Undefined);
 
-    vm_tick(vm, 16);
-    vm_tick(vm, 16);
-
-    auto thread2 = vm_run_thread(vm, script);
-    EXPECT_NE(thread2, Undefined);
-    vm_tick(vm, 16);
+    while (vm_tick(vm, 16)) {
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(8ms);
+    }
 }

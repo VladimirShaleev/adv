@@ -717,7 +717,7 @@ void Analyzer::resolveTypes() {
                 acceptNode(node->while_stmt.body);
             }
         }
-        void visit(adv_node_t* /* node */, Tag<ADV_NODE_YIELD_STMT>) { assert(!"not implemented"); }
+        void visit(adv_node_t* /* node */, Tag<ADV_NODE_YIELD_STMT>) {}
         void visit(adv_node_t* node, Tag<ADV_NODE_WAIT_STMT>) {
             if (!node->expr_stmt.expr) {
                 ctx.log<ADV_STATUS_E3041>(options, node->location);
@@ -727,8 +727,7 @@ void Analyzer::resolveTypes() {
             if (exprType == Undefined) {
                 return;
             }
-            if (exprType != symbolTable.lookup(VM_VALUE_TYPE_INT) &&
-                exprType != symbolTable.lookup(VM_VALUE_TYPE_FLOAT)) {
+            if (exprType != symbolTable.lookup(VM_VALUE_TYPE_INT)) {
                 ctx.log<ADV_STATUS_E3040>(options, node->expr_stmt.expr->location, exprType);
                 return;
             }
@@ -825,9 +824,8 @@ void Analyzer::resolveSlots() {
             }
         }
         void visit(adv_node_t* node, Tag<ADV_NODE_MEMBER_ACCESS>) {
-            const auto isNestedAccess =
-                node->parent && node->parent->type == ADV_NODE_MEMBER_ACCESS &&
-                node->parent->member_access.target == node;
+            const auto isNestedAccess = node->parent && node->parent->type == ADV_NODE_MEMBER_ACCESS &&
+                                        node->parent->member_access.target == node;
             if (!isNestedAccess) {
                 auto root = node;
                 while (root->type == ADV_NODE_MEMBER_ACCESS) {
@@ -835,11 +833,9 @@ void Analyzer::resolveSlots() {
                 }
                 if (root->type == ADV_NODE_CALL_EXPR) {
                     auto type = symbolTable.getSymbol(root->resolved_type);
-                    if (type && type->kind == ADV_SYMBOL_KIND_STRUCTURE &&
-                        calculateStructureSlots(type, nullptr)) {
+                    if (type && type->kind == ADV_SYMBOL_KIND_STRUCTURE && calculateStructureSlots(type, nullptr)) {
                         auto& frame = analyzer.currFrame();
-                        frame.maxTemporarySlots =
-                            std::max<adv_uint32_t>(frame.maxTemporarySlots, type->slot_count);
+                        frame.maxTemporarySlots = std::max<adv_uint32_t>(frame.maxTemporarySlots, type->slot_count);
                     }
                 }
             }

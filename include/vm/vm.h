@@ -293,9 +293,10 @@ vm_destroy(vm_t vm);
  *            by the specified elapsed time.
  * @param[in] vm VM instance to advance.
  * @param[in] elapsed_ms Elapsed time in milliseconds to apply to VM timers.
+ * @return    *FALSE*, if no threads remain running after the call
  * @ingroup   vm_functions
  */
-VM_API void
+VM_API vm_bool_t
 vm_tick(vm_t vm,
         vm_uint32_t elapsed_ms);
 
@@ -567,6 +568,27 @@ VM_API void
 vm_set_release_import(vm_t vm,
                       vm_release_import_callback_t callback,
                       vm_data_t data);
+
+/**
+ * @brief      Gets the maximum number of execution iterations per step.
+ * @details    Returns the configured iteration budget executed in a single VM step.
+ * @param[in]  vm VM instance to query.
+ * @return     Maximum number of iterations executed per step.
+ * @ingroup    vm_functions
+ */
+VM_API vm_uint32_t
+vm_get_max_iterations_per_step(vm_t vm);
+
+/**
+ * @brief     Sets the maximum number of execution iterations per step.
+ * @details   Configures the iteration budget executed in a single VM step.
+ * @param[in] vm VM instance to update.
+ * @param[in] max_iterations Maximum number of iterations per step.
+ * @ingroup   vm_functions
+ */
+VM_API void
+vm_set_max_iterations_per_step(vm_t vm,
+                               vm_uint32_t max_iterations);
 
 /**
  * @brief      Retrieves the VM logging callback.
